@@ -1,0 +1,1080 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+
+<title>Ecurie Damien Siri</title>
+
+<script>
+const APP_VERSION="20260629-5";
+</script>
+<link rel="manifest" id="app-manifest">
+<script>
+document.getElementById("app-manifest").href=`manifest.json?v=${APP_VERSION}`;
+
+if("serviceWorker" in navigator){
+window.addEventListener("load",()=>{
+navigator.serviceWorker.getRegistration("/").then(registration=>{
+if(registration)registration.update();
+}).catch(()=>{});
+});
+}
+</script>
+
+<link rel="apple-touch-icon" href="image/icon-192x192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Ecurie DS">
+<meta name="theme-color" content="#287fbd">
+
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700&display=swap" rel="stylesheet">
+
+<!-- OneSignal -->
+<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+
+<script>
+window.OneSignalDeferred = window.OneSignalDeferred || [];
+OneSignalDeferred.push(async function(OneSignal) {
+
+await OneSignal.init({
+appId:"85a477ff-3d8d-4975-960d-c7e69100a0ff",
+notifyButton:{enable:false},
+promptOptions:{
+slidedown:{
+prompts:[{
+type:"push",
+autoPrompt:true,
+text:{
+actionMessage:"Souhaitez-vous recevoir les notifications de l’écurie ?",
+acceptButton:"Autoriser",
+cancelButton:"Plus tard"
+}
+}]
+}
+}
+});
+
+});
+</script>
+
+<style>
+@property --sky-top{
+  syntax:"<color>";
+  inherits:true;
+  initial-value:#5fc6ff;
+}
+
+@property --sky-mid{
+  syntax:"<color>";
+  inherits:true;
+  initial-value:#6ab9ff;
+}
+
+@property --sky-bottom{
+  syntax:"<color>";
+  inherits:true;
+  initial-value:#d9f6ff;
+}
+
+@property --solar-x{
+  syntax:"<percentage>";
+  inherits:true;
+  initial-value:50%;
+}
+
+@property --solar-y{
+  syntax:"<percentage>";
+  inherits:true;
+  initial-value:20%;
+}
+
+@property --solar-opacity{
+  syntax:"<number>";
+  inherits:true;
+  initial-value:.42;
+}
+
+:root{
+  color-scheme:light dark;
+  --safe-top:env(safe-area-inset-top,0px);
+  --safe-bottom:env(safe-area-inset-bottom,0px);
+  --font-main:'Montserrat',-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",sans-serif;
+  --text-strong:rgba(255,255,255,.98);
+  --text-main:rgba(255,255,255,.88);
+  --text-soft:rgba(255,255,255,.68);
+  --text-muted:rgba(255,255,255,.52);
+  --glass:rgba(255,255,255,.16);
+  --glass-strong:rgba(255,255,255,.23);
+  --glass-line:rgba(255,255,255,.25);
+  --shadow-card:0 22px 60px rgba(10,35,70,.22);
+  --shadow-soft:0 12px 32px rgba(10,35,70,.16);
+  --sky-top:#287fbd;
+  --sky-mid:#3f9fdd;
+  --sky-bottom:#8dcced;
+  --solar-x:50%;
+  --solar-y:20%;
+  --solar-opacity:.42;
+  --celestial-glow:rgba(255,239,174,.48);
+  --radius-xl:32px;
+  --radius-lg:25px;
+  --radius-md:20px;
+}
+
+*{
+  box-sizing:border-box;
+  -webkit-tap-highlight-color:transparent;
+}
+
+html{
+  width:100%;
+  min-height:100%;
+  background:#2f8fce;
+  scrollbar-width:none;
+}
+
+body{
+  position:relative;
+  min-height:100%;
+  margin:0;
+  overflow-x:hidden;
+  font-family:var(--font-main);
+  color:var(--text-main);
+  background:transparent;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+  scrollbar-width:none;
+  transition:
+    --sky-top 2.8s ease,
+    --sky-mid 2.8s ease,
+    --sky-bottom 2.8s ease,
+    --solar-x 60s linear,
+    --solar-y 60s linear,
+    --solar-opacity 2.8s ease;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar{
+  width:0;
+  height:0;
+  display:none;
+}
+
+body[data-day-phase="night"]{
+  --sky-top:#061225;
+  --sky-mid:#102848;
+  --sky-bottom:#244d75;
+  --celestial-glow:rgba(176,207,255,.26);
+  --solar-opacity:.26;
+}
+
+body[data-day-phase="dawn"]{
+  --sky-top:#1f3155;
+  --sky-mid:#705f84;
+  --sky-bottom:#c88a70;
+  --celestial-glow:rgba(255,211,164,.36);
+  --solar-opacity:.34;
+}
+
+body[data-day-phase="morning"]{
+  --sky-top:#2c86c5;
+  --sky-mid:#45a6e4;
+  --sky-bottom:#9bd5f0;
+  --celestial-glow:rgba(255,239,174,.36);
+  --solar-opacity:.38;
+}
+
+body[data-day-phase="day"]{
+  --sky-top:#287fbd;
+  --sky-mid:#3f9fdd;
+  --sky-bottom:#8dcced;
+  --celestial-glow:rgba(255,241,184,.36);
+  --solar-opacity:.40;
+}
+
+body[data-day-phase="golden"]{
+  --sky-top:#346f9e;
+  --sky-mid:#be7d66;
+  --sky-bottom:#e8b681;
+  --celestial-glow:rgba(255,210,133,.44);
+  --solar-opacity:.44;
+}
+
+body[data-day-phase="dusk"]{
+  --sky-top:#1f3155;
+  --sky-mid:#5f547b;
+  --sky-bottom:#b77670;
+  --celestial-glow:rgba(255,190,153,.30);
+  --solar-opacity:.30;
+}
+
+.ambient-stage{
+  position:fixed;
+  inset:0;
+  z-index:0;
+  overflow:hidden;
+  pointer-events:none;
+  background:
+    radial-gradient(circle at 22% 12%,rgba(255,225,151,.22),transparent 32%),
+    radial-gradient(circle at 84% 20%,rgba(115,224,255,.16),transparent 34%),
+    radial-gradient(ellipse at 48% 88%,rgba(255,255,255,.10),transparent 38%),
+    linear-gradient(180deg,var(--sky-top) 0%,var(--sky-mid) 48%,var(--sky-bottom) 100%);
+  transform:translateZ(0);
+}
+
+.ambient-stage::before{
+  content:"";
+  position:absolute;
+  inset:-4%;
+  pointer-events:none;
+  background:
+    radial-gradient(circle at 22% 12%,rgba(255,225,151,.22),transparent 32%),
+    radial-gradient(circle at 84% 20%,rgba(115,224,255,.16),transparent 34%),
+    radial-gradient(ellipse at 48% 88%,rgba(255,255,255,.10),transparent 38%),
+    linear-gradient(180deg,var(--sky-top) 0%,var(--sky-mid) 48%,var(--sky-bottom) 100%);
+  transform:translateZ(0);
+  animation:ambientBreath 18s ease-in-out infinite alternate;
+}
+
+.ambient-stage::after{
+  content:"";
+  position:absolute;
+  inset:-24%;
+  pointer-events:none;
+  opacity:var(--solar-opacity);
+  mix-blend-mode:screen;
+  background:
+    radial-gradient(circle at var(--solar-x) var(--solar-y),var(--celestial-glow),transparent 18%),
+    linear-gradient(112deg,transparent 0 28%,rgba(255,255,255,.14) 38%,transparent 52% 100%),
+    radial-gradient(circle at 64% 34%,rgba(255,255,255,.18),transparent 24%);
+  transform:translate3d(-5%,0,0) rotate(-3deg);
+  animation:lightVeil 28s ease-in-out infinite alternate;
+  transition:opacity 2.8s ease;
+}
+
+.app{
+  position:relative;
+  z-index:1;
+  width:min(100%,520px);
+  min-height:100svh;
+  margin:0 auto;
+}
+
+.scroll{
+  position:relative;
+  width:100%;
+  min-height:100%;
+  padding-top:calc(70px + var(--safe-top));
+  scrollbar-width:none;
+  box-sizing:border-box;
+}
+
+.scroll::-webkit-scrollbar{
+  display:none;
+}
+
+header{
+  position:fixed;
+  top:0;
+  left:50%;
+  z-index:1000;
+  width:min(100%,520px);
+  height:calc(70px + var(--safe-top));
+  padding-top:var(--safe-top);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  transform:translateX(-50%);
+  border-bottom:0;
+  background:transparent;
+  box-shadow:none;
+  backdrop-filter:none;
+  -webkit-backdrop-filter:none;
+}
+
+.header-left{
+  position:absolute;
+  left:16px;
+  display:grid;
+  place-items:center;
+  width:46px;
+  height:46px;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  box-shadow:none;
+}
+
+.header-left img{
+  display:block;
+  max-width:34px;
+  max-height:34px;
+  object-fit:contain;
+  filter:drop-shadow(0 8px 14px rgba(20,52,92,.16));
+}
+
+header h1{
+  margin:0;
+  color:var(--text-strong);
+  font-size:17px;
+  font-weight:700;
+  letter-spacing:.14em;
+  text-align:center;
+  text-shadow:0 8px 24px rgba(18,48,90,.20);
+}
+
+.eggs{
+  font-size:28px;
+  letter-spacing:6px;
+}
+
+#bellBox{
+  position:absolute;
+  right:16px;
+  display:grid;
+  place-items:center;
+  width:46px;
+  height:46px;
+  border:1px solid rgba(255,255,255,.22);
+  border-radius:50%;
+  background:rgba(255,255,255,.14);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.20),var(--shadow-soft);
+  font-size:21px;
+  cursor:pointer;
+  transition:transform .2s ease,background .2s ease;
+}
+
+#bellBox:active{
+  transform:scale(.94);
+  background:rgba(255,255,255,.22);
+}
+
+#bellBadge{
+  position:absolute;
+  top:-3px;
+  right:-3px;
+  width:18px;
+  height:18px;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  border:2px solid rgba(255,255,255,.85);
+  border-radius:50%;
+  color:white;
+  background:#e1000f;
+  box-shadow:0 6px 14px rgba(225,0,15,.35);
+  font-size:9px;
+  font-weight:700;
+}
+
+.page-content{
+  min-height:100%;
+  padding:18px 0 calc(44px + var(--safe-bottom));
+}
+
+#welcome{
+  margin:2px 18px 8px;
+  color:var(--text-strong);
+  font-size:clamp(2.25rem,10vw,3.3rem);
+  font-weight:700;
+  letter-spacing:-.065em;
+  line-height:1;
+  text-align:center;
+  text-shadow:0 18px 48px rgba(18,52,96,.24);
+  animation:contentReveal .75s cubic-bezier(.2,.85,.24,1) both;
+}
+
+.opening-status{
+  width:max-content;
+  max-width:calc(100% - 36px);
+  min-height:30px;
+  margin:0 auto 12px;
+  padding:8px 16px;
+  border:1px solid rgba(255,255,255,.30);
+  border-radius:999px;
+  background:
+    linear-gradient(145deg,rgba(255,255,255,.30),rgba(255,255,255,.14));
+  box-shadow:0 12px 28px rgba(10,35,70,.16),inset 0 1px 0 rgba(255,255,255,.22);
+  color:#ffffff;
+  font-size:12px;
+  font-weight:700;
+  text-align:center;
+  text-shadow:0 1px 10px rgba(0,0,0,.20);
+  backdrop-filter:blur(18px) saturate(1.18);
+  -webkit-backdrop-filter:blur(18px) saturate(1.18);
+  animation:contentReveal .75s .08s cubic-bezier(.2,.85,.24,1) both;
+}
+
+.opening-status.open{
+  border-color:rgba(185,255,212,.58);
+  color:#f8fff9;
+  background:
+    radial-gradient(circle at 20% 0%,rgba(255,255,255,.30),transparent 42%),
+    linear-gradient(145deg,rgba(34,156,92,.94),rgba(21,113,70,.82));
+  box-shadow:0 14px 30px rgba(14,92,55,.28),inset 0 1px 0 rgba(255,255,255,.26);
+}
+
+.opening-status.closed{
+  border-color:rgba(255,205,198,.60);
+  color:#fffafa;
+  background:
+    radial-gradient(circle at 20% 0%,rgba(255,255,255,.28),transparent 42%),
+    linear-gradient(145deg,rgba(213,64,54,.95),rgba(157,34,43,.84));
+  box-shadow:0 14px 30px rgba(132,28,36,.27),inset 0 1px 0 rgba(255,255,255,.24);
+}
+
+.opening-status.exception{
+  border-color:rgba(255,230,179,.66);
+  color:#fffdf8;
+  background:
+    radial-gradient(circle at 20% 0%,rgba(255,255,255,.32),transparent 42%),
+    linear-gradient(145deg,rgba(237,151,35,.96),rgba(190,95,22,.86));
+  box-shadow:0 14px 30px rgba(154,83,18,.25),inset 0 1px 0 rgba(255,255,255,.25);
+}
+
+#alert-box{
+  display:none;
+  margin:12px 18px 16px;
+  padding:13px 15px;
+  align-items:center;
+  gap:9px;
+  border:1px solid rgba(255,255,255,.24);
+  border-radius:var(--radius-md);
+  color:white;
+  background:
+    radial-gradient(circle at 20% 0%,rgba(255,255,255,.30),transparent 42%),
+    linear-gradient(145deg,rgba(237,151,35,.94),rgba(190,95,22,.82));
+  box-shadow:0 16px 34px rgba(154,83,18,.24),inset 0 1px 0 rgba(255,255,255,.22);
+  font-size:12px;
+  font-weight:700;
+  line-height:1.4;
+  backdrop-filter:blur(18px);
+  -webkit-backdrop-filter:blur(18px);
+}
+
+#alert-box.urgent{
+  background:
+    radial-gradient(circle at 20% 0%,rgba(255,255,255,.28),transparent 42%),
+    linear-gradient(145deg,rgba(225,0,15,.86),rgba(183,0,21,.72));
+  box-shadow:0 16px 34px rgba(130,0,15,.24),inset 0 1px 0 rgba(255,255,255,.20);
+}
+
+.section-title{
+  display:inline-flex;
+  align-items:center;
+  min-height:30px;
+  margin:20px 18px 11px;
+  padding:7px 13px;
+  border:1px solid rgba(255,255,255,.16);
+  border-radius:999px;
+  color:var(--text-strong);
+  background:rgba(255,255,255,.11);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.13);
+  font-size:11px;
+  font-weight:700;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
+}
+
+.grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:14px;
+  margin-bottom:12px;
+  padding:0 18px;
+}
+
+.card{
+  position:relative;
+  overflow:hidden;
+  width:100%;
+  height:108px;
+  margin:0;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  border:1px solid var(--glass-line);
+  border-radius:var(--radius-lg);
+  color:var(--text-strong);
+  background:
+    radial-gradient(circle at 24% 4%,rgba(255,255,255,.24),transparent 34%),
+    linear-gradient(145deg,rgba(255,255,255,.22),rgba(255,255,255,.08)),
+    var(--glass);
+  box-shadow:var(--shadow-card),inset 0 1px 0 rgba(255,255,255,.16);
+  text-align:center;
+  cursor:pointer;
+  backdrop-filter:blur(22px) saturate(1.20);
+  -webkit-backdrop-filter:blur(22px) saturate(1.20);
+  transform:translate3d(0,14px,0);
+  opacity:0;
+  animation:cardReveal .72s cubic-bezier(.2,.85,.24,1) forwards;
+  transition:transform .2s ease,background .2s ease,box-shadow .2s ease;
+}
+
+.card::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  background:linear-gradient(180deg,rgba(255,255,255,.10),transparent 52%);
+}
+
+.card:nth-child(2n){
+  animation-delay:.07s;
+}
+
+.card:active{
+  transform:scale(.97);
+  background:rgba(255,255,255,.24);
+  box-shadow:0 12px 30px rgba(10,35,70,.20),inset 0 1px 0 rgba(255,255,255,.18);
+}
+
+.card img{
+  position:relative;
+  z-index:1;
+  width:40px;
+  height:40px;
+  margin-bottom:9px;
+  object-fit:contain;
+  opacity:.98;
+  filter:
+    drop-shadow(0 2px 0 rgba(255,255,255,.18))
+    drop-shadow(0 10px 17px rgba(12,42,82,.24));
+}
+
+.card div{
+  position:relative;
+  z-index:1;
+  color:var(--text-strong);
+  font-size:11px;
+  font-weight:700;
+  letter-spacing:.06em;
+}
+
+.list-btn{
+  position:relative;
+  overflow:hidden;
+  width:auto;
+  min-height:58px;
+  margin:14px 18px;
+  padding:16px 18px;
+  display:flex;
+  align-items:center;
+  gap:13px;
+  border:1px solid var(--glass-line);
+  border-radius:var(--radius-lg);
+  color:var(--text-strong);
+  background:
+    radial-gradient(circle at 8% 0%,rgba(255,255,255,.20),transparent 30%),
+    linear-gradient(145deg,rgba(255,255,255,.20),rgba(255,255,255,.07)),
+    var(--glass);
+  box-shadow:var(--shadow-card),inset 0 1px 0 rgba(255,255,255,.14);
+  font-size:12px;
+  font-weight:700;
+  letter-spacing:.035em;
+  cursor:pointer;
+  backdrop-filter:blur(22px) saturate(1.20);
+  -webkit-backdrop-filter:blur(22px) saturate(1.20);
+  transform:translate3d(0,12px,0);
+  opacity:0;
+  animation:cardReveal .72s .06s cubic-bezier(.2,.85,.24,1) forwards;
+  transition:transform .2s ease,background .2s ease,box-shadow .2s ease;
+}
+
+.list-btn::after{
+  content:"›";
+  position:absolute;
+  right:18px;
+  top:50%;
+  color:var(--text-soft);
+  font-size:25px;
+  font-weight:500;
+  transform:translateY(-54%);
+}
+
+.list-btn:active{
+  transform:scale(.98);
+  background:rgba(255,255,255,.23);
+  box-shadow:0 12px 30px rgba(10,35,70,.18),inset 0 1px 0 rgba(255,255,255,.16);
+}
+
+.list-btn img{
+  width:27px;
+  height:27px;
+  object-fit:contain;
+  opacity:.98;
+  filter:
+    drop-shadow(0 2px 0 rgba(255,255,255,.16))
+    drop-shadow(0 9px 15px rgba(12,42,82,.22));
+}
+
+@keyframes ambientBreath{
+  0%{filter:saturate(1);transform:scale(1);}
+  100%{filter:saturate(1.08);transform:scale(1.035);}
+}
+
+@keyframes lightVeil{
+  0%{transform:translate3d(-5%,0,0) rotate(-3deg);}
+  100%{transform:translate3d(7%,2%,0) rotate(2deg);}
+}
+
+@keyframes contentReveal{
+  from{opacity:0;transform:translate3d(0,14px,0);}
+  to{opacity:1;transform:translate3d(0,0,0);}
+}
+
+@keyframes cardReveal{
+  to{opacity:1;transform:translate3d(0,0,0);}
+}
+
+@media (prefers-color-scheme:dark){
+  :root{
+    --text-strong:rgba(255,255,255,.98);
+    --text-main:rgba(255,255,255,.88);
+    --text-soft:rgba(255,255,255,.66);
+    --text-muted:rgba(255,255,255,.48);
+    --glass:rgba(18,28,46,.36);
+    --glass-strong:rgba(24,36,58,.46);
+    --glass-line:rgba(255,255,255,.16);
+    --shadow-card:0 24px 70px rgba(0,0,0,.34);
+    --shadow-soft:0 14px 36px rgba(0,0,0,.26);
+  }
+
+}
+
+@media (max-width:380px){
+  .grid{
+    gap:11px;
+    padding:0 14px;
+  }
+
+  .section-title{
+    margin-left:14px;
+    margin-right:14px;
+  }
+
+  .list-btn{
+    margin-left:14px;
+    margin-right:14px;
+  }
+
+  .header-left{
+    left:12px;
+  }
+
+  #bellBox{
+    right:12px;
+  }
+}
+
+@media (prefers-reduced-motion:reduce){
+  *,
+  *::before,
+  *::after{
+    animation-duration:1ms !important;
+    animation-iteration-count:1 !important;
+    scroll-behavior:auto !important;
+    transition-duration:1ms !important;
+  }
+}
+</style>
+</head>
+
+<!-- REMPLACE UNIQUEMENT ÇA -->
+
+<body>
+
+<div class="ambient-stage" aria-hidden="true"></div>
+
+<header>
+
+<div class="header-left">
+<img src="image/logo.png">
+</div>
+
+<h1>
+ECURIE DAMIEN SIRI
+<span class="eggs"><br></span>
+</h1>
+
+<div id="bellBox" onclick="go('notifications.html')">
+🔔
+<span id="bellBadge"></span>
+</div>
+
+</header>
+
+<div class="app">
+<div class="scroll">
+
+<div class="page-content">
+
+<div id="welcome">BIENVENUE</div>
+
+<div id="opening-status" class="opening-status"></div>
+
+<div id="alert-box"></div>
+
+<div class="section-title">ESPACES</div>
+
+<div class="grid">
+<div class="card" onclick="go('travail.html')"><img src="image/travail.svg"><div>TRAVAIL</div></div>
+<div class="card" onclick="go('paddocks.html')"><img src="image/paddock.svg"><div>PADDOCK</div></div>
+</div>
+
+<div class="list-btn" onclick="go('plan.html')"><img src="image/plan.svg"> PLAN INTERACTIF</div>
+
+<div class="section-title">PRATIQUE</div>
+
+<div class="grid">
+<div class="card" onclick="go('horaires.html')"><img src="image/time.svg"><div>HORAIRES</div></div>
+<div class="card" onclick="go('meteo.html')"><img src="image/meteo.svg"><div>MÉTÉO</div></div>
+<div class="card" onclick="openExternal('https://ce-grand-rang.cavasoft.fr')"><img src="image/cavasoft.svg"><div>COURS</div></div>
+<div class="card" onclick="go('service.html')"><img src="image/service.svg"><div>SERVICES</div></div>
+<div class="card" onclick="go('concours.html')"><img src="image/concours.svg"><div>CONCOURS</div></div>
+<div class="card" onclick="go('soins.html')"><img src="image/soins.svg"><div>SOINS</div></div>
+</div>
+
+<div class="section-title">AUTRES</div>
+
+<div class="list-btn" onclick="go('laverie.html')"><img src="image/laverie.svg"> LAVERIE</div>
+<div class="list-btn" onclick="openExternal('tarifs.pdf')"><img src="image/tarif.svg"> TARIFS</div>
+
+<div class="section-title">COMPTE</div>
+
+<div class="list-btn" onclick="go('mes-commandes.html')"><img src="image/compte.svg"> MES COMMANDES</div>
+<div class="list-btn" onclick="go('mesreservations.html')"><img src="image/reservation.svg"> MES RÉSERVATIONS</div>
+<div class="list-btn" onclick="go('panier.html')"><img src="image/panier.svg"> MON PANIER</div>
+
+</div>
+</div>
+</div>
+
+<script>
+
+function withAppVersion(url){
+const separator=url.includes("?")?"&":"?";
+return `${url}${separator}v=${encodeURIComponent(APP_VERSION)}`;
+}
+
+function go(url){window.location.href=withAppVersion(url);}
+function openExternal(url){window.open(url,"_blank");}
+
+const STATUTS_URL="https://script.google.com/macros/s/AKfycbzWEB8PPqSQ4rinnTbh4414U3QPX836XtPOPBmKr0Bw2W4mRFWAl7Chv6WKHOjrcWoZew/exec?sheet=statuts";
+const HORAIRES_URL="https://script.google.com/macros/s/AKfycbzWEB8PPqSQ4rinnTbh4414U3QPX836XtPOPBmKr0Bw2W4mRFWAl7Chv6WKHOjrcWoZew/exec?sheet=horaires";
+const EXCEPTIONS_URL="https://script.google.com/macros/s/AKfycbzWEB8PPqSQ4rinnTbh4414U3QPX836XtPOPBmKr0Bw2W4mRFWAl7Chv6WKHOjrcWoZew/exec?sheet=exceptions";
+
+function formatTime(val){
+
+if(!val)return"--:--";
+
+if(val.includes("T")){
+const d=new Date(val);
+return d.toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"});
+}
+
+return val.substring(0,5);
+
+}
+
+function normalizeSheetKey(value){
+return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim().toLowerCase();
+}
+
+function getSheetValue(row,name){
+if(!row)return "";
+const target=normalizeSheetKey(name);
+const key=Object.keys(row).find(k=>normalizeSheetKey(k)===target);
+return key ? row[key] : "";
+}
+
+async function load(){
+
+const [horaires,exceptions,statuts]=await Promise.all([
+fetch(HORAIRES_URL,{cache:"no-store"}).then(r=>r.json()),
+fetch(EXCEPTIONS_URL,{cache:"no-store"}).then(r=>r.json()),
+fetch(STATUTS_URL,{cache:"no-store"}).then(r=>r.json())
+]);
+
+updateUI(horaires,exceptions,statuts);
+
+}
+
+function updateUI(horaires,exceptions,statuts){
+
+const status=document.getElementById("opening-status");
+const alertBox=document.getElementById("alert-box");
+status.classList.remove("open","closed","exception");
+
+const accueil=statuts.find(e=>e.espace==="accueil");
+const alerte=getSheetValue(accueil,"alerte");
+
+if(accueil && alerte && alerte.trim()!==""){
+const isUrgent=String(getSheetValue(accueil,"urgent")).trim().toLowerCase()==="oui";
+alertBox.style.display="flex";
+alertBox.classList.toggle("urgent",isUrgent);
+alertBox.innerHTML="⚠️ "+alerte;
+}else{
+alertBox.style.display="none";
+alertBox.classList.remove("urgent");
+}
+
+const now=new Date();
+
+const today=
+now.getFullYear()+"-"+String(now.getMonth()+1).padStart(2,"0")+"-"+String(now.getDate()).padStart(2,"0");
+
+const ex = exceptions.find(e=>{
+  if(!e.date) return false;
+
+  const d = new Date(e.date);
+
+  const local =
+    d.getFullYear() + "-" +
+    String(d.getMonth()+1).padStart(2,"0") + "-" +
+    String(d.getDate()).padStart(2,"0");
+
+  return local === today;
+});
+
+if(ex){
+status.classList.add("exception");
+status.textContent=ex.message;
+return;
+}
+
+const todayName=["dimanche","lundi","mardi","mercredi","jeudi","vendredi","samedi"][new Date().getDay()];
+
+const h=horaires.find(r=>r.jour.toLowerCase()===todayName);
+
+if(!h)return;
+
+const open=formatTime(h.ouvert);
+const close=formatTime(h.ferme);
+
+const [oh,om]=open.split(":");
+const [ch,cm]=close.split(":");
+
+const nowTime=new Date();
+
+const o=new Date();o.setHours(oh,om,0,0);
+const c=new Date();c.setHours(ch,cm,0,0);
+
+if(nowTime>=o && nowTime<=c){
+status.classList.add("open");
+status.textContent=`Écuries ouvertes ${open} – ${close}`;
+}else{
+status.classList.add("closed");
+status.textContent=`Écuries fermées ${open} – ${close}`;
+}
+
+}
+
+load();
+setInterval(load,10000);
+
+["paddocks.html","travail.html","plan.html","horaires.html"].forEach(p=>{
+fetch(withAppVersion(p),{cache:"reload"}).catch(()=>{});
+});
+
+</script>
+
+<script>
+
+/* CLOCHE */
+
+const API_URL="https://script.googleusercontent.com/macros/echo?user_content_key=AY5xjrRY09nECq5kqJEPaFCkMRnR4qbM-Z9y5KOMgVdlakJAA_L1FlwHMDN84Nstw8qXhqpt9QHGCeU6Sr6aLk3y7hSeA-1vr_eBBQYFwVL111h-CJZc8JxRQKvcu3XE7Gg-OXbXE8Vkp1PlAMHAkhJduQw6bxUswIvR7b1rA8txQ2Rtyl25eNxQWvtBet3bytcH6RpMKvJdyZcSioOtKa5sYL4uRI4FOoFrfUzX5P_pjpK-cAN8Bdf6otVcK4myQl66GohjWiPVOyCuofXOq8M4lQkmsxucwQ&lib=MfQh9XKIUpdlMRcOJ4l9JImAGFOlNCMp3";
+
+const STORAGE_KEY="alerts_lues";
+
+function getLues(){
+try{return JSON.parse(localStorage.getItem(STORAGE_KEY))||[];}
+catch(e){return[];}
+}
+
+function parseDateFR(str){
+
+if(!str)return null;
+
+if(str.includes("-")){
+const p=str.split("-");
+return new Date(p[0],p[1]-1,p[2]);
+}
+
+if(str.includes("/")){
+const p=str.split("/");
+return new Date(p[2],p[1]-1,p[0]);
+}
+
+return null;
+
+}
+
+async function updateBell(){
+
+const badge=document.getElementById("bellBadge");
+
+try{
+
+const res=await fetch(API_URL,{cache:"no-store"});
+const data=await res.json();
+
+const today=new Date();
+today.setHours(0,0,0,0);
+
+const lues=getLues().map(String);
+
+let count=0;
+
+data.filter(n=>{
+
+if(n.epingle==="oui")return true;
+if(n.active!=="oui")return false;
+
+if(!n.expire){
+const d=parseDateFR(n.date);
+if(!d)return true;
+return d>=today;
+}
+
+const exp=parseDateFR(n.expire);
+if(!exp)return true;
+return exp>=today;
+
+}).forEach(n=>{
+
+if(!lues.includes(String(n.id))){
+count++;
+}
+
+});
+
+badge.style.display=count>0?"flex":"none";
+badge.textContent=count;
+
+}catch(e){
+badge.style.display="none";
+}
+
+}
+
+updateBell();
+setInterval(updateBell,60000);
+
+</script>
+
+<script>
+/* Identité visuelle : ambiance solaire locale, sans dépendance réseau. */
+(function initializeSolarAmbiance(){
+  const latitude=48.391;
+  const longitude=4.527;
+  const timeZone="Europe/Paris";
+  const radians=Math.PI/180;
+  const themeColors={
+    night:"#061225",
+    dawn:"#1f3155",
+    morning:"#2c86c5",
+    day:"#287fbd",
+    golden:"#9b684f",
+    dusk:"#1f3155"
+  };
+
+  function localClock(date){
+    const parts={};
+    new Intl.DateTimeFormat("en-CA",{
+      timeZone,
+      year:"numeric",
+      month:"2-digit",
+      day:"2-digit",
+      hour:"2-digit",
+      minute:"2-digit",
+      hourCycle:"h23",
+      timeZoneName:"shortOffset"
+    }).formatToParts(date).forEach(part=>{
+      if(part.type!=="literal")parts[part.type]=part.value;
+    });
+
+    const offsetMatch=(parts.timeZoneName||"GMT+1").match(/GMT([+-]?\d+(?::\d+)?)/);
+    const offsetText=offsetMatch?offsetMatch[1]:"1";
+    const offsetParts=offsetText.split(":");
+    const offsetHours=Number(offsetParts[0])+(Number(offsetParts[1]||0)/60)*Math.sign(Number(offsetParts[0])||1);
+    const dayStart=Date.UTC(Number(parts.year),Number(parts.month)-1,Number(parts.day));
+    const yearStart=Date.UTC(Number(parts.year),0,1);
+
+    return{
+      minutes:Number(parts.hour)*60+Number(parts.minute),
+      dayOfYear:Math.floor((dayStart-yearStart)/86400000)+1,
+      offsetHours
+    };
+  }
+
+  function solarTimes(clock){
+    const gamma=(2*Math.PI/365)*(clock.dayOfYear-1);
+    const equationOfTime=229.18*(
+      .000075+
+      .001868*Math.cos(gamma)-
+      .032077*Math.sin(gamma)-
+      .014615*Math.cos(2*gamma)-
+      .040849*Math.sin(2*gamma)
+    );
+    const declination=
+      .006918-
+      .399912*Math.cos(gamma)+
+      .070257*Math.sin(gamma)-
+      .006758*Math.cos(2*gamma)+
+      .000907*Math.sin(2*gamma)-
+      .002697*Math.cos(3*gamma)+
+      .00148*Math.sin(3*gamma);
+    const zenith=90.833*radians;
+    const hourAngle=Math.acos(
+      (Math.cos(zenith)/(Math.cos(latitude*radians)*Math.cos(declination)))-
+      Math.tan(latitude*radians)*Math.tan(declination)
+    );
+    const solarNoon=720-4*longitude-equationOfTime+clock.offsetHours*60;
+    const daylightMinutes=(hourAngle/radians)*8;
+
+    return{
+      sunrise:solarNoon-daylightMinutes/2,
+      noon:solarNoon,
+      sunset:solarNoon+daylightMinutes/2
+    };
+  }
+
+  function phaseFor(minutes,times){
+    if(minutes<times.sunrise-55||minutes>=times.sunset+50)return"night";
+    if(minutes<times.sunrise+35)return"dawn";
+    if(minutes<times.noon-80)return"morning";
+    if(minutes<times.sunset-115)return"day";
+    if(minutes<times.sunset-25)return"golden";
+    return"dusk";
+  }
+
+  function updateAmbiance(){
+    const clock=localClock(new Date());
+    const times=solarTimes(clock);
+    const phase=phaseFor(clock.minutes,times);
+    const daylightProgress=Math.max(0,Math.min(1,(clock.minutes-times.sunrise)/(times.sunset-times.sunrise)));
+    const solarHeight=Math.sin(Math.PI*daylightProgress);
+
+    document.body.dataset.dayPhase=phase;
+    document.body.style.setProperty("--solar-x",(10+80*daylightProgress).toFixed(2)+"%");
+    document.body.style.setProperty("--solar-y",(62-47*solarHeight).toFixed(2)+"%");
+    document.body.dataset.sunrise=Math.round(times.sunrise);
+    document.body.dataset.sunset=Math.round(times.sunset);
+    document.documentElement.style.backgroundColor=themeColors[phase]||themeColors.day;
+
+    const themeMeta=document.querySelector('meta[name="theme-color"]');
+    if(themeMeta)themeMeta.setAttribute("content",themeColors[phase]||themeColors.day);
+  }
+
+  updateAmbiance();
+  setInterval(updateAmbiance,60000);
+})();
+</script>
+
+</body>
+</html>

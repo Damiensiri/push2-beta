@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#6fb7ff">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Plan interactif</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+
+<style>
+
+body{
+margin:0;
+background:#f4f4f4;
+font-family:'Montserrat',sans-serif;
+color:#000;
+transition:background .3s ease,color .3s ease;
+}
+
+/* PAGE */
+
+.page{
+min-height:100vh;
+transform:translateX(100%);
+transition:transform .35s ease;
+}
+
+.page.active{ transform:translateX(0); }
+.page.exit{ transform:translateX(100%); }
+
+/* HEADER */
+
+header{
+position:relative;
+height:70px;
+}
+
+#backBtn{
+position:absolute;
+left:15px;
+top:50%;
+transform:translateY(-50%);
+width:42px;
+height:42px;
+border-radius:50%;
+background:white;
+display:flex;
+align-items:center;
+justify-content:center;
+box-shadow:0 3px 8px rgba(0,0,0,0.15);
+cursor:pointer;
+}
+
+#backBtn img{ width:22px; }
+
+header h1{
+position:absolute;
+left:50%;
+top:50%;
+transform:translate(-50%,-50%);
+margin:0;
+font-size:18px;
+font-weight:700;
+}
+
+/* PLAN */
+
+#mapWrapper{
+position:relative;
+padding:18px;
+}
+
+#map{
+width:100%;
+border-radius:20px;
+}
+
+/* BOUTONS */
+
+#map{
+border-radius:30px;
+
+box-shadow:
+0 20px 60px rgba(0,0,0,0.14);
+}
+
+.plan-btn{
+position:absolute;
+
+z-index:4;
+
+width:42px;
+height:42px;
+
+border-radius:14px;
+
+background:rgba(255,255,255,0.72);
+
+backdrop-filter:blur(14px);
+-webkit-backdrop-filter:blur(14px);
+
+border:1px solid rgba(255,255,255,0.45);
+
+display:flex;
+align-items:center;
+justify-content:center;
+
+cursor:pointer;
+
+box-shadow:
+0 8px 18px rgba(0,0,0,0.14),
+0 2px 4px rgba(0,0,0,0.06),
+inset 0 1px 1px rgba(255,255,255,0.5);
+
+transition:
+transform .18s ease,
+background .18s ease,
+box-shadow .18s ease,
+opacity .3s ease;
+
+opacity:.92;
+}
+
+.plan-btn:hover{
+transform:scale(1.08);
+
+background:rgba(255,255,255,0.82);
+
+box-shadow:
+0 12px 24px rgba(0,0,0,0.18),
+0 4px 8px rgba(0,0,0,0.08);
+}
+
+.plan-btn:active{
+transform:scale(.94);
+}
+
+.plan-btn img{
+width:22px;
+
+filter:
+drop-shadow(0 1px 2px rgba(0,0,0,0.12));
+}
+
+
+/* positions */
+
+#btn-carriere{top:20%;left:25%;}
+#btn-beudot{top:20%;left:55%;}
+#btn-manege{top:35%;left:38%;}
+#btn-grande{top:38%;left:69%;}
+#btn-maison{top:55%;left:60%;}
+
+/* LEGENDE */
+
+.legend{
+padding:20px;
+font-size:15px;
+}
+
+.legend-item{
+display:flex;
+align-items:center;
+gap:10px;
+margin-bottom:15px;
+}
+
+.legend-item img{ width:22px; }
+
+/* PANEL */
+
+#panel{
+position:fixed;
+left:0;
+bottom:0;
+width:100%;
+height:50%;
+background:white;
+border-radius:20px 20px 0 0;
+z-index:20;
+
+transform:translateY(110%);
+opacity:0;
+
+transition:transform .35s ease, opacity .2s ease;
+
+padding:20px;
+box-sizing:border-box;
+}
+
+#panel.active{
+transform:translateY(0);
+opacity:1;
+}
+
+/* CERCLE */
+
+#panelIcon{
+position:absolute;
+top:-30px;
+left:50%;
+transform:translateX(-50%);
+width:60px;
+height:60px;
+border-radius:50%;
+background:white;
+display:flex;
+align-items:center;
+justify-content:center;
+box-shadow:0 8px 25px rgba(0,0,0,0.25);
+}
+
+#panelIcon img{
+width:30px;
+position:absolute;
+z-index:2;
+}
+
+/* HALO SVG */
+
+.halo{
+position:absolute;
+width:66px;
+height:66px;
+transform:rotate(-90deg);
+}
+
+.halo circle{
+fill:none;
+stroke-width:3;
+stroke-linecap:round;
+stroke-dasharray:188;
+stroke-dashoffset:188;
+}
+
+/* PANEL CONTENT */
+
+#panelHeader{
+display:flex;
+justify-content:space-between;
+align-items:center;
+}
+
+#panelTitle{
+font-size:20px;
+font-weight:700;
+}
+
+#closePanel{
+font-size:22px;
+cursor:pointer;
+}
+
+.row{ margin-top:14px; }
+
+.label{
+font-size:12px;
+color:#888;
+}
+
+.value{
+font-size:14px;
+font-weight:500;
+}
+
+#statut{
+font-size:18px;
+font-weight:700;
+}
+
+#horaire{
+font-size:14px;
+font-weight:500;
+}
+
+.optionText{
+font-size:13px;
+margin-right:15px;
+}
+
+#info{
+margin-top:8px;
+line-height:1.7;
+font-size:14px;
+font-weight:550;
+}
+
+.scrollable{
+max-height:160px;
+overflow-y:auto;
+}
+
+#reserveBox{
+display:none;
+margin-top:20px;
+background:#E88B00;
+color:white;
+padding:12px;
+border-radius:12px;
+text-align:center;
+font-weight:600;
+cursor:pointer;
+}
+
+/* DARK MODE */
+
+@media (prefers-color-scheme: dark){
+
+body{
+background:#0f1115;
+color:white;
+}
+
+header h1{ color:white; }
+
+#backBtn{
+background:#1c1f26;
+box-shadow:0 12px 30px rgba(0,0,0,0.6);
+}
+
+#backBtn img{
+filter:brightness(0) invert(1);
+}
+
+#panel{
+background:#1c1f26;
+box-shadow:0 25px 60px rgba(0,0,0,0.75);
+}
+
+#panelIcon{
+background:#1c1f26;
+}
+
+.label{ color:#9aa0a6; }
+.value{ color:#e5e5e5; }
+.legend{ color:#ddd; }
+
+#map{
+filter:brightness(0.92) contrast(0.95);
+}
+
+#reserveBox{
+background:#c87400;
+}
+
+.plan-btn{
+background:rgba(28,32,40,0.78);
+
+border:1px solid rgba(255,255,255,0.06);
+
+box-shadow:
+0 10px 24px rgba(0,0,0,0.45),
+inset 0 1px 1px rgba(255,255,255,0.05);
+}
+
+.plan-btn:hover{
+background:rgba(38,43,52,0.92);
+}
+
+}
+
+</style>
+
+<style>
+/* Identité visuelle solaire premium. */
+@property --sky-top{syntax:"<color>";inherits:true;initial-value:#5fc6ff;}
+@property --sky-mid{syntax:"<color>";inherits:true;initial-value:#6ab9ff;}
+@property --sky-bottom{syntax:"<color>";inherits:true;initial-value:#d9f6ff;}
+@property --solar-x{syntax:"<percentage>";inherits:true;initial-value:50%;}
+@property --solar-y{syntax:"<percentage>";inherits:true;initial-value:20%;}
+@property --solar-opacity{syntax:"<number>";inherits:true;initial-value:.42;}
+
+:root{
+--safe-top:env(safe-area-inset-top,0px);
+--safe-bottom:env(safe-area-inset-bottom,0px);
+--text-strong:rgba(255,255,255,.98);
+--text-main:rgba(255,255,255,.88);
+--text-soft:rgba(255,255,255,.68);
+--glass:rgba(255,255,255,.16);
+--glass-strong:rgba(255,255,255,.23);
+--glass-line:rgba(255,255,255,.25);
+--shadow-card:0 22px 60px rgba(10,35,70,.22);
+--shadow-soft:0 12px 32px rgba(10,35,70,.16);
+--sky-top:#287fbd;
+--sky-mid:#3f9fdd;
+--sky-bottom:#8dcced;
+--solar-x:50%;
+--solar-y:20%;
+--solar-opacity:.42;
+--celestial-glow:rgba(255,239,174,.48);
+}
+
+*{-webkit-tap-highlight-color:transparent;}
+
+html{
+min-height:100%;
+background:#2f8fce;
+}
+
+body{
+position:relative;
+min-height:100%;
+overflow-x:hidden;
+color:var(--text-main);
+background:transparent;
+-webkit-font-smoothing:antialiased;
+text-rendering:optimizeLegibility;
+transition:--sky-top 2.8s ease,--sky-mid 2.8s ease,--sky-bottom 2.8s ease,--solar-x 60s linear,--solar-y 60s linear,--solar-opacity 2.8s ease;
+}
+
+body[data-day-phase="night"]{--sky-top:#061225;--sky-mid:#102848;--sky-bottom:#244d75;--celestial-glow:rgba(176,207,255,.26);--solar-opacity:.26;}
+body[data-day-phase="dawn"]{--sky-top:#1f3155;--sky-mid:#705f84;--sky-bottom:#c88a70;--celestial-glow:rgba(255,211,164,.36);--solar-opacity:.34;}
+body[data-day-phase="morning"]{--sky-top:#2c86c5;--sky-mid:#45a6e4;--sky-bottom:#9bd5f0;--celestial-glow:rgba(255,239,174,.36);--solar-opacity:.38;}
+body[data-day-phase="day"]{--sky-top:#287fbd;--sky-mid:#3f9fdd;--sky-bottom:#8dcced;--celestial-glow:rgba(255,241,184,.36);--solar-opacity:.40;}
+body[data-day-phase="golden"]{--sky-top:#346f9e;--sky-mid:#be7d66;--sky-bottom:#e8b681;--celestial-glow:rgba(255,210,133,.44);--solar-opacity:.44;}
+body[data-day-phase="dusk"]{--sky-top:#1f3155;--sky-mid:#5f547b;--sky-bottom:#b77670;--celestial-glow:rgba(255,190,153,.30);--solar-opacity:.30;}
+
+body::before{
+content:"";
+position:fixed;
+inset:0;
+z-index:0;
+pointer-events:none;
+background:radial-gradient(circle at 22% 12%,rgba(255,225,151,.22),transparent 32%),radial-gradient(circle at 84% 20%,rgba(115,224,255,.16),transparent 34%),radial-gradient(ellipse at 48% 88%,rgba(255,255,255,.10),transparent 38%),linear-gradient(180deg,var(--sky-top) 0%,var(--sky-mid) 48%,var(--sky-bottom) 100%);
+transform:translateZ(0);
+animation:ambientBreath 18s ease-in-out infinite alternate;
+}
+
+body::after{
+content:"";
+position:fixed;
+inset:-24%;
+z-index:0;
+pointer-events:none;
+opacity:var(--solar-opacity);
+mix-blend-mode:screen;
+background:radial-gradient(circle at var(--solar-x) var(--solar-y),var(--celestial-glow),transparent 18%),linear-gradient(112deg,transparent 0 28%,rgba(255,255,255,.14) 38%,transparent 52% 100%),radial-gradient(circle at 64% 34%,rgba(255,255,255,.18),transparent 24%);
+transform:translate3d(-5%,0,0) rotate(-3deg);
+animation:lightVeil 28s ease-in-out infinite alternate;
+}
+
+.page{
+position:relative;
+z-index:1;
+width:min(100%,520px);
+min-height:100svh;
+margin:0 auto;
+padding-bottom:calc(24px + var(--safe-bottom));
+}
+
+header{
+position:sticky;
+top:0;
+z-index:10;
+height:calc(70px + var(--safe-top));
+padding-top:var(--safe-top);
+border-bottom:0;
+background:transparent;
+box-shadow:none;
+backdrop-filter:none;
+-webkit-backdrop-filter:none;
+}
+
+header h1{
+color:var(--text-strong);
+font-size:16px;
+letter-spacing:.18em;
+text-shadow:0 2px 14px rgba(18,52,88,.22);
+}
+
+#backBtn{
+left:18px;
+width:44px;
+height:44px;
+background:var(--glass-strong);
+border:1px solid var(--glass-line);
+box-shadow:var(--shadow-soft),inset 0 1px 0 rgba(255,255,255,.28);
+backdrop-filter:blur(18px) saturate(140%);
+-webkit-backdrop-filter:blur(18px) saturate(140%);
+transition:transform .22s ease,background .22s ease;
+}
+
+#backBtn:active{transform:translateY(-50%) scale(.93);}
+#backBtn img{filter:brightness(0) invert(1);}
+
+#mapWrapper{padding:18px;}
+
+#map{
+display:block;
+border-radius:32px;
+border:1px solid rgba(255,255,255,.32);
+box-shadow:var(--shadow-card),inset 0 1px 0 rgba(255,255,255,.2);
+animation:mapReveal .8s cubic-bezier(.22,.72,.18,1) both;
+}
+
+.plan-btn{
+background:rgba(255,255,255,.72);
+border:1px solid rgba(255,255,255,.62);
+box-shadow:0 10px 26px rgba(10,35,70,.25),inset 0 1px 0 rgba(255,255,255,.68);
+backdrop-filter:blur(16px) saturate(145%);
+-webkit-backdrop-filter:blur(16px) saturate(145%);
+animation:markerFloat 5.5s ease-in-out infinite;
+}
+
+.plan-btn:nth-of-type(3){animation-delay:-1.1s;}
+.plan-btn:nth-of-type(4){animation-delay:-2.2s;}
+.plan-btn:nth-of-type(5){animation-delay:-3.3s;}
+.plan-btn:nth-of-type(6){animation-delay:-4.4s;}
+.plan-btn:hover{background:rgba(255,255,255,.84);}
+
+.legend{
+display:grid;
+grid-template-columns:repeat(2,minmax(0,1fr));
+gap:10px;
+margin:0 18px 24px;
+padding:15px;
+color:rgba(255,255,255,.97);
+font-size:12.5px;
+font-weight:700;
+text-shadow:0 2px 12px rgba(8,31,62,.30);
+background:var(--glass);
+border:1px solid var(--glass-line);
+border-radius:26px;
+box-shadow:var(--shadow-soft),inset 0 1px 0 rgba(255,255,255,.22);
+backdrop-filter:blur(22px) saturate(140%);
+-webkit-backdrop-filter:blur(22px) saturate(140%);
+}
+
+.legend-item{
+min-width:0;
+margin:0;
+padding:10px;
+gap:8px;
+border-radius:16px;
+background:rgba(255,255,255,.18);
+border:1px solid rgba(255,255,255,.14);
+}
+
+.legend-item img{flex:0 0 auto;}
+
+#panel{
+left:50%;
+width:min(100%,520px);
+height:min(56%,540px);
+padding:0;
+color:rgba(255,255,255,.94);
+background:
+linear-gradient(160deg,rgba(29,64,92,.86),rgba(39,93,126,.74)),
+radial-gradient(circle at 46% 0%,rgba(255,255,255,.18),transparent 42%);
+border:1px solid rgba(255,255,255,.34);
+border-bottom:0;
+border-radius:34px 34px 0 0;
+box-shadow:0 -24px 70px rgba(8,31,62,.34),inset 0 1px 0 rgba(255,255,255,.30);
+backdrop-filter:blur(30px) saturate(160%);
+-webkit-backdrop-filter:blur(30px) saturate(160%);
+transform:translate(-50%,110%);
+overflow:visible;
+}
+
+#panel.active{transform:translate(-50%,0);}
+
+#panelIcon{
+top:-33px;
+width:66px;
+height:66px;
+background:rgba(255,255,255,.72);
+border:1px solid rgba(255,255,255,.62);
+box-shadow:0 14px 36px rgba(10,35,70,.28),inset 0 1px 0 rgba(255,255,255,.68);
+backdrop-filter:blur(18px) saturate(145%);
+-webkit-backdrop-filter:blur(18px) saturate(145%);
+}
+
+#panelContent{
+height:100%;
+padding:46px 22px calc(22px + var(--safe-bottom));
+box-sizing:border-box;
+overflow-y:auto;
+-webkit-overflow-scrolling:touch;
+border-radius:34px 34px 0 0;
+}
+
+#panelHeader{margin-bottom:4px;}
+#panelTitle{color:rgba(255,255,255,.98);letter-spacing:.02em;text-shadow:0 2px 16px rgba(0,0,0,.26);}
+#closePanel{color:rgba(255,255,255,.88);padding:8px;line-height:1;text-shadow:0 2px 12px rgba(0,0,0,.22);}
+
+.row{
+margin-top:10px;
+padding:12px 14px;
+border:1px solid rgba(255,255,255,.16);
+border-radius:18px;
+background:rgba(255,255,255,.14);
+box-shadow:inset 0 1px 0 rgba(255,255,255,.10);
+}
+
+.label{color:rgba(255,255,255,.70);letter-spacing:.08em;text-transform:uppercase;}
+.value,#horaire,#info{color:rgba(255,255,255,.92);text-shadow:0 1px 10px rgba(0,0,0,.16);}
+#statut{font-size:17px;}
+#statut,.optionText span{
+text-shadow:0 1px 10px rgba(0,0,0,.20);
+}
+.scrollable{max-height:120px;}
+
+#reserveBox{
+margin-top:14px;
+padding:14px;
+border:1px solid rgba(255,255,255,.28);
+border-radius:18px;
+background:linear-gradient(135deg,#f4a329,#df7c00);
+box-shadow:0 12px 28px rgba(122,70,0,.22),inset 0 1px 0 rgba(255,255,255,.32);
+}
+
+@keyframes ambientBreath{from{filter:saturate(.96) brightness(.99);}to{filter:saturate(1.07) brightness(1.03);}}
+@keyframes lightVeil{from{transform:translate3d(-5%,0,0) rotate(-3deg);}to{transform:translate3d(5%,2%,0) rotate(2deg);}}
+@keyframes mapReveal{from{opacity:0;transform:translateY(12px) scale(.985);}to{opacity:1;transform:none;}}
+@keyframes markerFloat{
+0%,100%{box-shadow:0 10px 26px rgba(10,35,70,.25),inset 0 1px 0 rgba(255,255,255,.68);}
+50%{box-shadow:0 14px 32px rgba(10,35,70,.34),0 0 0 4px rgba(255,255,255,.08),inset 0 1px 0 rgba(255,255,255,.68);}
+}
+
+@media (max-width:370px){
+.legend{grid-template-columns:1fr;}
+.legend-item{padding:8px 10px;}
+}
+
+@media (prefers-reduced-motion:reduce){
+body,body::before,body::after,#map,.plan-btn{animation:none!important;transition:none!important;}
+}
+
+@media (prefers-color-scheme:dark){
+body{background:transparent;color:var(--text-main);}
+header h1{color:var(--text-strong);}
+#backBtn,#panelIcon{background:rgba(255,255,255,.18);}
+#panel{background:linear-gradient(160deg,rgba(22,40,65,.76),rgba(13,29,51,.64));}
+.label{color:var(--text-soft);}
+.value,#horaire,#info{color:var(--text-main);}
+#map{filter:brightness(.96) contrast(.98);}
+.plan-btn{background:rgba(255,255,255,.68);}
+#reserveBox{background:linear-gradient(135deg,#f4a329,#c96d00);}
+}
+</style>
+<link rel="stylesheet" href="app-shell.css">
+</head>
+
+<body class="fullscreen-standard">
+
+<div class="ambient-stage" aria-hidden="true"></div>
+
+<div class="page" id="page">
+
+<header class="plan-header">
+<div id="backBtn" onclick="goBack()">
+<img src="image/back.svg">
+</div>
+<h1>PLAN INTERACTIF</h1>
+</header>
+
+<div id="mapWrapper">
+
+<img id="map" src="image/plan.png">
+
+<div class="plan-btn" id="btn-carriere" onclick="openSpace('carriere')"><img id="icon-carriere"></div>
+<div class="plan-btn" id="btn-beudot" onclick="openSpace('beudot')"><img id="icon-beudot"></div>
+<div class="plan-btn" id="btn-manege" onclick="openSpace('manege')"><img id="icon-manege"></div>
+<div class="plan-btn" id="btn-grande" onclick="openSpace('grande-voie')"><img id="icon-grande-voie"></div>
+<div class="plan-btn" id="btn-maison" onclick="openSpace('maison')"><img id="icon-maison"></div>
+
+</div>
+
+<div class="legend">
+<div class="legend-item"><img src="image/ouvert.png"> Ouvert</div>
+<div class="legend-item"><img src="image/prevision.png"> Prévision d'ouverture</div>
+<div class="legend-item"><img src="image/ferme.png"> Fermé</div>
+<div class="legend-item"><img src="image/horsservice.png"> Hors service</div>
+</div>
+
+<div id="panel">
+
+<div id="panelIcon">
+
+<svg class="halo">
+<circle id="haloCircle" cx="33" cy="33" r="30"/>
+</svg>
+
+<img id="panelIconImg">
+
+</div>
+
+<div id="panelContent">
+
+<div id="panelHeader">
+<div id="panelTitle">---</div>
+<div id="closePanel">✕</div>
+</div>
+
+<div class="row">
+<div class="label">Statut</div>
+<div class="value" id="statut">---</div>
+</div>
+
+<div class="row">
+<div class="label">Horaires</div>
+<div class="value" id="horaire">---</div>
+</div>
+
+<div class="row" id="optionsRow">
+<div class="label">Activités possibles</div>
+<div>
+<span class="optionText" id="liberte"></span>
+<span class="optionText" id="longe"></span>
+</div>
+</div>
+
+<div class="row">
+<div class="label">Infos</div>
+<div class="value scrollable" id="info"></div>
+</div>
+
+<div id="reserveBox" onclick="goReserve()">Réserver</div>
+
+</div>
+
+</div>
+
+</div>
+
+<script>
+
+window.addEventListener("DOMContentLoaded",()=>{
+requestAnimationFrame(()=>{
+document.getElementById("page").classList.add("active");
+});
+});
+
+const SHEET_URL="https://script.google.com/macros/s/AKfycbzWEB8PPqSQ4rinnTbh4414U3QPX836XtPOPBmKr0Bw2W4mRFWAl7Chv6WKHOjrcWoZew/exec?sheet=statuts";
+
+const ICONS={
+"ouvert":"image/ouvert.png",
+"ferme":"image/ferme.png",
+"prevision":"image/prevision.png",
+"hors-service":"image/horsservice.png"
+};
+
+let DATA=[];
+
+const panel=document.getElementById("panel");
+const panelTitle=document.getElementById("panelTitle");
+const statut=document.getElementById("statut");
+const horaire=document.getElementById("horaire");
+const info=document.getElementById("info");
+const liberte=document.getElementById("liberte");
+const longe=document.getElementById("longe");
+const optionsRow=document.getElementById("optionsRow");
+const reserveBox=document.getElementById("reserveBox");
+const closePanel=document.getElementById("closePanel");
+const haloCircle=document.getElementById("haloCircle");
+const panelIconImg=document.getElementById("panelIconImg");
+
+function setPanelIcon(espace){
+if(espace==="carriere" || espace==="manege"){
+panelIconImg.src="image/travail.svg";
+}else{
+panelIconImg.src="image/paddock.svg";
+}
+}
+
+function loadData(){
+fetch(SHEET_URL+"&t="+Date.now(),{cache:"no-store"})
+.then(r=>r.json())
+.then(d=>{
+DATA=d;
+localStorage.setItem("statuts",JSON.stringify(d));
+renderIcons(d);
+});
+}
+
+function renderIcons(data){
+data.forEach(e=>{
+const icon=ICONS[(e.statut_auto||"").toLowerCase().trim()];
+const el=document.getElementById("icon-"+e.espace);
+if(el && icon) el.src=icon;
+});
+}
+
+const cache=localStorage.getItem("statuts");
+
+if(cache){
+try{
+DATA=JSON.parse(cache);
+renderIcons(DATA);
+}catch(e){}
+}
+
+loadData();
+setInterval(loadData,10000);
+
+function openSpace(espace){
+
+setPanelIcon(espace);
+
+const e=DATA.find(x=>x.espace===espace);
+if(!e) return;
+
+panelTitle.innerText=formatTitle(e.espace);
+
+function formatTitle(t){
+
+const map={
+"carriere":"Carrière",
+"manege":"Manège",
+"maison":"Maison",
+"grande-voie":"Grande voie",
+"beudot":"Beudot"
+};
+
+return map[t]||t;
+
+}
+
+if(e.statut_auto==="ouvert"){
+statut.innerText="Ouvert";
+statut.style.color="#33d17a";
+}
+
+if(e.statut_auto==="prevision"){
+statut.innerText="Ouverture prévue";
+statut.style.color="#ffb23f";
+}
+
+if(e.statut_auto==="ferme"){
+statut.innerText="Fermé";
+statut.style.color="#ff4d4d";
+}
+
+if(e.statut_auto==="hors-service"){
+statut.innerText="Hors service";
+statut.style.color="#d6dde8";
+}
+info.innerText=e.info||"Aucune info";
+
+/* couleur halo */
+
+let color="#33d17a";
+
+if(e.statut_auto==="ferme") color="#ff4d4d";
+if(e.statut_auto==="prevision") color="#ffb23f";
+if(e.statut_auto==="hors-service") color="#d6dde8";
+
+haloCircle.style.stroke=color;
+
+/* animation halo */
+
+haloCircle.style.transition="none";
+haloCircle.style.strokeDashoffset="188";
+
+setTimeout(()=>{
+haloCircle.style.transition="stroke-dashoffset 0.9s ease";
+haloCircle.style.strokeDashoffset="0";
+},50);
+
+/* horaires */
+
+if(e.horaire_special && e.horaire_special.trim() !== ""){
+horaire.innerHTML = `<span style="color:#ffb23f;font-weight:700">${e.horaire_special}</span>`;
+}else{
+horaire.innerText = e.horaire_affiche||"---";
+}
+/* options */
+
+let show=false;
+
+if(e.liberte){
+liberte.innerHTML=`Liberté : <span style="color:${e.liberte==="oui"?"#33d17a":"#ff4d4d"};font-weight:800">${e.liberte.toUpperCase()}</span>`;
+show=true;
+}
+
+if(e.longe){
+longe.innerHTML=`Longe : <span style="color:${e.longe==="oui"?"#33d17a":"#ff4d4d"};font-weight:800">${e.longe.toUpperCase()}</span>`;
+show=true;
+}
+
+optionsRow.style.display=show?"block":"none";
+
+/* réservation */
+
+if((espace==="maison"||espace==="grande-voie"||espace==="beudot") &&
+(e.statut_auto==="ouvert"||e.statut_auto==="prevision")){
+reserveBox.style.display="block";
+}else{
+reserveBox.style.display="none";
+}
+
+panel.classList.add("active");
+
+}
+
+closePanel.onclick=()=>panel.classList.remove("active");
+
+function goBack(){
+const page=document.getElementById("page");
+page.classList.remove("active");
+page.classList.add("exit");
+setTimeout(()=>{location.href="index.html";},300);
+}
+
+function goReserve(){
+location.href="planningpaddock.html";
+}
+
+</script>
+
+<script>
+/* Identité visuelle : ambiance solaire locale, sans dépendance réseau. */
+(function initializeSolarAmbiance(){
+const latitude=48.391;
+const longitude=4.527;
+const timeZone="Europe/Paris";
+const radians=Math.PI/180;
+const themeColors={
+night:"#061225",
+dawn:"#1f3155",
+morning:"#2c86c5",
+day:"#287fbd",
+golden:"#9b684f",
+dusk:"#1f3155"
+};
+
+function localClock(date){
+const parts={};
+new Intl.DateTimeFormat("en-CA",{timeZone,year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hourCycle:"h23",timeZoneName:"shortOffset"}).formatToParts(date).forEach(part=>{
+if(part.type!=="literal")parts[part.type]=part.value;
+});
+const offsetMatch=(parts.timeZoneName||"GMT+1").match(/GMT([+-]?\d+(?::\d+)?)/);
+const offsetText=offsetMatch?offsetMatch[1]:"1";
+const offsetParts=offsetText.split(":");
+const offsetHours=Number(offsetParts[0])+(Number(offsetParts[1]||0)/60)*Math.sign(Number(offsetParts[0])||1);
+const dayStart=Date.UTC(Number(parts.year),Number(parts.month)-1,Number(parts.day));
+const yearStart=Date.UTC(Number(parts.year),0,1);
+return{minutes:Number(parts.hour)*60+Number(parts.minute),dayOfYear:Math.floor((dayStart-yearStart)/86400000)+1,offsetHours};
+}
+
+function solarTimes(clock){
+const gamma=(2*Math.PI/365)*(clock.dayOfYear-1);
+const equationOfTime=229.18*(.000075+.001868*Math.cos(gamma)-.032077*Math.sin(gamma)-.014615*Math.cos(2*gamma)-.040849*Math.sin(2*gamma));
+const declination=.006918-.399912*Math.cos(gamma)+.070257*Math.sin(gamma)-.006758*Math.cos(2*gamma)+.000907*Math.sin(2*gamma)-.002697*Math.cos(3*gamma)+.00148*Math.sin(3*gamma);
+const zenith=90.833*radians;
+const hourAngle=Math.acos((Math.cos(zenith)/(Math.cos(latitude*radians)*Math.cos(declination)))-Math.tan(latitude*radians)*Math.tan(declination));
+const solarNoon=720-4*longitude-equationOfTime+clock.offsetHours*60;
+const daylightMinutes=(hourAngle/radians)*8;
+return{sunrise:solarNoon-daylightMinutes/2,noon:solarNoon,sunset:solarNoon+daylightMinutes/2};
+}
+
+function phaseFor(minutes,times){
+if(minutes<times.sunrise-55||minutes>=times.sunset+50)return"night";
+if(minutes<times.sunrise+35)return"dawn";
+if(minutes<times.noon-80)return"morning";
+if(minutes<times.sunset-115)return"day";
+if(minutes<times.sunset-25)return"golden";
+return"dusk";
+}
+
+function updateAmbiance(){
+const clock=localClock(new Date());
+const times=solarTimes(clock);
+const daylightProgress=Math.max(0,Math.min(1,(clock.minutes-times.sunrise)/(times.sunset-times.sunrise)));
+const solarHeight=Math.sin(Math.PI*daylightProgress);
+document.body.dataset.dayPhase=phaseFor(clock.minutes,times);
+document.body.style.setProperty("--solar-x",(10+80*daylightProgress).toFixed(2)+"%");
+document.body.style.setProperty("--solar-y",(62-47*solarHeight).toFixed(2)+"%");
+document.body.dataset.sunrise=Math.round(times.sunrise);
+document.body.dataset.sunset=Math.round(times.sunset);
+const themeMeta=document.querySelector('meta[name="theme-color"]');
+if(themeMeta)themeMeta.setAttribute("content",themeColors[document.body.dataset.dayPhase]||themeColors.day);
+}
+
+updateAmbiance();
+setInterval(updateAmbiance,60000);
+})();
+</script>
+
+</body>
+</html>

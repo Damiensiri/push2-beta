@@ -1,0 +1,49 @@
+/*
+ * Météo possède déjà son propre fond plein écran.
+ * Cette feuille fige uniquement le header et masque la scrollbar.
+ */
+
+html,
+body.fullscreen-weather{
+  scrollbar-width:none;
+}
+
+html::-webkit-scrollbar,
+body.fullscreen-weather::-webkit-scrollbar{
+  width:0;
+  height:0;
+  display:none;
+}
+
+body.fullscreen-weather .app-shell{
+  padding-top:calc(var(--safe-top) + 84px);
+}
+
+body.fullscreen-weather .top-bar{
+  position:fixed;
+  top:calc(var(--safe-top) + 16px);
+  left:50%;
+  z-index:1000;
+  width:min(calc(100% - 36px),484px);
+  margin:0;
+  background:transparent !important;
+  box-shadow:none !important;
+  backdrop-filter:none !important;
+  -webkit-backdrop-filter:none !important;
+  transform:translateX(-50%);
+}
+
+body.fullscreen-weather .screen-title{
+  font-family:'Montserrat',-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",sans-serif;
+  font-size:16px;
+  font-weight:700;
+  line-height:1;
+  letter-spacing:.18em;
+  text-transform:uppercase;
+}
+
+@media (max-width:380px){
+  body.fullscreen-weather .top-bar{
+    width:calc(100% - 28px);
+  }
+}

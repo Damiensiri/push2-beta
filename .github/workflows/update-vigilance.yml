@@ -1,0 +1,36 @@
+name: Mettre à jour la vigilance Aube
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update-vigilance:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Récupérer le dépôt
+        uses: actions/checkout@v6
+
+      - name: Installer Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Générer les données MeteoAlarm
+        run: python scripts/update-vigilance.py
+
+      - name: Publier les nouvelles données
+        run: |
+          if git diff --quiet -- vigilance.json vigilance-data.js; then
+            echo "Aucun changement de vigilance."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add vigilance.json vigilance-data.js
+          git commit -m "Mise à jour de la vigilance Aube"
+          git push

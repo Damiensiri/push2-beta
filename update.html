@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Mise à jour</title>
+</head>
+<body>
+<script>
+const APP_VERSION="20260629-5";
+const APP_URL=`/index.html?v=${APP_VERSION}`;
+
+(async()=>{
+try{
+if("caches" in window){
+const names=await caches.keys();
+await Promise.all(names.map(name=>caches.delete(name)));
+}
+
+if("serviceWorker" in navigator){
+const registrations=await navigator.serviceWorker.getRegistrations();
+await Promise.all(registrations.map(registration=>registration.unregister()));
+}
+}catch(e){}
+
+window.location.replace(APP_URL);
+})();
+</script>
+</body>
+</html>

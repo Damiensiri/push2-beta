@@ -1,0 +1,10 @@
+{
+  "department": "Aube",
+  "level": "green",
+  "label": "Vert",
+  "phenomenon": "Aucun phénomène dangereux signalé pour l'Aube.",
+  "period": "Aucune alerte active",
+  "updatedAt": "Vérification automatique active",
+  "source": "MeteoAlarm / EUMETNET",
+  "sourceUrl": "https://meteoalarm.org"
+}
