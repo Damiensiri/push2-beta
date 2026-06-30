@@ -1,9 +1,9 @@
-body.horaires-page{
+body.horaires-page .page{
   transform:translateX(100%);
   animation:slideIn .35s ease forwards;
 }
 
-body.horaires-page.slide-out{
+body.horaires-page .page.slide-out{
   animation:slideOut .35s ease forwards;
 }
 
@@ -82,7 +82,7 @@ body.horaires-page .page{
 }
 
 @keyframes slideIn{
-  to{transform:translateX(0);}
+  to{transform:none;}
 }
 
 @keyframes slideOut{

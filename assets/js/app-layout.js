@@ -7,11 +7,11 @@
 
   function goBack(){
     const page=document.getElementById("page");
-    const usesBodySlide=document.body.dataset.pageTransition==="slide";
-    const delay=usesBodySlide?350:300;
+    const usesSlide=document.body.dataset.pageTransition==="slide";
+    const delay=usesSlide?350:300;
 
-    if(usesBodySlide){
-      document.body.classList.add("slide-out");
+    if(usesSlide && page){
+      page.classList.add("slide-out");
     }else if(page){
       page.classList.remove("active");
       page.classList.add("exit");

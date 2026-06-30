@@ -47,10 +47,7 @@
 
 html{
   min-height:100%;
-  background:var(--app-background,var(--sky-bottom,#8dcced));
-  background-color:var(--sky-bottom,#8dcced);
-  background-repeat:no-repeat;
-  background-size:cover;
+  background:transparent;
   overscroll-behavior-y:none;
   scrollbar-width:none;
 }
@@ -75,6 +72,9 @@ body.app-page{
   overscroll-behavior-y:none;
   color:var(--text-main);
   background-color:var(--sky-bottom,#8dcced);
+  background-image:var(--app-background);
+  background-repeat:no-repeat;
+  background-size:cover;
   font-family:var(--font-main);
   -webkit-font-smoothing:antialiased;
   text-rendering:optimizeLegibility;
@@ -89,28 +89,12 @@ body.app-page{
 }
 
 body.app-page > .ambient-stage{
-  position:absolute;
+  position:fixed;
   inset:0;
-  min-height:100vh;
-  min-height:100dvh;
   z-index:0;
   overflow:hidden;
   pointer-events:none;
-  background:var(--app-background);
-  background-repeat:no-repeat;
-  background-size:cover;
-}
-
-body.app-page > .ambient-stage::before{
-  content:"";
-  position:absolute;
-  inset:-4%;
-  pointer-events:none;
-  background:var(--app-background);
-  background-repeat:no-repeat;
-  background-size:cover;
-  transform:translateZ(0);
-  animation:ambientBreath 18s ease-in-out infinite alternate;
+  background:transparent;
 }
 
 body.app-page > .ambient-stage::after{
@@ -208,11 +192,6 @@ body.app-page header.plan-header #backBtn img,
 body.app-page header.plan-header .back-btn img{
   width:22px;
   filter:brightness(0) invert(1);
-}
-
-@keyframes ambientBreath{
-  from{filter:saturate(.96) brightness(.99);}
-  to{filter:saturate(1.07) brightness(1.03);}
 }
 
 @keyframes lightVeil{
