@@ -51,8 +51,11 @@ Toujours vérifier :
 
 ## Chantier actuellement en cours
 
-Le chantier actuel concerne la centralisation progressive du design et la
-gestion des thèmes saisonniers.
+Le chantier concerne la centralisation progressive du design et la gestion des
+thèmes saisonniers. Il est volontairement **en pause après la validation de
+`travail.html` et `horaires.html`**.
+
+Ne migrer aucune autre page avant une nouvelle demande explicite de Damien.
 
 La Phase 2 progresse page par page dans `push2-beta`. Chaque page possède un
 commit et une validation séparés. L’ensemble sera transféré vers `push2`
@@ -110,7 +113,100 @@ créer une nouvelle jonction au sommet de ce cache. Summer reprend
 `--sky-bottom`; chaque futur thème pourra fournir sa propre valeur.
 L’animation d’entrée de `horaires.html` porte uniquement sur la liste afin de
 ne pas déplacer le bouton retour et le titre fixes. La validation sur iPhone
-de `travail.html` et `horaires.html` reste en attente.
+de `travail.html` et `horaires.html` est terminée.
+
+Tests validés par Damien sur iPhone le 30 juin 2026 :
+
+- aucune ligne de démarcation dans la zone inférieure ;
+- aucun micro-scroll sur une page courte ;
+- scroll naturel conservé sur une page réellement longue ;
+- fonctionnement correct après plusieurs fermetures et réouvertures de la
+  PWA ;
+- rendu Summer conforme au design attendu ;
+- placement correct du titre et du bouton retour de `horaires.html`.
+
+## Fond global et Safe Area iPhone — technique validée
+
+Cette architecture est la référence à conserver pour les pages migrées. Elle
+résout une particularité d’iOS : la zone du Home Indicator peut être repeinte
+différemment du viewport CSS, même lorsque la toile principale est prolongée.
+
+### Répartition des surfaces
+
+- `html` porte le fond principal avec `--app-background` et la couleur de
+  secours `--sky-bottom`.
+- `body.app-page` reste transparent afin de ne jamais créer une seconde
+  surface visible.
+- `.ambient-stage` est une toile fixe hors du flux, avec le même
+  `--app-background`, et porte l’effet lumineux animé.
+- `.page` reste au-dessus des couches de fond avec son `z-index`.
+- Le fond utilise `100vh` en repli et `100dvh` lorsque cette unité est prise en
+  charge.
+
+Chaque page utilisant cette architecture doit conserver, directement dans le
+`body`, la couche suivante :
+
+```html
+<div class="ambient-stage" aria-hidden="true"></div>
+```
+
+### Cache inférieur thémable
+
+Le raccord iOS est neutralisé par `html::after`, une surcouche fixe qui ne
+participe pas à la hauteur du document :
+
+```css
+html::after{
+  content:"";
+  position:fixed;
+  right:0;
+  bottom:0;
+  left:0;
+  height:calc(var(--safe-bottom) + 32px);
+  background:var(--app-safearea-bottom-background);
+  -webkit-mask-image:linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 32px,
+    #000 100%
+  );
+  mask-image:linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 32px,
+    #000 100%
+  );
+  pointer-events:none;
+}
+```
+
+La transition masquée de 32 px fond progressivement le cache dans la toile et
+évite de déplacer simplement la ligne de démarcation plus haut.
+
+Le thème Summer définit :
+
+```css
+--app-safearea-bottom-background:var(--sky-bottom);
+```
+
+Les futurs thèmes `autumn`, `christmas` et `spring` devront définir cette même
+variable avec la teinte correspondant au bas de leur propre fond. La technique
+reste donc commune ; seule la valeur visuelle appartient au thème.
+
+### Règles à ne pas casser
+
+- Ne pas remettre de fond opaque sur `body.app-page`.
+- Ne pas supprimer le cache `html::after` ni son masque progressif.
+- Ne pas augmenter la hauteur du document pour couvrir la Safe Area.
+- Ne pas utiliser `overflow:hidden` global sur `html` ou `body`.
+- Conserver `--safe-bottom:env(safe-area-inset-bottom,0px)`.
+- Conserver les couches de fond en `position:fixed`, hors du flux du document.
+- Vérifier après chaque évolution une page courte et une page longue dans la
+  PWA installée sur iPhone.
+- `meteo.html` reste exclue : elle conserve son propre fond animé et ne doit pas
+  adopter cette architecture globale.
+
+Référence validée : version `20260630-12`, commit `ecd929b`.
 
 La gestion des versions a été validée sur iPhone le 30 juin 2026 : une PWA
 installée en version `20260630-1` a chargé la version `20260630-2` sans
@@ -152,6 +248,9 @@ push.
   la version `20260630-1` à la version `20260630-2`.
 - Validation de l’architecture pilote Summer sur `travail.html`, avec gestion
   correcte des pages courtes et longues sur iPhone.
+- Validation définitive du fond Summer sur `travail.html` et `horaires.html`,
+  avec cache inférieur thémable supprimant la démarcation de la Safe Area
+  iPhone sans micro-scroll.
 
 Cette section doit être maintenue afin de résumer les principales évolutions de
 la PWA et de retrouver facilement les grandes étapes du projet.
