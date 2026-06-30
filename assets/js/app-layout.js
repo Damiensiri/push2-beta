@@ -85,6 +85,7 @@
       const daylightProgress=Math.max(0,Math.min(1,(clock.minutes-times.sunrise)/(times.sunset-times.sunrise)));
       const solarHeight=Math.sin(Math.PI*daylightProgress);
 
+      document.documentElement.dataset.dayPhase=phase;
       document.body.dataset.dayPhase=phase;
       document.body.style.setProperty("--solar-x",(10+80*daylightProgress).toFixed(2)+"%");
       document.body.style.setProperty("--solar-y",(62-47*solarHeight).toFixed(2)+"%");

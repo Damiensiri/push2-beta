@@ -20,7 +20,7 @@
   --browser-theme-color:#287fbd;
 }
 
-:root[data-theme="summer"] body[data-day-phase="night"]{
+:root[data-theme="summer"][data-day-phase="night"]{
   --sky-top:#061225;
   --sky-mid:#102848;
   --sky-bottom:#244d75;
@@ -29,7 +29,7 @@
   --browser-theme-color:#061225;
 }
 
-:root[data-theme="summer"] body[data-day-phase="dawn"]{
+:root[data-theme="summer"][data-day-phase="dawn"]{
   --sky-top:#1f3155;
   --sky-mid:#705f84;
   --sky-bottom:#c88a70;
@@ -38,7 +38,7 @@
   --browser-theme-color:#1f3155;
 }
 
-:root[data-theme="summer"] body[data-day-phase="morning"]{
+:root[data-theme="summer"][data-day-phase="morning"]{
   --sky-top:#2c86c5;
   --sky-mid:#45a6e4;
   --sky-bottom:#9bd5f0;
@@ -47,7 +47,7 @@
   --browser-theme-color:#2c86c5;
 }
 
-:root[data-theme="summer"] body[data-day-phase="day"]{
+:root[data-theme="summer"][data-day-phase="day"]{
   --sky-top:#287fbd;
   --sky-mid:#3f9fdd;
   --sky-bottom:#8dcced;
@@ -56,7 +56,7 @@
   --browser-theme-color:#287fbd;
 }
 
-:root[data-theme="summer"] body[data-day-phase="golden"]{
+:root[data-theme="summer"][data-day-phase="golden"]{
   --sky-top:#346f9e;
   --sky-mid:#be7d66;
   --sky-bottom:#e8b681;
@@ -65,7 +65,7 @@
   --browser-theme-color:#9b684f;
 }
 
-:root[data-theme="summer"] body[data-day-phase="dusk"]{
+:root[data-theme="summer"][data-day-phase="dusk"]{
   --sky-top:#1f3155;
   --sky-mid:#5f547b;
   --sky-bottom:#b77670;

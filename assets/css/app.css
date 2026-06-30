@@ -47,7 +47,8 @@
 
 html{
   min-height:100%;
-  background:#2f8fce;
+  background:var(--sky-bottom,#8dcced);
+  overscroll-behavior-y:none;
   scrollbar-width:none;
 }
 
@@ -68,6 +69,7 @@ body.app-page{
   display:flex;
   flex-direction:column;
   overflow-x:hidden;
+  overscroll-behavior-y:none;
   color:var(--text-main);
   background:transparent;
   font-family:var(--font-main);
