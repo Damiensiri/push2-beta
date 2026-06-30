@@ -89,8 +89,9 @@ La Phase 2 doit également supprimer le micro-scroll des pages courtes par un
 calcul correct de la hauteur disponible, sans utiliser de blocage global du
 scroll.
 
-État actuel : architecture pilote implémentée dans la version `20260630-4`,
-en attente de validation visuelle et fonctionnelle sur iPhone.
+État actuel : architecture pilote implémentée dans la version `20260630-5`,
+avec une correction complémentaire du micro-scroll, en attente de validation
+visuelle et fonctionnelle sur iPhone.
 
 La gestion des versions a été validée sur iPhone le 30 juin 2026 : une PWA
 installée en version `20260630-1` a chargé la version `20260630-2` sans
