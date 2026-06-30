@@ -8,19 +8,27 @@
 </head>
 <body>
 <script>
-const APP_VERSION="20260629-5";
-const APP_URL=`/index.html?v=${APP_VERSION}`;
+const APP_VERSION="20260630-1";
+const APP_BASE_URL=new URL("./",window.location.href);
+const APP_URL=new URL(`index.html?v=${APP_VERSION}`,APP_BASE_URL).href;
+const IS_SHARED_BETA_ORIGIN=window.location.hostname==="damiensiri.github.io" &&
+                            APP_BASE_URL.pathname!=="/";
 
 (async()=>{
 try{
-if("caches" in window){
+if("caches" in window && !IS_SHARED_BETA_ORIGIN){
 const names=await caches.keys();
 await Promise.all(names.map(name=>caches.delete(name)));
 }
 
 if("serviceWorker" in navigator){
 const registrations=await navigator.serviceWorker.getRegistrations();
-await Promise.all(registrations.map(registration=>registration.unregister()));
+const appRegistrations=registrations.filter(
+registration=>registration.scope===APP_BASE_URL.href
+);
+await Promise.all(
+appRegistrations.map(registration=>registration.unregister())
+);
 }
 }catch(e){}
 

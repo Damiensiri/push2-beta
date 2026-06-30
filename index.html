@@ -8,7 +8,10 @@
 <title>Ecurie Damien Siri</title>
 
 <script>
-const APP_VERSION="20260629-5";
+const APP_VERSION="20260630-1";
+const APP_BASE_URL=new URL("./",window.location.href);
+const IS_BETA=window.location.hostname==="damiensiri.github.io" &&
+              APP_BASE_URL.pathname==="/push2-beta/";
 </script>
 <link rel="manifest" id="app-manifest">
 <script>
@@ -16,7 +19,14 @@ document.getElementById("app-manifest").href=`manifest.json?v=${APP_VERSION}`;
 
 if("serviceWorker" in navigator){
 window.addEventListener("load",()=>{
-navigator.serviceWorker.getRegistration("/").then(registration=>{
+const registrationPromise=IS_BETA
+?navigator.serviceWorker.register(
+new URL("OneSignalSDKWorker.js",APP_BASE_URL).href,
+{scope:APP_BASE_URL.pathname}
+)
+:navigator.serviceWorker.getRegistration();
+
+registrationPromise.then(registration=>{
 if(registration)registration.update();
 }).catch(()=>{});
 });
@@ -36,6 +46,7 @@ if(registration)registration.update();
 
 <script>
 window.OneSignalDeferred = window.OneSignalDeferred || [];
+if(!IS_BETA){
 OneSignalDeferred.push(async function(OneSignal) {
 
 await OneSignal.init({
@@ -57,6 +68,7 @@ cancelButton:"Plus tard"
 });
 
 });
+}
 </script>
 
 <style>
@@ -612,6 +624,17 @@ header h1{
     drop-shadow(0 9px 15px rgba(12,42,82,.22));
 }
 
+.app-version{
+  margin:24px 18px 0;
+  color:rgba(255,255,255,.52);
+  font-size:9px;
+  font-weight:500;
+  letter-spacing:.08em;
+  text-align:center;
+  user-select:none;
+  -webkit-user-select:none;
+}
+
 @keyframes ambientBreath{
   0%{filter:saturate(1);transform:scale(1);}
   100%{filter:saturate(1.08);transform:scale(1.035);}
@@ -750,11 +773,15 @@ ECURIE DAMIEN SIRI
 <div class="list-btn" onclick="go('mesreservations.html')"><img src="image/reservation.svg"> MES RÉSERVATIONS</div>
 <div class="list-btn" onclick="go('panier.html')"><img src="image/panier.svg"> MON PANIER</div>
 
+<div class="app-version">Version <span id="app-version-number"></span></div>
+
 </div>
 </div>
 </div>
 
 <script>
+
+document.getElementById("app-version-number").textContent=APP_VERSION;
 
 function withAppVersion(url){
 const separator=url.includes("?")?"&":"?";

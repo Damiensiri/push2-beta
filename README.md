@@ -15,6 +15,19 @@ désormais le dépôt officiel de développement.
 Le dépôt `ecran` ne doit plus être utilisé pour le développement de cette PWA,
 car il contient également d’autres projets.
 
+## Environnement bêta
+
+La bêta est accessible à l’adresse :
+
+`https://damiensiri.github.io/push2-beta/`
+
+Le dépôt `push2-beta` ne doit pas contenir de fichier `CNAME`. Les chemins de
+la PWA doivent rester compatibles avec le sous-dossier `/push2-beta/` ainsi
+qu’avec la racine du domaine de production.
+
+Les notifications OneSignal ne sont pas activées sur la bêta. Elles restent
+réservées au domaine de production `app.damiensiri.com`.
+
 ## Workflow
 
 1. Tous les développements commencent sur `push2-beta`.
@@ -42,7 +55,8 @@ Le chantier actuel concerne la gestion des versions de la PWA.
 
 Objectifs :
 
-- automatiser `APP_VERSION` à chaque publication ;
+- synchroniser automatiquement `APP_VERSION` avec
+  `scripts/bump-app-version.sh` avant chaque publication ;
 - afficher discrètement le numéro de version en bas de `index.html` ;
 - conserver la synchronisation entre `index.html`, le manifest, le
   service worker et `update.html` ;
@@ -50,6 +64,22 @@ Objectifs :
 
 Ces modifications ne doivent modifier ni le design ni les fonctionnalités
 existantes.
+
+État actuel : implémentation terminée dans `push2-beta` avec la version
+`20260630-1`. La validation sur iPhone après publication de la bêta reste
+obligatoire avant toute synchronisation vers la production.
+
+### Préparation d’une publication
+
+Avant chaque publication, exécuter depuis la racine du dépôt :
+
+```bash
+./scripts/bump-app-version.sh
+```
+
+Le script génère une version unique à partir de la date et de l’heure, puis la
+synchronise dans `index.html`, `manifest.json`, `OneSignalSDKWorker.js` et
+`update.html`. Il ne crée aucun commit et ne déclenche aucun push.
 
 ## Reprise d’une nouvelle session
 

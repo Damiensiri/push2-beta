@@ -1,8 +1,8 @@
 {
   "name": "Ecurie Damien SIRI",
   "short_name": "Ecurie DSIRI",
-  "start_url": "/index.html?v=20260629-5",
-  "scope": "/",
+  "start_url": "./index.html?v=20260630-1",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#0f2a44",
   "theme_color": "#0f2a44",
