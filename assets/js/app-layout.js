@@ -7,15 +7,19 @@
 
   function goBack(){
     const page=document.getElementById("page");
+    const usesBodySlide=document.body.dataset.pageTransition==="slide";
+    const delay=usesBodySlide?350:300;
 
-    if(page){
+    if(usesBodySlide){
+      document.body.classList.add("slide-out");
+    }else if(page){
       page.classList.remove("active");
       page.classList.add("exit");
     }
 
     setTimeout(()=>{
       location.href="index.html";
-    },300);
+    },delay);
   }
 
   function initializeSolarAmbiance(){

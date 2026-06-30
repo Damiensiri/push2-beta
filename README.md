@@ -54,7 +54,9 @@ Toujours vérifier :
 Le chantier actuel concerne la centralisation progressive du design et la
 gestion des thèmes saisonniers.
 
-La Phase 2 est limitée à la page pilote `travail.html`.
+La Phase 2 progresse page par page dans `push2-beta`. Chaque page possède un
+commit et une validation séparés. L’ensemble sera transféré vers `push2`
+uniquement lorsque toutes les pages prévues auront été validées.
 
 Architecture pilote :
 
@@ -93,6 +95,9 @@ scroll.
 `20260630-6`. La page courte ne présente plus de micro-scroll ni de fond de
 secours visible, tandis qu’un contenu long conserve son défilement naturel.
 Le rendu Summer et les fonctionnalités de `travail.html` sont validés.
+
+La migration de `horaires.html` est implémentée dans la version `20260630-7`
+et reste en attente de validation sur iPhone.
 
 La gestion des versions a été validée sur iPhone le 30 juin 2026 : une PWA
 installée en version `20260630-1` a chargé la version `20260630-2` sans
