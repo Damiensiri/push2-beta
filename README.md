@@ -89,10 +89,10 @@ La Phase 2 doit également supprimer le micro-scroll des pages courtes par un
 calcul correct de la hauteur disponible, sans utiliser de blocage global du
 scroll.
 
-État actuel : architecture pilote implémentée dans la version `20260630-6`.
-Le rebond élastique iOS et le fond de secours du thème ont été corrigés sans
-bloquer le défilement des contenus longs. La validation visuelle et
-fonctionnelle sur iPhone reste en attente.
+État actuel : architecture pilote validée sur iPhone dans la version
+`20260630-6`. La page courte ne présente plus de micro-scroll ni de fond de
+secours visible, tandis qu’un contenu long conserve son défilement naturel.
+Le rendu Summer et les fonctionnalités de `travail.html` sont validés.
 
 La gestion des versions a été validée sur iPhone le 30 juin 2026 : une PWA
 installée en version `20260630-1` a chargé la version `20260630-2` sans
@@ -132,6 +132,8 @@ push.
   installées sur iPhone.
 - Validation sur la bêta du passage automatique d’une PWA iPhone installée de
   la version `20260630-1` à la version `20260630-2`.
+- Validation de l’architecture pilote Summer sur `travail.html`, avec gestion
+  correcte des pages courtes et longues sur iPhone.
 
 Cette section doit être maintenue afin de résumer les principales évolutions de
 la PWA et de retrouver facilement les grandes étapes du projet.
