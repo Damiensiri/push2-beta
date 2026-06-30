@@ -96,8 +96,10 @@ scroll.
 secours visible, tandis qu’un contenu long conserve son défilement naturel.
 Le rendu Summer et les fonctionnalités de `travail.html` sont validés.
 
-La migration de `horaires.html` est implémentée dans la version `20260630-7`
-et reste en attente de validation sur iPhone.
+La migration de `horaires.html` est implémentée. La version `20260630-8`
+centralise également le fond Summer complet afin d’éviter toute jonction
+visible entre la couche animée et le fond de secours. La validation sur iPhone
+de `travail.html` et `horaires.html` reste en attente.
 
 La gestion des versions a été validée sur iPhone le 30 juin 2026 : une PWA
 installée en version `20260630-1` a chargé la version `20260630-2` sans

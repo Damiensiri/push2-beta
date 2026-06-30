@@ -18,6 +18,11 @@
   --solar-opacity:.40;
   --celestial-glow:rgba(255,241,184,.36);
   --browser-theme-color:#287fbd;
+  --app-background:
+    radial-gradient(circle at 22% 12%,rgba(255,225,151,.22),transparent 32%),
+    radial-gradient(circle at 84% 20%,rgba(115,224,255,.16),transparent 34%),
+    radial-gradient(ellipse at 48% 88%,rgba(255,255,255,.10),transparent 38%),
+    linear-gradient(180deg,var(--sky-top) 0%,var(--sky-mid) 48%,var(--sky-bottom) 100%);
 }
 
 :root[data-theme="summer"][data-day-phase="night"]{

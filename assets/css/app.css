@@ -47,7 +47,9 @@
 
 html{
   min-height:100%;
-  background:var(--sky-bottom,#8dcced);
+  background:var(--app-background,var(--sky-bottom,#8dcced));
+  background-repeat:no-repeat;
+  background-size:cover;
   overscroll-behavior-y:none;
   scrollbar-width:none;
 }
@@ -93,11 +95,9 @@ body.app-page > .ambient-stage{
   z-index:0;
   overflow:hidden;
   pointer-events:none;
-  background:
-    radial-gradient(circle at 22% 12%,rgba(255,225,151,.22),transparent 32%),
-    radial-gradient(circle at 84% 20%,rgba(115,224,255,.16),transparent 34%),
-    radial-gradient(ellipse at 48% 88%,rgba(255,255,255,.10),transparent 38%),
-    linear-gradient(180deg,var(--sky-top) 0%,var(--sky-mid) 48%,var(--sky-bottom) 100%);
+  background:var(--app-background);
+  background-repeat:no-repeat;
+  background-size:cover;
 }
 
 body.app-page > .ambient-stage::before{
@@ -105,11 +105,9 @@ body.app-page > .ambient-stage::before{
   position:absolute;
   inset:-4%;
   pointer-events:none;
-  background:
-    radial-gradient(circle at 22% 12%,rgba(255,225,151,.22),transparent 32%),
-    radial-gradient(circle at 84% 20%,rgba(115,224,255,.16),transparent 34%),
-    radial-gradient(ellipse at 48% 88%,rgba(255,255,255,.10),transparent 38%),
-    linear-gradient(180deg,var(--sky-top) 0%,var(--sky-mid) 48%,var(--sky-bottom) 100%);
+  background:var(--app-background);
+  background-repeat:no-repeat;
+  background-size:cover;
   transform:translateZ(0);
   animation:ambientBreath 18s ease-in-out infinite alternate;
 }
