@@ -101,10 +101,11 @@ Le rendu Summer et les fonctionnalités de `travail.html` sont validés.
 La migration de `horaires.html` est implémentée. La version `20260630-12`
 utilise une seule toile dynamique Summer continue sur la racine `html`, y
 compris derrière les Safe Areas, tandis que le `body` reste transparent. Les
-effets animés sont une surcouche fixe et transparente : aucun second fond
-opaque ne doit créer de démarcation. La toile et sa lumière dépassent la limite
-CSS inférieure de l’iPhone sans augmenter la hauteur de la page, afin de couvrir
-intégralement la Safe Area sans réintroduire de scroll. L’animation d’entrée de
+effets animés sont portés par une toile fixe dédiée, alignée avec le même fond
+sur `html`. Sa hauteur utilise successivement `100vh`, `100dvh` puis `100lvh`
+selon le support iOS, auxquels s’ajoutent la Safe Area inférieure et une marge
+hors écran. Cette couche fixe ne participe pas à la hauteur du document et ne
+peut donc pas réintroduire de micro-scroll. L’animation d’entrée de
 `horaires.html` porte uniquement sur la liste afin de ne pas déplacer le bouton
 retour et le titre fixes. La validation sur iPhone de `travail.html` et
 `horaires.html` reste en attente.
