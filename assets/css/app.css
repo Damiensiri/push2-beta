@@ -50,8 +50,8 @@ html{
   background-color:var(--sky-bottom,#8dcced);
   background-image:var(--app-background);
   background-repeat:no-repeat;
-  background-position:center;
-  background-size:cover;
+  background-position:center top;
+  background-size:100% calc(100% + var(--safe-bottom) + 24px);
   background-attachment:fixed;
   overscroll-behavior-y:none;
   scrollbar-width:none;
@@ -92,7 +92,10 @@ body.app-page{
 
 body.app-page > .ambient-stage{
   position:fixed;
-  inset:0;
+  top:0;
+  right:0;
+  bottom:calc(0px - var(--safe-bottom) - 24px);
+  left:0;
   z-index:0;
   overflow:hidden;
   pointer-events:none;
