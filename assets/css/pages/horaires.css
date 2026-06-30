@@ -1,4 +1,4 @@
-body.horaires-page .page{
+body.horaires-page #list{
   transform:translateX(100%);
   animation:slideIn .35s ease forwards;
 }

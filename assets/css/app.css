@@ -47,9 +47,21 @@
 
 html{
   min-height:100%;
-  background:transparent;
+  background-color:var(--sky-bottom,#8dcced);
+  background-image:var(--app-background);
+  background-repeat:no-repeat;
+  background-position:center;
+  background-size:cover;
+  background-attachment:fixed;
   overscroll-behavior-y:none;
   scrollbar-width:none;
+  transition:
+    --sky-top 2.8s ease,
+    --sky-mid 2.8s ease,
+    --sky-bottom 2.8s ease,
+    --solar-x 60s linear,
+    --solar-y 60s linear,
+    --solar-opacity 2.8s ease;
 }
 
 html::-webkit-scrollbar,
@@ -71,21 +83,11 @@ body.app-page{
   overflow-x:hidden;
   overscroll-behavior-y:none;
   color:var(--text-main);
-  background-color:var(--sky-bottom,#8dcced);
-  background-image:var(--app-background);
-  background-repeat:no-repeat;
-  background-size:cover;
+  background:transparent;
   font-family:var(--font-main);
   -webkit-font-smoothing:antialiased;
   text-rendering:optimizeLegibility;
   scrollbar-width:none;
-  transition:
-    --sky-top 2.8s ease,
-    --sky-mid 2.8s ease,
-    --sky-bottom 2.8s ease,
-    --solar-x 60s linear,
-    --solar-y 60s linear,
-    --solar-opacity 2.8s ease;
 }
 
 body.app-page > .ambient-stage{

@@ -98,13 +98,14 @@ scroll.
 secours visible, tandis qu’un contenu long conserve son défilement naturel.
 Le rendu Summer et les fonctionnalités de `travail.html` sont validés.
 
-La migration de `horaires.html` est implémentée. La version `20260630-10`
-utilise une seule toile dynamique Summer continue sur le `body`. Les effets
-animés sont désormais une surcouche fixe et transparente : aucun second fond
-opaque ne doit créer de démarcation à la jonction avec les Safe Areas.
-L’animation d’entrée de `horaires.html` porte uniquement sur son contenu afin
-de ne jamais déplacer la toile de fond. La validation sur iPhone de
-`travail.html` et `horaires.html` reste en attente.
+La migration de `horaires.html` est implémentée. La version `20260630-11`
+utilise une seule toile dynamique Summer continue sur la racine `html`, y
+compris derrière les Safe Areas, tandis que le `body` reste transparent. Les
+effets animés sont une surcouche fixe et transparente : aucun second fond
+opaque ne doit créer de démarcation. L’animation d’entrée de `horaires.html`
+porte uniquement sur la liste afin de ne pas déplacer le bouton retour et le
+titre fixes. La validation sur iPhone de `travail.html` et `horaires.html`
+reste en attente.
 
 La gestion des versions a été validée sur iPhone le 30 juin 2026 : une PWA
 installée en version `20260630-1` a chargé la version `20260630-2` sans
