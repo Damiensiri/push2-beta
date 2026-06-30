@@ -8,7 +8,7 @@
 <title>Ecurie Damien Siri</title>
 
 <script>
-const APP_VERSION="20260630-2";
+const APP_VERSION="20260630-3";
 const APP_BASE_URL=new URL("./",window.location.href);
 const IS_BETA=window.location.hostname==="damiensiri.github.io" &&
               APP_BASE_URL.pathname==="/push2-beta/";
@@ -148,7 +148,8 @@ html{
 
 body{
   position:relative;
-  min-height:100%;
+  min-height:100vh;
+  min-height:100dvh;
   margin:0;
   overflow-x:hidden;
   font-family:var(--font-main);
@@ -222,8 +223,10 @@ body[data-day-phase="dusk"]{
 }
 
 .ambient-stage{
-  position:fixed;
+  position:absolute;
   inset:0;
+  min-height:100vh;
+  min-height:100dvh;
   z-index:0;
   overflow:hidden;
   pointer-events:none;
@@ -232,7 +235,6 @@ body[data-day-phase="dusk"]{
     radial-gradient(circle at 84% 20%,rgba(115,224,255,.16),transparent 34%),
     radial-gradient(ellipse at 48% 88%,rgba(255,255,255,.10),transparent 38%),
     linear-gradient(180deg,var(--sky-top) 0%,var(--sky-mid) 48%,var(--sky-bottom) 100%);
-  transform:translateZ(0);
 }
 
 .ambient-stage::before{

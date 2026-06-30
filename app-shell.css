@@ -30,7 +30,9 @@ body.fullscreen-standard #cartPanel::-webkit-scrollbar{
 }
 
 body.fullscreen-standard{
-  min-height:100%;
+  position:relative;
+  min-height:100vh;
+  min-height:100dvh;
   margin:0;
   padding-top:calc(76px + var(--safe-top));
   padding-bottom:0;
@@ -46,8 +48,10 @@ body.fullscreen-standard::after{
 }
 
 body.fullscreen-standard > .ambient-stage{
-  position:fixed;
+  position:absolute;
   inset:0;
+  min-height:100vh;
+  min-height:100dvh;
   z-index:0;
   overflow:hidden;
   pointer-events:none;
@@ -56,7 +60,6 @@ body.fullscreen-standard > .ambient-stage{
     radial-gradient(circle at 84% 20%,rgba(115,224,255,.16),transparent 34%),
     radial-gradient(ellipse at 48% 88%,rgba(255,255,255,.10),transparent 38%),
     linear-gradient(180deg,var(--sky-top) 0%,var(--sky-mid) 48%,var(--sky-bottom) 100%);
-  transform:translateZ(0);
 }
 
 html.safe-area-root{
