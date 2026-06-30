@@ -65,9 +65,10 @@ Objectifs :
 Ces modifications ne doivent modifier ni le design ni les fonctionnalités
 existantes.
 
-État actuel : implémentation terminée dans `push2-beta` avec la version
-`20260630-1`. La validation sur iPhone après publication de la bêta reste
-obligatoire avant toute synchronisation vers la production.
+État actuel : validation réussie sur iPhone le 30 juin 2026. Une PWA installée
+en version `20260630-1` a chargé la version `20260630-2` sans suppression ni
+réinstallation. Toute synchronisation vers la production reste soumise à la
+validation explicite de Damien.
 
 ### Préparation d’une publication
 
@@ -99,6 +100,8 @@ synchronise dans `index.html`, `manifest.json`, `OneSignalSDKWorker.js` et
   proximité de l’heure de fermeture.
 - Mise en place du chantier de mise à jour et de gestion du cache des PWA déjà
   installées sur iPhone.
+- Validation sur la bêta du passage automatique d’une PWA iPhone installée de
+  la version `20260630-1` à la version `20260630-2`.
 
 Cette section doit être maintenue afin de résumer les principales évolutions de
 la PWA et de retrouver facilement les grandes étapes du projet.
