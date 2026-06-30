@@ -48,6 +48,7 @@
 html{
   min-height:100%;
   background:var(--app-background,var(--sky-bottom,#8dcced));
+  background-color:var(--sky-bottom,#8dcced);
   background-repeat:no-repeat;
   background-size:cover;
   overscroll-behavior-y:none;
@@ -73,7 +74,7 @@ body.app-page{
   overflow-x:hidden;
   overscroll-behavior-y:none;
   color:var(--text-main);
-  background:transparent;
+  background-color:var(--sky-bottom,#8dcced);
   font-family:var(--font-main);
   -webkit-font-smoothing:antialiased;
   text-rendering:optimizeLegibility;
