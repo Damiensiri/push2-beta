@@ -102,13 +102,15 @@ La migration de `horaires.html` est implémentée. La version `20260630-12`
 utilise une seule toile dynamique Summer continue sur la racine `html`, y
 compris derrière les Safe Areas, tandis que le `body` reste transparent. Les
 effets animés sont portés par une toile fixe dédiée, alignée avec le même fond
-sur `html`. Sa hauteur utilise successivement `100vh`, `100dvh` puis `100lvh`
-selon le support iOS, auxquels s’ajoutent la Safe Area inférieure et une marge
-hors écran. Cette couche fixe ne participe pas à la hauteur du document et ne
-peut donc pas réintroduire de micro-scroll. L’animation d’entrée de
-`horaires.html` porte uniquement sur la liste afin de ne pas déplacer le bouton
-retour et le titre fixes. La validation sur iPhone de `travail.html` et
-`horaires.html` reste en attente.
+sur `html`. La toile utilise `100dvh` lorsque cette unité est disponible, sans
+allongement artificiel. Un cache inférieur fixe, indépendant de la hauteur du
+document, couvre la Safe Area avec la variable thémable
+`--app-safearea-bottom-background`. Une transition masquée de 32 px évite de
+créer une nouvelle jonction au sommet de ce cache. Summer reprend
+`--sky-bottom`; chaque futur thème pourra fournir sa propre valeur.
+L’animation d’entrée de `horaires.html` porte uniquement sur la liste afin de
+ne pas déplacer le bouton retour et le titre fixes. La validation sur iPhone
+de `travail.html` et `horaires.html` reste en attente.
 
 La gestion des versions a été validée sur iPhone le 30 juin 2026 : une PWA
 installée en version `20260630-1` a chargé la version `20260630-2` sans

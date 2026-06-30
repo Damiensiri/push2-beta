@@ -13,6 +13,7 @@
   --sky-top:#287fbd;
   --sky-mid:#3f9fdd;
   --sky-bottom:#8dcced;
+  --app-safearea-bottom-background:var(--sky-bottom);
   --solar-x:50%;
   --solar-y:20%;
   --solar-opacity:.40;
