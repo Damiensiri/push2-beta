@@ -1,0 +1,237 @@
+@property --sky-top{
+  syntax:"<color>";
+  inherits:true;
+  initial-value:#287fbd;
+}
+
+@property --sky-mid{
+  syntax:"<color>";
+  inherits:true;
+  initial-value:#3f9fdd;
+}
+
+@property --sky-bottom{
+  syntax:"<color>";
+  inherits:true;
+  initial-value:#8dcced;
+}
+
+@property --solar-x{
+  syntax:"<percentage>";
+  inherits:true;
+  initial-value:50%;
+}
+
+@property --solar-y{
+  syntax:"<percentage>";
+  inherits:true;
+  initial-value:20%;
+}
+
+@property --solar-opacity{
+  syntax:"<number>";
+  inherits:true;
+  initial-value:.40;
+}
+
+:root{
+  --safe-top:env(safe-area-inset-top,0px);
+  --safe-bottom:env(safe-area-inset-bottom,0px);
+  --font-main:'Montserrat',-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",sans-serif;
+}
+
+*{
+  box-sizing:border-box;
+  -webkit-tap-highlight-color:transparent;
+}
+
+html{
+  min-height:100%;
+  background:#2f8fce;
+  scrollbar-width:none;
+}
+
+html::-webkit-scrollbar,
+body.app-page::-webkit-scrollbar{
+  width:0;
+  height:0;
+  display:none;
+}
+
+body.app-page{
+  position:relative;
+  min-height:100vh;
+  min-height:100dvh;
+  margin:0;
+  padding-top:calc(76px + var(--safe-top));
+  padding-bottom:0;
+  overflow-x:hidden;
+  color:var(--text-main);
+  background:transparent;
+  font-family:var(--font-main);
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+  scrollbar-width:none;
+  transition:
+    --sky-top 2.8s ease,
+    --sky-mid 2.8s ease,
+    --sky-bottom 2.8s ease,
+    --solar-x 60s linear,
+    --solar-y 60s linear,
+    --solar-opacity 2.8s ease;
+}
+
+body.app-page > .ambient-stage{
+  position:absolute;
+  inset:0;
+  min-height:100vh;
+  min-height:100dvh;
+  z-index:0;
+  overflow:hidden;
+  pointer-events:none;
+  background:
+    radial-gradient(circle at 22% 12%,rgba(255,225,151,.22),transparent 32%),
+    radial-gradient(circle at 84% 20%,rgba(115,224,255,.16),transparent 34%),
+    radial-gradient(ellipse at 48% 88%,rgba(255,255,255,.10),transparent 38%),
+    linear-gradient(180deg,var(--sky-top) 0%,var(--sky-mid) 48%,var(--sky-bottom) 100%);
+}
+
+body.app-page > .ambient-stage::before{
+  content:"";
+  position:absolute;
+  inset:-4%;
+  pointer-events:none;
+  background:
+    radial-gradient(circle at 22% 12%,rgba(255,225,151,.22),transparent 32%),
+    radial-gradient(circle at 84% 20%,rgba(115,224,255,.16),transparent 34%),
+    radial-gradient(ellipse at 48% 88%,rgba(255,255,255,.10),transparent 38%),
+    linear-gradient(180deg,var(--sky-top) 0%,var(--sky-mid) 48%,var(--sky-bottom) 100%);
+  transform:translateZ(0);
+  animation:ambientBreath 18s ease-in-out infinite alternate;
+}
+
+body.app-page > .ambient-stage::after{
+  content:"";
+  position:absolute;
+  inset:-24%;
+  pointer-events:none;
+  opacity:var(--solar-opacity);
+  mix-blend-mode:screen;
+  background:
+    radial-gradient(circle at var(--solar-x) var(--solar-y),var(--celestial-glow),transparent 18%),
+    linear-gradient(112deg,transparent 0 28%,rgba(255,255,255,.14) 38%,transparent 52% 100%),
+    radial-gradient(circle at 64% 34%,rgba(255,255,255,.18),transparent 24%);
+  transform:translate3d(-5%,0,0) rotate(-3deg);
+  animation:lightVeil 28s ease-in-out infinite alternate;
+}
+
+body.app-page .page{
+  position:relative;
+  z-index:1;
+  width:min(100%,520px);
+  min-height:calc(100vh - 76px - var(--safe-top));
+  min-height:calc(100dvh - 76px - var(--safe-top));
+  margin:0 auto;
+  padding-bottom:calc(28px + var(--safe-bottom));
+  transform:none;
+  transition:none;
+}
+
+body.app-page .page.active,
+body.app-page .page.exit{
+  transform:none;
+}
+
+body.app-page .page > header{
+  position:fixed;
+  top:6px;
+  left:50%;
+  z-index:1000;
+  width:min(100%,520px);
+  height:calc(70px + var(--safe-top));
+  margin:0;
+  padding-top:var(--safe-top);
+  box-sizing:border-box;
+  background:transparent;
+  transform:translateX(-50%);
+}
+
+body.app-page header.plan-header h1{
+  position:absolute;
+  top:calc(35px + var(--safe-top));
+  left:50%;
+  margin:0;
+  color:var(--text-strong);
+  font-family:var(--font-main);
+  font-size:16px;
+  font-weight:700;
+  line-height:1;
+  letter-spacing:.18em;
+  white-space:nowrap;
+  text-transform:uppercase;
+  text-shadow:0 2px 14px rgba(18,52,88,.22);
+  transform:translate(-50%,-50%);
+}
+
+body.app-page header.plan-header #backBtn,
+body.app-page header.plan-header .back-btn{
+  position:absolute;
+  top:calc(35px + var(--safe-top));
+  left:18px;
+  width:46px;
+  height:46px;
+  margin:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  box-sizing:border-box;
+  border:1px solid var(--glass-line);
+  border-radius:50%;
+  background:var(--glass-strong);
+  box-shadow:var(--shadow-soft),inset 0 1px 0 rgba(255,255,255,.28);
+  cursor:pointer;
+  transform:translateY(-50%);
+  backdrop-filter:blur(18px) saturate(140%);
+  -webkit-backdrop-filter:blur(18px) saturate(140%);
+  transition:transform .22s ease,background .22s ease;
+}
+
+body.app-page header.plan-header #backBtn:active,
+body.app-page header.plan-header .back-btn:active{
+  transform:translateY(-50%) scale(.93);
+}
+
+body.app-page header.plan-header #backBtn img,
+body.app-page header.plan-header .back-btn img{
+  width:22px;
+  filter:brightness(0) invert(1);
+}
+
+@keyframes ambientBreath{
+  from{filter:saturate(.96) brightness(.99);}
+  to{filter:saturate(1.07) brightness(1.03);}
+}
+
+@keyframes lightVeil{
+  from{transform:translate3d(-5%,0,0) rotate(-3deg);}
+  to{transform:translate3d(5%,2%,0) rotate(2deg);}
+}
+
+@keyframes contentReveal{
+  from{opacity:0;transform:translate3d(0,12px,0);}
+  to{opacity:1;transform:none;}
+}
+
+@keyframes cardReveal{
+  to{opacity:1;transform:translate3d(0,0,0);}
+}
+
+@media (prefers-reduced-motion:reduce){
+  *,
+  *::before,
+  *::after{
+    animation-duration:1ms !important;
+    animation-iteration-count:1 !important;
+    transition-duration:1ms !important;
+  }
+}

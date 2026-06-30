@@ -51,24 +51,50 @@ Toujours vérifier :
 
 ## Chantier actuellement en cours
 
-Le chantier actuel concerne la gestion des versions de la PWA.
+Le chantier actuel concerne la centralisation progressive du design et la
+gestion des thèmes saisonniers.
 
-Objectifs :
+La Phase 2 est limitée à la page pilote `travail.html`.
 
-- synchroniser automatiquement `APP_VERSION` avec
-  `scripts/bump-app-version.sh` avant chaque publication ;
-- afficher discrètement le numéro de version en bas de `index.html` ;
-- conserver la synchronisation entre `index.html`, le manifest, le
-  service worker et `update.html` ;
-- vérifier le fonctionnement des mises à jour sur iPhone.
+Architecture pilote :
 
-Ces modifications ne doivent modifier ni le design ni les fonctionnalités
-existantes.
+```text
+assets/
+  css/
+    app.css
+    pages/
+      travail.css
+    themes/
+      summer.css
+      autumn.css
+      christmas.css
+      spring.css
+  js/
+    app-config.js
+    app-layout.js
+    pages/
+      travail.js
+```
 
-État actuel : validation réussie sur iPhone le 30 juin 2026. Une PWA installée
-en version `20260630-1` a chargé la version `20260630-2` sans suppression ni
-réinstallation. Toute synchronisation vers la production reste soumise à la
-validation explicite de Damien.
+Le thème actif est défini uniquement dans `assets/js/app-config.js`.
+
+`summer` est le thème de référence et doit conserver exactement le rendu
+validé avant la refonte. Les thèmes `autumn`, `christmas` et `spring` sont
+enregistrés mais restent volontairement non finalisés.
+
+La page `meteo.html` est une exception permanente : son fond et ses animations
+météo ne doivent pas être remplacés par le thème global.
+
+La Phase 2 doit également supprimer le micro-scroll des pages courtes par un
+calcul correct de la hauteur disponible, sans utiliser de blocage global du
+scroll.
+
+État actuel : architecture pilote implémentée dans la version `20260630-4`,
+en attente de validation visuelle et fonctionnelle sur iPhone.
+
+La gestion des versions a été validée sur iPhone le 30 juin 2026 : une PWA
+installée en version `20260630-1` a chargé la version `20260630-2` sans
+suppression ni réinstallation.
 
 ### Préparation d’une publication
 
@@ -80,7 +106,9 @@ Avant chaque publication, exécuter depuis la racine du dépôt :
 
 Le script génère une version unique à partir de la date et de l’heure, puis la
 synchronise dans `index.html`, `manifest.json`, `OneSignalSDKWorker.js` et
-`update.html`. Il ne crée aucun commit et ne déclenche aucun push.
+`update.html`. Il synchronise également les paramètres de version des assets
+CSS et JavaScript déjà migrés. Il ne crée aucun commit et ne déclenche aucun
+push.
 
 ## Reprise d’une nouvelle session
 

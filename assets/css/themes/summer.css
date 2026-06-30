@@ -1,0 +1,85 @@
+:root[data-theme="summer"]{
+  color-scheme:light dark;
+  --text:rgba(255,255,255,.90);
+  --text-strong:rgba(255,255,255,.98);
+  --text-main:rgba(255,255,255,.90);
+  --text-soft:rgba(255,255,255,.70);
+  --glass:rgba(255,255,255,.16);
+  --glass-strong:rgba(255,255,255,.23);
+  --glass-line:rgba(255,255,255,.25);
+  --shadow-card:0 22px 60px rgba(10,35,70,.22);
+  --shadow-soft:0 12px 32px rgba(10,35,70,.16);
+  --info:#ffb23f;
+  --sky-top:#287fbd;
+  --sky-mid:#3f9fdd;
+  --sky-bottom:#8dcced;
+  --solar-x:50%;
+  --solar-y:20%;
+  --solar-opacity:.40;
+  --celestial-glow:rgba(255,241,184,.36);
+  --browser-theme-color:#287fbd;
+}
+
+:root[data-theme="summer"] body[data-day-phase="night"]{
+  --sky-top:#061225;
+  --sky-mid:#102848;
+  --sky-bottom:#244d75;
+  --celestial-glow:rgba(176,207,255,.26);
+  --solar-opacity:.26;
+  --browser-theme-color:#061225;
+}
+
+:root[data-theme="summer"] body[data-day-phase="dawn"]{
+  --sky-top:#1f3155;
+  --sky-mid:#705f84;
+  --sky-bottom:#c88a70;
+  --celestial-glow:rgba(255,211,164,.36);
+  --solar-opacity:.34;
+  --browser-theme-color:#1f3155;
+}
+
+:root[data-theme="summer"] body[data-day-phase="morning"]{
+  --sky-top:#2c86c5;
+  --sky-mid:#45a6e4;
+  --sky-bottom:#9bd5f0;
+  --celestial-glow:rgba(255,239,174,.36);
+  --solar-opacity:.38;
+  --browser-theme-color:#2c86c5;
+}
+
+:root[data-theme="summer"] body[data-day-phase="day"]{
+  --sky-top:#287fbd;
+  --sky-mid:#3f9fdd;
+  --sky-bottom:#8dcced;
+  --celestial-glow:rgba(255,241,184,.36);
+  --solar-opacity:.40;
+  --browser-theme-color:#287fbd;
+}
+
+:root[data-theme="summer"] body[data-day-phase="golden"]{
+  --sky-top:#346f9e;
+  --sky-mid:#be7d66;
+  --sky-bottom:#e8b681;
+  --celestial-glow:rgba(255,210,133,.44);
+  --solar-opacity:.44;
+  --browser-theme-color:#9b684f;
+}
+
+:root[data-theme="summer"] body[data-day-phase="dusk"]{
+  --sky-top:#1f3155;
+  --sky-mid:#5f547b;
+  --sky-bottom:#b77670;
+  --celestial-glow:rgba(255,190,153,.30);
+  --solar-opacity:.30;
+  --browser-theme-color:#1f3155;
+}
+
+@media (prefers-color-scheme:dark){
+  :root[data-theme="summer"]{
+    --glass:rgba(18,28,46,.36);
+    --glass-strong:rgba(24,36,58,.46);
+    --glass-line:rgba(255,255,255,.16);
+    --shadow-card:0 24px 70px rgba(0,0,0,.34);
+    --shadow-soft:0 14px 36px rgba(0,0,0,.26);
+  }
+}
