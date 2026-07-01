@@ -76,6 +76,7 @@ assets/
       confirmation.css
       concours.css
       notifications.css
+      detail.css
     themes/
       summer.css
       autumn.css
@@ -191,12 +192,21 @@ fichier JavaScript dédié. Elle a été validée par Damien le 1er juillet 2026
 La migration visuelle de `notifications.html` vers l’architecture commune est
 implémentée avec une règle de sécurité renforcée. Son bloc JavaScript métier
 reste directement dans la page et a été vérifié caractère par caractère comme
-identique à la version précédente. `index.html` et `detail.html` sont
-strictement inchangés. L’URL API, la clé `alerts_lues`, le cache
+identique à la version précédente. Lors de cette migration, `index.html` et
+`detail.html` sont restés strictement inchangés. L’URL API, la clé `alerts_lues`, le cache
 `alert_detail_cache`, le lien `detail.html?id=...`, le rafraîchissement toutes
 les 60 secondes et le rafraîchissement au retour visible sont conservés. Sa
-validation complète sur iPhone reste obligatoire avant toute migration de
-`detail.html` ou toute autre modification du système de notifications.
+validation sur iPhone a été confirmée par Damien le 1er juillet 2026.
+
+La migration visuelle de `detail.html` vers l’architecture commune est
+implémentée avec le même niveau de prudence. Son bloc JavaScript métier reste
+directement dans la page et a été vérifié caractère par caractère comme
+identique à la version précédente. L’URL API, la clé `alerts_lues`, le cache
+`alert_detail_cache`, le paramètre `id`, le marquage comme lu, les contrôles
+d’expiration, le repli sur le cache et le retour par l’historique sont
+conservés. `index.html` et `notifications.html` sont restés strictement
+inchangés pendant cette migration. La validation sur iPhone de cette page
+reste obligatoire avant de poursuivre le système de notifications.
 
 ## Fond global et Safe Area iPhone — technique validée
 
