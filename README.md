@@ -79,6 +79,7 @@ assets/
       detail.css
       planningpaddock.css
       mesreservations.css
+      index.css
     themes/
       summer.css
       autumn.css
@@ -251,6 +252,18 @@ sur iPhone et iPad. Le téléchargement Blob existant reste utilisé sur les
 autres appareils. L’ouverture du flux iCalendar et l’ajout au Calendrier ont
 été validés par Damien sur iPhone le 1er juillet 2026. La migration complète
 de `mesreservations.html` est donc validée.
+
+La migration visuelle de `index.html`, dernière page du parcours client hors
+exception Météo, est implémentée avec une règle de sécurité maximale. Les cinq
+blocs JavaScript sensibles restent directement dans la page et ont été
+vérifiés séparément comme strictement identiques à la version précédente :
+version et environnement, manifest et service worker, OneSignal, navigation
+et horaires, cloche et alertes lues. Tous les identifiants HTML, événements
+`onclick`, URLs d’intégration, préchargements et fonctions `go`, `load`,
+`updateUI` et `updateBell` sont conservés. Seuls le CSS embarqué et le moteur
+d’ambiance visuelle local ont été remplacés par les ressources communes du
+thème Summer. La validation complète sur iPhone reste obligatoire avant toute
+publication en production.
 
 ## Fond global et Safe Area iPhone — technique validée
 
