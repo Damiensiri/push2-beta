@@ -52,10 +52,8 @@ Toujours vérifier :
 ## Chantier actuellement en cours
 
 Le chantier concerne la centralisation progressive du design et la gestion des
-thèmes saisonniers. Il est volontairement **en pause après la validation de
-`travail.html` et `horaires.html`**.
-
-Ne migrer aucune autre page avant une nouvelle demande explicite de Damien.
+thèmes saisonniers. Il a repris le 1er juillet 2026 après la validation de
+`travail.html` et `horaires.html`.
 
 La Phase 2 progresse page par page dans `push2-beta`. Chaque page possède un
 commit et une validation séparés. L’ensemble sera transféré vers `push2`
@@ -70,6 +68,7 @@ assets/
     pages/
       travail.css
       horaires.css
+      paddocks.css
     themes/
       summer.css
       autumn.css
@@ -81,6 +80,7 @@ assets/
     pages/
       travail.js
       horaires.js
+      paddocks.js
 ```
 
 Le thème actif est défini uniquement dans `assets/js/app-config.js`.
@@ -124,6 +124,12 @@ Tests validés par Damien sur iPhone le 30 juin 2026 :
   PWA ;
 - rendu Summer conforme au design attendu ;
 - placement correct du titre et du bouton retour de `horaires.html`.
+
+La migration de `paddocks.html` vers l’architecture commune est implémentée.
+Elle conserve l’API des statuts, le cache local, l’actualisation toutes les
+10 secondes, les trois paddocks, le bouton de réservation et la navigation
+vers `planningpaddock.html`. Sa validation sur iPhone reste à effectuer avant
+de migrer une page supplémentaire.
 
 ## Fond global et Safe Area iPhone — technique validée
 
