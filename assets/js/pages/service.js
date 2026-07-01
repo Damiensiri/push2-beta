@@ -1,6 +1,7 @@
 emailjs.init("03cdce-AcdCC03k_v")
 
-const SHEET_URL="https://opensheet.elk.sh/1ka6djXZhsDBbF77OVgH5wjqQwLpMUUPbMl1RD_rssXI/service"
+const SHEET_URL=document.body.dataset.catalogUrl ||
+"https://opensheet.elk.sh/1ka6djXZhsDBbF77OVgH5wjqQwLpMUUPbMl1RD_rssXI/service"
 
 let cart = JSON.parse(localStorage.getItem("cart") || "[]")
 let products=[]

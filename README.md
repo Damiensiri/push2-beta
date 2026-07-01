@@ -145,8 +145,16 @@ Elle conserve le catalogue, le produit mis en avant, le panier local,
 l’animation d’ajout, les quantités, EmailJS, l’archivage local des commandes,
 le formulaire Google et la navigation vers `mes-commandes.html`. Le panneau du
 panier conserve son fond sur toute la hauteur de l’écran, tandis que son
-contenu respecte les Safe Areas supérieure et inférieure. Sa validation sur
-iPhone reste à effectuer avant de migrer une page supplémentaire.
+contenu respecte les Safe Areas supérieure et inférieure. Elle a été validée
+par Damien le 1er juillet 2026.
+
+Les migrations de `soins.html` et `laverie.html` sont implémentées en
+réutilisant directement `service.css` et `service.js`, y compris le panier
+validé avec la Dynamic Island. Les deux pages ne fournissent que leur titre et
+leur URL de catalogue propre via `data-catalog-url` (`/soins` ou `/laverie`).
+Le comportement du catalogue, du panier et de la commande reste donc commun
+aux trois pages. Leur validation sur iPhone reste à effectuer avant de migrer
+une page supplémentaire.
 
 ## Fond global et Safe Area iPhone — technique validée
 
