@@ -238,6 +238,17 @@ Google Sheets, la carte de mises, les statuts, l’historique, la génération d
 calendrier et l’actualisation automatique sont conservés. La validation
 fonctionnelle et visuelle sur iPhone reste obligatoire avant de poursuivre.
 
+Le 1er juillet 2026, l’ajout au calendrier a cessé de fonctionner sur iPhone
+dans Safari comme dans la PWA, aussi bien sur la bêta que sur la production.
+Les trois méthodes locales déjà testées (`data:`, Blob et partage natif iOS)
+ne permettent plus d’ouvrir l’import Calendrier de manière fiable. La solution
+retenue consiste à servir un véritable flux iCalendar en HTTPS depuis une Web
+App Google Apps Script indépendante. Le fichier source
+`apps-script-calendar-ics.js` est prêt à être déployé. Il ne lit et ne modifie
+aucune donnée : il transforme uniquement les paramètres reçus en flux ICAL.
+`mesreservations.html` ne devra être reliée à ce service qu’après obtention de
+l’URL publique `/exec`.
+
 ## Fond global et Safe Area iPhone — technique validée
 
 Cette architecture est la référence à conserver pour les pages migrées. Elle
