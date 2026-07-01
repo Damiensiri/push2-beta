@@ -73,6 +73,7 @@ assets/
       service.css
       mes-commandes.css
       panier.css
+      confirmation.css
     themes/
       summer.css
       autumn.css
@@ -89,6 +90,7 @@ assets/
       service.js
       mes-commandes.js
       panier.js
+      confirmation.js
 ```
 
 Le thème actif est défini uniquement dans `assets/js/app-config.js`.
@@ -170,8 +172,14 @@ Les boîtes de saisie navigateur ont été remplacées par un formulaire visible
 Nom, Prénom et Email placé après le total. Le bouton Commander reste désactivé
 tant que le panier est vide, qu’un champ est vide ou que l’adresse email est
 invalide. L’envoi EmailJS, l’historique local, `lastOrder`, le vidage du panier
-et la navigation vers `confirmation.html` sont conservés. Sa validation sur
-iPhone reste à effectuer avant de migrer une page supplémentaire.
+et la navigation vers `confirmation.html` sont conservés. Elle a été validée
+par Damien le 1er juillet 2026.
+
+La migration de `confirmation.html` vers l’architecture commune est
+implémentée. Elle conserve la lecture de `lastOrder`, le récapitulatif des
+articles, le total, le cas sans commande et la navigation vers
+`mes-commandes.html`. Sa validation sur iPhone reste à effectuer avant de
+migrer une page supplémentaire.
 
 ## Fond global et Safe Area iPhone — technique validée
 
