@@ -77,6 +77,7 @@ assets/
       concours.css
       notifications.css
       detail.css
+      planningpaddock.css
     themes/
       summer.css
       autumn.css
@@ -205,8 +206,19 @@ identique à la version précédente. L’URL API, la clé `alerts_lues`, le cac
 `alert_detail_cache`, le paramètre `id`, le marquage comme lu, les contrôles
 d’expiration, le repli sur le cache et le retour par l’historique sont
 conservés. `index.html` et `notifications.html` sont restés strictement
-inchangés pendant cette migration. La validation sur iPhone de cette page
-reste obligatoire avant de poursuivre le système de notifications.
+inchangés pendant cette migration. Elle a été validée par Damien le
+1er juillet 2026.
+
+La migration visuelle de `planningpaddock.html` vers l’architecture commune
+est implémentée sans aucune modification de sa logique métier. Le bloc
+JavaScript complet reste directement dans la page et a été vérifié caractère
+par caractère comme identique à la version précédente. La configuration
+Firebase, les écoutes temps réel des collections `reservations`, `horaires` et
+`restrictions`, la création et l’annulation des réservations, les blocages
+1 h 30, les contrôles de fermeture et de chevauchement, les demandes de mise
+au paddock et EmailJS sont conservés. Seuls l’ancien habillage embarqué et son
+script d’ambiance visuelle ont été remplacés par le thème commun. La validation
+fonctionnelle et visuelle sur iPhone reste obligatoire avant de poursuivre.
 
 ## Fond global et Safe Area iPhone — technique validée
 
