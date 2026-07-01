@@ -1,0 +1,189 @@
+body.mesreservations-page .container{
+  padding:10px 18px 0;
+}
+
+.section-title{
+  margin:18px 0 10px;
+  color:rgba(255,255,255,.76);
+  font-size:13px;
+  font-weight:800;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+}
+
+.card{
+  position:relative;
+  margin-bottom:15px;
+  padding:18px;
+  overflow:hidden;
+  border:1px solid var(--glass-line);
+  border-radius:26px;
+  color:var(--text-main);
+  background:
+    linear-gradient(160deg,rgba(29,64,92,.78),rgba(39,93,126,.60)),
+    radial-gradient(circle at 12% 0%,rgba(255,255,255,.18),transparent 38%);
+  box-shadow:var(--shadow-card),inset 0 1px 0 rgba(255,255,255,.20);
+  backdrop-filter:blur(24px) saturate(145%);
+  -webkit-backdrop-filter:blur(24px) saturate(145%);
+}
+
+.card h3{
+  margin:0 0 12px;
+  color:var(--text-strong);
+  font-size:18px;
+  line-height:1.25;
+}
+
+.card p{
+  margin:7px 0;
+  color:rgba(255,255,255,.84);
+  font-size:14px;
+  line-height:1.45;
+}
+
+.card strong{
+  color:rgba(255,255,255,.96);
+}
+
+body.mesreservations-page button{
+  width:100%;
+  margin-top:12px;
+  padding:13px 14px;
+  border:1px solid rgba(255,255,255,.22);
+  border-radius:16px;
+  color:white;
+  background:linear-gradient(135deg,#e65a4f,#c93b36);
+  box-shadow:0 14px 28px rgba(90,20,20,.22),inset 0 1px 0 rgba(255,255,255,.24);
+  font:inherit;
+  font-weight:800;
+  cursor:pointer;
+}
+
+body.mesreservations-page .calendar-btn{
+  background:linear-gradient(135deg,#4cc3ff,#277fc1);
+  box-shadow:0 14px 28px rgba(15,76,130,.24),inset 0 1px 0 rgba(255,255,255,.28);
+}
+
+.card-number-form{
+  margin-top:12px;
+  display:flex;
+  gap:10px;
+}
+
+.card-number-form input{
+  min-width:0;
+  flex:1;
+  padding:12px;
+  border:1px solid rgba(255,255,255,.24);
+  border-radius:16px;
+  color:white;
+  background:rgba(255,255,255,.16);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.18);
+  font:inherit;
+  font-size:16px;
+}
+
+.card-number-form input::placeholder{
+  color:rgba(255,255,255,.62);
+}
+
+body.mesreservations-page .card-number-form button{
+  width:auto;
+  margin-top:0;
+  background:linear-gradient(135deg,#4cc3ff,#277fc1);
+}
+
+.progress{
+  height:11px;
+  margin:12px 0 8px;
+  overflow:hidden;
+  border-radius:999px;
+  background:rgba(255,255,255,.16);
+  box-shadow:inset 0 1px 2px rgba(0,0,0,.10);
+}
+
+.progress-bar{
+  height:100%;
+  border-radius:inherit;
+  transition:width .5s ease;
+}
+
+.progress-green{background:linear-gradient(90deg,#27ae60,#2ecc71);}
+.progress-orange{background:linear-gradient(90deg,#e67e22,#f39c12);}
+.progress-red{background:linear-gradient(90deg,#c0392b,#e74c3c);}
+
+.card-complete,
+.card-message{
+  color:#ffd166;
+  font-weight:700;
+}
+
+.card-message{
+  line-height:1.5;
+}
+
+.card-loading{
+  color:rgba(255,255,255,.72);
+  font-weight:600;
+}
+
+.empty,
+#toggleHistory{
+  margin:20px 0;
+  padding:16px;
+  border:1px solid var(--glass-line);
+  border-radius:24px;
+  color:rgba(255,255,255,.84);
+  background:rgba(255,255,255,.14);
+  box-shadow:var(--shadow-soft),inset 0 1px 0 rgba(255,255,255,.16);
+  text-align:center;
+  backdrop-filter:blur(18px) saturate(140%);
+  -webkit-backdrop-filter:blur(18px) saturate(140%);
+}
+
+.empty{
+  margin-top:40px;
+  font-weight:600;
+}
+
+.status{
+  width:auto;
+  margin-top:10px;
+  padding:8px 13px;
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  border-radius:999px;
+  background:rgba(255,255,255,.12);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.22),0 10px 24px rgba(10,35,70,.16);
+  font-weight:800;
+}
+
+.status strong{
+  color:inherit;
+}
+
+.status-attente{
+  border:1px solid rgba(243,156,18,.46);
+  color:#ffd897;
+  background:rgba(243,156,18,.34);
+}
+
+.status-accepte{
+  border:1px solid rgba(39,174,96,.50);
+  color:#caffdf;
+  background:rgba(39,174,96,.36);
+}
+
+.status-refuse,
+.status-annule{
+  border:1px solid rgba(231,76,60,.50);
+  color:#ffd0cb;
+  background:rgba(231,76,60,.36);
+}
+
+.status-realise{
+  border:1px solid rgba(41,128,185,.54);
+  color:#d7efff;
+  background:rgba(41,128,185,.38);
+}

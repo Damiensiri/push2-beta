@@ -78,6 +78,7 @@ assets/
       notifications.css
       detail.css
       planningpaddock.css
+      mesreservations.css
     themes/
       summer.css
       autumn.css
@@ -217,8 +218,7 @@ Firebase, les écoutes temps réel des collections `reservations`, `horaires` et
 `restrictions`, la création et l’annulation des réservations, les blocages
 1 h 30, les contrôles de fermeture et de chevauchement, les demandes de mise
 au paddock et EmailJS sont conservés. Seuls l’ancien habillage embarqué et son
-script d’ambiance visuelle ont été remplacés par le thème commun. La validation
-fonctionnelle et visuelle sur iPhone reste obligatoire avant de poursuivre.
+script d’ambiance visuelle ont été remplacés par le thème commun.
 
 Le test du 1er juillet 2026 a validé les annulations, les blocages et les
 demandes de mise au paddock. Deux ajustements sans modification de Firebase ont
@@ -227,6 +227,16 @@ créneaux d’une heure, chaque créneau porte désormais explicitement la menti
 « Libre 1 h ». L’échec EmailJS observé pendant le test provenait du quota
 mensuel du service épuisé et non du code de la PWA. L’affichage technique
 temporaire utilisé pour ce diagnostic a ensuite été retiré.
+La page a ensuite été validée par Damien le 1er juillet 2026.
+
+La migration visuelle de `mesreservations.html` vers l’architecture commune
+est implémentée sans modification de sa logique métier. Son bloc JavaScript
+reste directement dans la page et a été vérifié caractère par caractère comme
+identique à la version précédente. La configuration Firebase, la lecture et
+l’annulation des réservations, `myReservations`, `myMises`, les deux sources
+Google Sheets, la carte de mises, les statuts, l’historique, la génération du
+calendrier et l’actualisation automatique sont conservés. La validation
+fonctionnelle et visuelle sur iPhone reste obligatoire avant de poursuivre.
 
 ## Fond global et Safe Area iPhone — technique validée
 
