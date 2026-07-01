@@ -224,9 +224,9 @@ Le test du 1er juillet 2026 a validé les annulations, les blocages et les
 demandes de mise au paddock. Deux ajustements sans modification de Firebase ont
 ensuite été ajoutés : lorsqu’un blocage 1 h 30 entraîne l’affichage de
 créneaux d’une heure, chaque créneau porte désormais explicitement la mention
-« Libre 1 h » ; en cas d’échec d’EmailJS pour une demande de mise au paddock,
-le détail technique renvoyé par le service est affiché afin de permettre son
-diagnostic.
+« Libre 1 h ». L’échec EmailJS observé pendant le test provenait du quota
+mensuel du service épuisé et non du code de la PWA. L’affichage technique
+temporaire utilisé pour ce diagnostic a ensuite été retiré.
 
 ## Fond global et Safe Area iPhone — technique validée
 
