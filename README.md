@@ -262,8 +262,12 @@ et horaires, cloche et alertes lues. Tous les identifiants HTML, événements
 `onclick`, URLs d’intégration, préchargements et fonctions `go`, `load`,
 `updateUI` et `updateBell` sont conservés. Seuls le CSS embarqué et le moteur
 d’ambiance visuelle local ont été remplacés par les ressources communes du
-thème Summer. La validation complète sur iPhone reste obligatoire avant toute
-publication en production.
+thème Summer. L’index conserve sa propre toile pleine hauteur : sa feuille
+`assets/css/pages/index.css` désactive uniquement pour cette page le
+pseudo-élément global `html::after`, afin de ne pas ajouter le halo du cache
+Safe Area sur le fond inférieur. Cette exception ne modifie ni les autres
+pages ni leur correction Safe Area. La validation complète sur iPhone reste
+obligatoire avant toute publication en production.
 
 ## Fond global et Safe Area iPhone — technique validée
 

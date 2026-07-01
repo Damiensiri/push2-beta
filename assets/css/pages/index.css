@@ -15,6 +15,12 @@ html{
   scrollbar-width:none;
 }
 
+/* L'index possède déjà sa propre toile pleine hauteur : ne pas superposer
+   le cache Safe Area réservé aux autres pages migrées. */
+html::after{
+  display:none;
+}
+
 body.index-page{
   position:relative;
   min-height:100vh;
