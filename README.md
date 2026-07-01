@@ -244,10 +244,11 @@ Les trois méthodes locales déjà testées (`data:`, Blob et partage natif iOS)
 ne permettent plus d’ouvrir l’import Calendrier de manière fiable. La solution
 retenue consiste à servir un véritable flux iCalendar en HTTPS depuis une Web
 App Google Apps Script indépendante. Le fichier source
-`apps-script-calendar-ics.js` est prêt à être déployé. Il ne lit et ne modifie
-aucune donnée : il transforme uniquement les paramètres reçus en flux ICAL.
-`mesreservations.html` ne devra être reliée à ce service qu’après obtention de
-l’URL publique `/exec`.
+`apps-script-calendar-ics.js` a été déployé. Il ne lit et ne modifie aucune
+donnée : il transforme uniquement les paramètres reçus en flux ICAL.
+`mesreservations.html` utilise désormais son URL publique `/exec` uniquement
+sur iPhone et iPad. Le téléchargement Blob existant reste utilisé sur les
+autres appareils.
 
 ## Fond global et Safe Area iPhone — technique validée
 

@@ -138,6 +138,8 @@ function isIOSCalendarTarget(){
 return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1)
 }
 
+const CALENDAR_ICS_URL="https://script.google.com/macros/s/AKfycbw4heNGle1tcRK6z_LIyp-aeiutj4tjP_qG3qxYxYMswgGEg9zEh8LtVgvfoNesMUwkqw/exec"
+
 function escapeICS(value){
 return String(value || "")
 .replace(/\\/g,"\\\\")
@@ -182,7 +184,15 @@ const ics=[
 const filename=`reservation-${dateStr}.ics`
 
 if(isIOSCalendarTarget()){
-window.location.href=`data:text/calendar;charset=utf-8,${encodeURIComponent(ics)}`
+const calendarParameters=new URLSearchParams({
+title:title || "Réservation paddock",
+date:dateStr,
+time:timeStr,
+duration:String(duration),
+description:description || title || "Réservation paddock"
+})
+
+window.location.href=CALENDAR_ICS_URL+"?"+calendarParameters.toString()
 return
 }
 
