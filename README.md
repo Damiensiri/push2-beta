@@ -209,16 +209,24 @@ conservés. `index.html` et `notifications.html` sont restés strictement
 inchangés pendant cette migration. Elle a été validée par Damien le
 1er juillet 2026.
 
-La migration visuelle de `planningpaddock.html` vers l’architecture commune
-est implémentée sans aucune modification de sa logique métier. Le bloc
-JavaScript complet reste directement dans la page et a été vérifié caractère
-par caractère comme identique à la version précédente. La configuration
+La migration visuelle initiale de `planningpaddock.html` vers l’architecture
+commune a été implémentée sans aucune modification de sa logique métier. Le
+bloc JavaScript complet reste directement dans la page et avait été vérifié
+caractère par caractère comme identique à la version précédente. La configuration
 Firebase, les écoutes temps réel des collections `reservations`, `horaires` et
 `restrictions`, la création et l’annulation des réservations, les blocages
 1 h 30, les contrôles de fermeture et de chevauchement, les demandes de mise
 au paddock et EmailJS sont conservés. Seuls l’ancien habillage embarqué et son
 script d’ambiance visuelle ont été remplacés par le thème commun. La validation
 fonctionnelle et visuelle sur iPhone reste obligatoire avant de poursuivre.
+
+Le test du 1er juillet 2026 a validé les annulations, les blocages et les
+demandes de mise au paddock. Deux ajustements sans modification de Firebase ont
+ensuite été ajoutés : lorsqu’un blocage 1 h 30 entraîne l’affichage de
+créneaux d’une heure, chaque créneau porte désormais explicitement la mention
+« Libre 1 h » ; en cas d’échec d’EmailJS pour une demande de mise au paddock,
+le détail technique renvoyé par le service est affiché afin de permettre son
+diagnostic.
 
 ## Fond global et Safe Area iPhone — technique validée
 

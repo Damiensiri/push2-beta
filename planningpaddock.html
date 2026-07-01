@@ -703,7 +703,9 @@ else if(!conflict){
 
 row.className="row free"
 
-row.innerHTML=`<div>${time}</div><div class="freeText">libre</div>`
+row.innerHTML=ninetyBlocked
+    ? `<div>${time}</div><div class="shortText">Libre 1h</div>`
+    : `<div>${time}</div><div class="freeText">libre</div>`
 
 row.onclick=()=>{
 
@@ -887,11 +889,17 @@ showSheet(
 "Jour : "+selectedDate+"<br>Nous vous confirmerons la mise au paddock."
 )
 
-}).catch(()=>{
+}).catch(error=>{
+
+console.error("Erreur EmailJS mise au paddock :",error)
+
+const errorDetail=error && (error.text || error.message || error.status)
+const safeError=document.createElement("span")
+safeError.innerText=String(errorDetail || "Détail indisponible")
 
 showSheet(
 "Erreur",
-"L'envoi du mail a échoué."
+"L'envoi du mail a échoué.<br><small>"+safeError.innerHTML+"</small>"
 )
 
 })
