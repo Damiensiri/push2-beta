@@ -72,6 +72,7 @@ assets/
       plan.css
       service.css
       mes-commandes.css
+      panier.css
     themes/
       summer.css
       autumn.css
@@ -87,6 +88,7 @@ assets/
       plan.js
       service.js
       mes-commandes.js
+      panier.js
 ```
 
 Le thème actif est défini uniquement dans `assets/js/app-config.js`.
@@ -160,8 +162,16 @@ aux trois pages. Elles ont été validées par Damien le 1er juillet 2026.
 La migration de `mes-commandes.html` vers l’architecture commune est
 implémentée. Elle conserve l’historique local, la purge des commandes de plus
 de six mois, le rapprochement par identifiant avec le Google Sheet ainsi que
-l’affichage des statuts et commentaires. Sa validation sur iPhone reste à
-effectuer avant de migrer une page supplémentaire.
+l’affichage des statuts et commentaires. Elle a été validée par Damien le
+1er juillet 2026.
+
+La migration de `panier.html` vers l’architecture commune est implémentée.
+Les boîtes de saisie navigateur ont été remplacées par un formulaire visible
+Nom, Prénom et Email placé après le total. Le bouton Commander reste désactivé
+tant que le panier est vide, qu’un champ est vide ou que l’adresse email est
+invalide. L’envoi EmailJS, l’historique local, `lastOrder`, le vidage du panier
+et la navigation vers `confirmation.html` sont conservés. Sa validation sur
+iPhone reste à effectuer avant de migrer une page supplémentaire.
 
 ## Fond global et Safe Area iPhone — technique validée
 
