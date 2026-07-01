@@ -143,8 +143,10 @@ Elle a été validée par Damien le 1er juillet 2026.
 La migration de `service.html` vers l’architecture commune est implémentée.
 Elle conserve le catalogue, le produit mis en avant, le panier local,
 l’animation d’ajout, les quantités, EmailJS, l’archivage local des commandes,
-le formulaire Google et la navigation vers `mes-commandes.html`. Sa validation
-sur iPhone reste à effectuer avant de migrer une page supplémentaire.
+le formulaire Google et la navigation vers `mes-commandes.html`. Le panneau du
+panier conserve son fond sur toute la hauteur de l’écran, tandis que son
+contenu respecte les Safe Areas supérieure et inférieure. Sa validation sur
+iPhone reste à effectuer avant de migrer une page supplémentaire.
 
 ## Fond global et Safe Area iPhone — technique validée
 
