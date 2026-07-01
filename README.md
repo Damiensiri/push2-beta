@@ -248,7 +248,9 @@ App Google Apps Script indépendante. Le fichier source
 donnée : il transforme uniquement les paramètres reçus en flux ICAL.
 `mesreservations.html` utilise désormais son URL publique `/exec` uniquement
 sur iPhone et iPad. Le téléchargement Blob existant reste utilisé sur les
-autres appareils.
+autres appareils. L’ouverture du flux iCalendar et l’ajout au Calendrier ont
+été validés par Damien sur iPhone le 1er juillet 2026. La migration complète
+de `mesreservations.html` est donc validée.
 
 ## Fond global et Safe Area iPhone — technique validée
 
