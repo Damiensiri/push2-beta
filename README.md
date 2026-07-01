@@ -71,6 +71,7 @@ assets/
       paddocks.css
       plan.css
       service.css
+      mes-commandes.css
     themes/
       summer.css
       autumn.css
@@ -85,6 +86,7 @@ assets/
       paddocks.js
       plan.js
       service.js
+      mes-commandes.js
 ```
 
 Le thème actif est défini uniquement dans `assets/js/app-config.js`.
@@ -153,8 +155,13 @@ réutilisant directement `service.css` et `service.js`, y compris le panier
 validé avec la Dynamic Island. Les deux pages ne fournissent que leur titre et
 leur URL de catalogue propre via `data-catalog-url` (`/soins` ou `/laverie`).
 Le comportement du catalogue, du panier et de la commande reste donc commun
-aux trois pages. Leur validation sur iPhone reste à effectuer avant de migrer
-une page supplémentaire.
+aux trois pages. Elles ont été validées par Damien le 1er juillet 2026.
+
+La migration de `mes-commandes.html` vers l’architecture commune est
+implémentée. Elle conserve l’historique local, la purge des commandes de plus
+de six mois, le rapprochement par identifiant avec le Google Sheet ainsi que
+l’affichage des statuts et commentaires. Sa validation sur iPhone reste à
+effectuer avant de migrer une page supplémentaire.
 
 ## Fond global et Safe Area iPhone — technique validée
 
