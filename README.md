@@ -69,6 +69,7 @@ assets/
       travail.css
       horaires.css
       paddocks.css
+      plan.css
     themes/
       summer.css
       autumn.css
@@ -81,6 +82,7 @@ assets/
       travail.js
       horaires.js
       paddocks.js
+      plan.js
 ```
 
 Le thème actif est défini uniquement dans `assets/js/app-config.js`.
@@ -128,8 +130,14 @@ Tests validés par Damien sur iPhone le 30 juin 2026 :
 La migration de `paddocks.html` vers l’architecture commune est implémentée.
 Elle conserve l’API des statuts, le cache local, l’actualisation toutes les
 10 secondes, les trois paddocks, le bouton de réservation et la navigation
-vers `planningpaddock.html`. Sa validation sur iPhone reste à effectuer avant
-de migrer une page supplémentaire.
+vers `planningpaddock.html`. Elle a été validée par Damien le 1er juillet 2026.
+
+La migration de `plan.html` vers l’architecture commune est implémentée. Elle
+conserve le plan, les cinq marqueurs, le panneau d’information, le halo de
+statut, les horaires, les activités possibles, le bouton de réservation,
+l’API des statuts, le cache local et l’actualisation toutes les 10 secondes.
+Sa validation sur iPhone reste à effectuer avant de migrer une page
+supplémentaire.
 
 ## Fond global et Safe Area iPhone — technique validée
 
