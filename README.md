@@ -74,6 +74,7 @@ assets/
       mes-commandes.css
       panier.css
       confirmation.css
+      concours.css
     themes/
       summer.css
       autumn.css
@@ -178,7 +179,13 @@ par Damien le 1er juillet 2026.
 La migration de `confirmation.html` vers l’architecture commune est
 implémentée. Elle conserve la lecture de `lastOrder`, le récapitulatif des
 articles, le total, le cas sans commande et la navigation vers
-`mes-commandes.html`. Sa validation sur iPhone reste à effectuer avant de
+`mes-commandes.html`. Elle a été validée par Damien le 1er juillet 2026.
+
+La migration de `concours.html` vers l’architecture commune est implémentée.
+Elle conserve l’intégration du calendrier Google, les deux calendriers
+sélectionnés, le fuseau Europe/Paris, la note d’abonnement et tous les tarifs.
+Cette page n’ayant aucune logique métier propre, elle ne nécessite pas de
+fichier JavaScript dédié. Sa validation sur iPhone reste à effectuer avant de
 migrer une page supplémentaire.
 
 ## Fond global et Safe Area iPhone — technique validée
