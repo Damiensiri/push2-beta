@@ -160,10 +160,12 @@
     const page=currentPage();
     const layer=document.createElement("div");
     layer.className="bottom-nav-layer";
-    const useRootLayer=document.body.classList.contains("app-page");
+    const useTopLayer=document.body.classList.contains("app-page") &&
+      typeof layer.showPopover==="function";
 
-    if(useRootLayer){
-      layer.classList.add("bottom-nav-layer--root");
+    if(useTopLayer){
+      layer.classList.add("bottom-nav-layer--top");
+      layer.setAttribute("popover","manual");
     }
 
     const nav=document.createElement("nav");
@@ -184,10 +186,15 @@
     });
 
     layer.appendChild(nav);
-    if(useRootLayer){
-      document.documentElement.appendChild(layer);
-    }else{
-      document.body.appendChild(layer);
+    document.body.appendChild(layer);
+
+    if(useTopLayer){
+      try{
+        layer.showPopover();
+      }catch(error){
+        layer.removeAttribute("popover");
+        layer.classList.remove("bottom-nav-layer--top");
+      }
     }
     document.body.classList.add("has-bottom-nav");
     document.documentElement.classList.add("has-bottom-nav");

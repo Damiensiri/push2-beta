@@ -12,8 +12,20 @@
   pointer-events:none;
 }
 
-.bottom-nav-layer--root{
-  bottom:calc(0px - max(var(--safe-top),var(--safe-bottom)));
+.bottom-nav-layer--top{
+  width:auto;
+  max-width:none;
+  height:auto;
+  max-height:none;
+  overflow:visible;
+  border:0;
+  color:inherit;
+  background:transparent;
+}
+
+.bottom-nav-layer--top::backdrop{
+  display:none;
+  background:transparent;
 }
 
 .bottom-nav{
@@ -163,9 +175,7 @@ body.has-bottom-nav #cartBtn{
 }
 
 body.bottom-nav-overlay-open .bottom-nav,
-body.bottom-nav-input-active .bottom-nav,
-body.bottom-nav-overlay-open + .bottom-nav-layer .bottom-nav,
-body.bottom-nav-input-active + .bottom-nav-layer .bottom-nav{
+body.bottom-nav-input-active .bottom-nav{
   opacity:0;
   pointer-events:none;
   transform:translate3d(-50%,calc(100% + var(--safe-bottom) + 18px),0);

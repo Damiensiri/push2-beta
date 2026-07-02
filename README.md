@@ -349,18 +349,18 @@ la confirmation Paddock, et ne bloque pas le défilement des pages longues.
 Le dock est placé dans une couche fixe commune `.bottom-nav-layer`,
 indépendante de la hauteur et du défilement du contenu. Sa position utilise
 directement `env(safe-area-inset-bottom)` afin de rester strictement identique
-sur toutes les pages. Sur les pages standard, cette couche est attachée
-directement à l’élément racine `html` avec la classe
-`.bottom-nav-layer--root`. Elle partage ainsi le même repère physique que le
-cache iOS et ne dépend plus de la hauteur utile du `body`. La couche racine
-est prolongée de la plus grande Safe Area afin de retrouver la position
-visuelle validée sur l’index. L’index et la météo conservent leur montage
-validé dans le `body`.
+sur toutes les pages. Sur les pages standard, cette couche utilise la Top
+Layer native du navigateur avec l’API Popover en mode manuel et la classe
+`.bottom-nav-layer--top`. Elle échappe ainsi aux contextes d’empilement, aux
+pseudo-éléments et aux caches des pages tout en restant non modale. Sa
+position reprend exactement les coordonnées CSS de l’index, sans décalage
+propre à une page. L’index et la météo conservent leur montage validé dans le
+`body`.
 
 Le dock ne crée aucun fond inférieur supplémentaire. Les pages standard
 conservent exclusivement le cache `html::after` historique, validé avant
-l’ajout du dock. Cela évite qu’une seconde surface bleue recouvre ou découpe
-la partie basse du composant.
+l’ajout du dock. La Top Layer reste au-dessus de ce cache : aucune surface de
+la page ne peut donc recouvrir ou découper la partie basse du composant.
 
 ## Fond global et Safe Area iPhone — technique validée
 
