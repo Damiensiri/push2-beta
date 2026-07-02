@@ -16,6 +16,10 @@ html.has-bottom-nav::after{
   pointer-events:none;
 }
 
+body.app-page .bottom-nav-layer{
+  bottom:calc(0px - max(var(--safe-top),var(--safe-bottom)));
+}
+
 body.app-page .bottom-nav-layer::before{
   content:"";
   position:absolute;

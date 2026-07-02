@@ -349,14 +349,17 @@ la confirmation Paddock, et ne bloque pas le défilement des pages longues.
 Le dock est placé dans une couche fixe commune `.bottom-nav-layer`,
 indépendante de la hauteur et du défilement du contenu. Sa position utilise
 directement `env(safe-area-inset-bottom)` afin de rester strictement identique
-sur toutes les pages.
+sur toutes les pages. Sur les pages standard, cette couche est prolongée sous
+le viewport CSS de la plus grande valeur entre `--safe-top` et
+`--safe-bottom`. Cela compense la zone système qu’iOS retranche parfois au
+calque fixe en mode PWA, sans modifier les coordonnées du dock. L’index, qui
+est la référence visuelle validée, reste inchangé.
 
 Lorsque cette couche est présente, elle neutralise l’ancien cache
 `html::after` et porte elle-même la transition inférieure iOS derrière le
 dock. Le fondu commence sous le dock et se termine dans la vraie Safe Area :
 il ne peut donc plus créer de ligne de raccord sur les pages courtes ou
-longues. L’index conserve le même positionnement validé ; seules les autres
-pages adoptent ce cache inférieur commun.
+longues. Seules les autres pages adoptent ce cache inférieur commun.
 
 ## Fond global et Safe Area iPhone — technique validée
 
