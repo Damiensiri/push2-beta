@@ -3,23 +3,4 @@
  * Ses choix visuels seront définis et validés dans un chantier séparé.
  */
 :root[data-theme="spring"]{
-  --bottom-nav-bg:var(--glass-strong);
-  --bottom-nav-border:var(--glass-line);
-  --bottom-nav-shadow:var(--shadow-card);
-  --bottom-nav-icon:var(--text-soft);
-  --bottom-nav-icon-active:var(--info);
-  --bottom-nav-label:var(--text-soft);
-  --bottom-nav-label-active:var(--text-strong);
-  --bottom-nav-item-active-bg:var(--glass);
-  --bottom-nav-item-active-border:var(--glass-line);
-  --bottom-nav-item-active-shadow:var(--shadow-soft);
-  --bottom-nav-badge-bg:var(--info);
-  --bottom-nav-badge-text:var(--text-strong);
-  --bottom-nav-badge-border:var(--glass-line);
-  --bottom-nav-badge-shadow:var(--shadow-soft);
-  --user-preview-bg:var(--glass);
-  --user-preview-border:var(--glass-line);
-  --user-preview-shadow:var(--shadow-soft);
-  --user-preview-icon:var(--text-strong);
-  --user-preview-label:var(--text-main);
 }
