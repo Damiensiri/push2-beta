@@ -80,6 +80,7 @@ assets/
       planningpaddock.css
       mesreservations.css
       index.css
+      meteo.css
     themes/
       summer.css
       autumn.css
@@ -97,6 +98,7 @@ assets/
       mes-commandes.js
       panier.js
       confirmation.js
+      meteo.js
 ```
 
 Le thème actif est défini uniquement dans `assets/js/app-config.js`.
@@ -105,8 +107,13 @@ Le thème actif est défini uniquement dans `assets/js/app-config.js`.
 validé avant la refonte. Les thèmes `autumn`, `christmas` et `spring` sont
 enregistrés mais restent volontairement non finalisés.
 
-La page `meteo.html` est une exception permanente : son fond et ses animations
-météo ne doivent pas être remplacés par le thème global.
+La page `meteo.html` est une exception permanente et contrôlée : son fond et
+ses animations météo ne doivent pas être remplacés par le thème global.
+Elle participe à la structure du projet et au versioning grâce à ses ressources
+dédiées `assets/css/pages/meteo.css` et `assets/js/pages/meteo.js`, mais elle ne
+charge volontairement ni `app.css`, ni `app-config.js`, ni `app-layout.js`, ni
+les thèmes saisonniers. Elle ne reçoit donc pas `.ambient-stage`, `html::after`
+ou le moteur de fond commun.
 
 La Phase 2 doit également supprimer le micro-scroll des pages courtes par un
 calcul correct de la hauteur disponible, sans utiliser de blocage global du
@@ -278,6 +285,18 @@ pseudo-élément global `html::after`, afin de ne pas ajouter le halo du cache
 Safe Area sur le fond inférieur. Cette exception ne modifie ni les autres
 pages ni leur correction Safe Area. La validation complète sur iPhone reste
 obligatoire avant toute publication en production.
+
+La migration contrôlée de `meteo.html` conserve cette page hors de
+l’architecture visuelle commune. Son CSS autonome a été déplacé mécaniquement
+vers `assets/css/pages/meteo.css` en conservant, dans le même ordre, toutes les
+règles du fond animé et les corrections de `meteo-fullscreen.css`. Son
+JavaScript a été déplacé sans réécriture vers
+`assets/js/pages/meteo.js`. Le chargement de `vigilance-data.js` reste placé
+avant le moteur météo. Ces trois ressources portent une version synchronisée
+par `scripts/bump-app-version.sh`. Aucun thème saisonnier, fond commun,
+`.ambient-stage` ou cache `html::after` n’est chargé. Une éventuelle future
+barre d’accès rapide devra être intégrée comme composant isolé et ne pourra pas
+introduire `app.css` ou le moteur de fond commun dans cette page.
 
 ## Fond global et Safe Area iPhone — technique validée
 

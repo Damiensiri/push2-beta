@@ -37,7 +37,7 @@ APP_VERSION="$APP_VERSION" perl -0pi -e \
 
 for path in "$ROOT_DIR"/*.html; do
   APP_VERSION="$APP_VERSION" perl -0pi -e \
-    's#((?:assets/(?:css|js)/[^"?]+|app-shell\.css)\?v=)[^"]*#${1}$ENV{APP_VERSION}#g' \
+    's#((?:assets/(?:css|js)/[^"?]+|app-shell\.css|vigilance-data\.js)\?v=)[^"]*#${1}$ENV{APP_VERSION}#g' \
     "$path"
 done
 
