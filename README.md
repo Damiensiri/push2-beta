@@ -352,15 +352,15 @@ directement `env(safe-area-inset-bottom)` afin de rester strictement identique
 sur toutes les pages. Sur les pages standard, cette couche est attachée
 directement à l’élément racine `html` avec la classe
 `.bottom-nav-layer--root`. Elle partage ainsi le même repère physique que le
-cache iOS et ne dépend plus de la hauteur utile du `body`. Aucun décalage
-artificiel n’est ajouté. L’index et la météo conservent leur montage validé
-dans le `body`.
+cache iOS et ne dépend plus de la hauteur utile du `body`. La couche racine
+est prolongée de la plus grande Safe Area afin de retrouver la position
+visuelle validée sur l’index. L’index et la météo conservent leur montage
+validé dans le `body`.
 
-Lorsque cette couche est présente, elle neutralise l’ancien cache
-`html::after` et porte elle-même la transition inférieure iOS derrière le
-dock. Le fondu commence sous le dock et se termine dans la vraie Safe Area :
-il ne peut donc plus créer de ligne de raccord sur les pages courtes ou
-longues. Seules les autres pages adoptent ce cache inférieur commun.
+Le dock ne crée aucun fond inférieur supplémentaire. Les pages standard
+conservent exclusivement le cache `html::after` historique, validé avant
+l’ajout du dock. Cela évite qu’une seconde surface bleue recouvre ou découpe
+la partie basse du composant.
 
 ## Fond global et Safe Area iPhone — technique validée
 

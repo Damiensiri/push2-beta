@@ -3,10 +3,6 @@
   --bottom-nav-clearance:62px;
 }
 
-html.has-bottom-nav::after{
-  display:none;
-}
-
 .bottom-nav-layer{
   position:fixed;
   inset:0;
@@ -16,21 +12,8 @@ html.has-bottom-nav::after{
   pointer-events:none;
 }
 
-.bottom-nav-layer--root::before{
-  content:"";
-  position:absolute;
-  right:0;
-  bottom:0;
-  left:0;
-  z-index:0;
-  height:calc(var(--bottom-nav-height) + var(--safe-bottom) + 4px);
-  pointer-events:none;
-  background:linear-gradient(
-    to bottom,
-    transparent 0,
-    var(--app-safearea-bottom-background,var(--sky-bottom,#8dcced)) var(--bottom-nav-height),
-    var(--app-safearea-bottom-background,var(--sky-bottom,#8dcced)) 100%
-  );
+.bottom-nav-layer--root{
+  bottom:calc(0px - max(var(--safe-top),var(--safe-bottom)));
 }
 
 .bottom-nav{
