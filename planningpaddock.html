@@ -18,7 +18,7 @@
 <link rel="stylesheet" href="assets/css/themes/autumn.css?v=20260701-planningpaddock">
 <link rel="stylesheet" href="assets/css/themes/christmas.css?v=20260701-planningpaddock">
 <link rel="stylesheet" href="assets/css/themes/spring.css?v=20260701-planningpaddock">
-<link rel="stylesheet" href="assets/css/pages/planningpaddock.css?v=20260701-planningpaddock">
+<link rel="stylesheet" href="assets/css/pages/planningpaddock.css?v=20260702-availability">
 </head>
 
 <body class="app-page planningpaddock-page">
@@ -33,6 +33,27 @@
 </div>
 <h1 id="title">RÉSERVATION</h1>
 </header>
+
+<section class="todayAvailability" aria-labelledby="todayAvailabilityTitle">
+<div id="todayAvailabilityTitle" class="todayAvailabilityTitle">Prochains créneaux libres · Aujourd’hui</div>
+<div class="todayAvailabilityGrid" aria-live="polite">
+<div class="todayAvailabilityItem availabilityMaison">
+<span class="todayAvailabilityIcon"><img src="image/paddock-maison.svg" alt="" aria-hidden="true"></span>
+<span class="todayAvailabilityName">Maison</span>
+<span id="availabilityMaison" class="todayAvailabilityValue loading">—</span>
+</div>
+<div class="todayAvailabilityItem availabilityGrande">
+<span class="todayAvailabilityIcon"><img src="image/paddock-grande-voie.svg" alt="" aria-hidden="true"></span>
+<span class="todayAvailabilityName">Grande Voie</span>
+<span id="availabilityGrande" class="todayAvailabilityValue loading">—</span>
+</div>
+<div class="todayAvailabilityItem availabilityBeudot">
+<span class="todayAvailabilityIcon"><img src="image/paddock-beudot.svg" alt="" aria-hidden="true"></span>
+<span class="todayAvailabilityName">Beudot</span>
+<span id="availabilityBeudot" class="todayAvailabilityValue loading">—</span>
+</div>
+</div>
+</section>
 
 <div class="card">
 
@@ -143,6 +164,8 @@ let horaires={}
 let restrictions={}
 let selectedDate=null
 let selected=null
+let reservationsLoaded=false
+let horairesLoaded=false
 
 let adminMode=false
 let tapCount=0
@@ -431,6 +454,8 @@ data.id = doc.id
 reservations.push(data)
 })
 
+reservationsLoaded=true
+renderTodayAvailability()
 generate()
 
 })
@@ -443,6 +468,8 @@ snapshot.forEach(doc=>{
 horaires[doc.id] = doc.data()
 })
 
+horairesLoaded=true
+renderTodayAvailability()
 generate()
 
 })
@@ -537,6 +564,105 @@ return Number.isFinite(startMinutes) &&
        Number.isFinite(durationMinutes) &&
        Number.isFinite(closingMinutes) &&
        startMinutes+durationMinutes<=closingMinutes
+
+}
+
+function localDateKey(date){
+
+return date.getFullYear()+"-"+
+       String(date.getMonth()+1).padStart(2,"0")+"-"+
+       String(date.getDate()).padStart(2,"0")
+
+}
+
+function firstFreeSlotToday(paddock,now){
+
+const today=localDateKey(now)
+const names=["dimanche","lundi","mardi","mercredi","jeudi","vendredi","samedi"]
+const config=horaires[paddock] && horaires[paddock][names[now.getDay()]]
+
+if(!config || config.closed){
+return {state:"closed",label:"Fermé"}
+}
+
+const openMinutes=timeToMinutes(config.open)
+const closeMinutes=timeToMinutes(config.close)
+
+if(!Number.isFinite(openMinutes) || !Number.isFinite(closeMinutes)){
+return {state:"full",label:"Complet"}
+}
+
+let current=openMinutes
+
+while(current<closeMinutes){
+
+const slotDate=new Date(
+now.getFullYear(),
+now.getMonth(),
+now.getDate(),
+Math.floor(current/60),
+current%60
+)
+
+const startsSoon=(slotDate-now)/60000<10
+const conflict=reservations.some(r=>{
+
+if(r.date!==today || r.paddock!==paddock) return false
+
+const reservationStart=timeToMinutes(r.time)
+const reservationEnd=reservationStart+Number(r.duration)
+
+return current<reservationEnd && current+60>reservationStart
+
+})
+
+if(!startsSoon &&
+   fitsBeforeClosing(current,60,closeMinutes) &&
+   !conflict){
+return {state:"free",label:minutesToTime(current)}
+}
+
+const reservationAtStart=reservations.find(r=>{
+return r.date===today &&
+       r.paddock===paddock &&
+       timeToMinutes(r.time)===current
+})
+
+if(reservationAtStart){
+const reservationDuration=Number(reservationAtStart.duration)
+current+=Number.isFinite(reservationDuration) && reservationDuration>0
+    ? reservationDuration
+    : 60
+}else{
+current+=60
+}
+
+}
+
+return {state:"full",label:"Complet"}
+
+}
+
+function renderTodayAvailability(){
+
+if(!reservationsLoaded || !horairesLoaded) return
+
+const now=new Date()
+const paddocks=[
+{id:"Maison",key:"maison"},
+{id:"Grande",key:"grande"},
+{id:"Beudot",key:"beudot"}
+]
+
+paddocks.forEach(item=>{
+
+const element=document.getElementById("availability"+item.id)
+const availability=firstFreeSlotToday(item.key,now)
+
+element.className="todayAvailabilityValue "+availability.state
+element.textContent=availability.label
+
+})
 
 }
 
@@ -1051,6 +1177,7 @@ updateEmailRequirement()
 buildDays()
 updatePaddocks()
 loadDataRealtime()
+setInterval(renderTodayAvailability,60000)
 
 })
 

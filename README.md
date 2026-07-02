@@ -230,6 +230,16 @@ mensuel du service épuisé et non du code de la PWA. L’affichage technique
 temporaire utilisé pour ce diagnostic a ensuite été retiré.
 La page a ensuite été validée par Damien le 1er juillet 2026.
 
+Une amélioration UX indépendante a ensuite été ajoutée après la validation de
+la migration : un bloc compact placé avant le formulaire affiche, en lecture
+seule, le premier créneau libre d’une heure disponible aujourd’hui pour
+Maison, Grande Voie et Beudot. Il réutilise les données déjà chargées par les
+écoutes temps réel existantes des horaires et réservations, sans nouvelle
+requête ni aucune écriture Firebase. Le calcul respecte les horaires, le délai
+minimum de dix minutes, les réservations et les blocages déjà enregistrés. Un
+paddock fermé affiche « Fermé » et une journée sans créneau libre affiche
+« Complet ». Les trois pictogrammes sont des SVG locaux originaux.
+
 La migration visuelle de `mesreservations.html` vers l’architecture commune
 est implémentée sans modification de sa logique métier. Son bloc JavaScript
 reste directement dans la page et a été vérifié caractère par caractère comme

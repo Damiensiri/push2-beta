@@ -2,6 +2,124 @@ body.planningpaddock-page{
   line-height:1.35;
 }
 
+.todayAvailability{
+  width:calc(100% - 36px);
+  margin:0 auto 14px;
+  padding:13px 12px 12px;
+  border:1px solid var(--glass-line);
+  border-radius:22px;
+  color:var(--text-main);
+  background:
+    linear-gradient(160deg,rgba(29,64,92,.70),rgba(39,93,126,.52)),
+    radial-gradient(circle at 12% 0%,rgba(255,255,255,.14),transparent 42%);
+  box-shadow:var(--shadow-soft),inset 0 1px 0 rgba(255,255,255,.18);
+  backdrop-filter:blur(20px) saturate(140%);
+  -webkit-backdrop-filter:blur(20px) saturate(140%);
+}
+
+.todayAvailabilityTitle{
+  margin-bottom:10px;
+  color:rgba(255,255,255,.68);
+  font-size:9px;
+  font-weight:700;
+  letter-spacing:.055em;
+  text-align:center;
+  text-transform:uppercase;
+}
+
+.todayAvailabilityGrid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+}
+
+.todayAvailabilityItem{
+  min-width:0;
+  padding:0 7px;
+  display:grid;
+  grid-template-columns:28px minmax(0,1fr);
+  grid-template-rows:auto auto;
+  column-gap:7px;
+  align-items:center;
+}
+
+.todayAvailabilityItem + .todayAvailabilityItem{
+  border-left:1px solid rgba(255,255,255,.13);
+}
+
+.todayAvailabilityIcon{
+  width:28px;
+  height:28px;
+  grid-row:1 / 3;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border:1px solid rgba(255,255,255,.16);
+  border-radius:50%;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.20);
+}
+
+.availabilityMaison .todayAvailabilityIcon{
+  background:linear-gradient(145deg,rgba(77,190,112,.92),rgba(43,130,86,.84));
+}
+
+.availabilityGrande .todayAvailabilityIcon{
+  background:linear-gradient(145deg,rgba(77,173,231,.92),rgba(38,115,178,.84));
+}
+
+.availabilityBeudot .todayAvailabilityIcon{
+  background:linear-gradient(145deg,rgba(223,158,91,.94),rgba(177,105,48,.86));
+}
+
+.todayAvailabilityIcon img{
+  width:16px;
+  height:16px;
+  display:block;
+}
+
+.todayAvailabilityName{
+  min-width:0;
+  overflow:hidden;
+  color:rgba(255,255,255,.90);
+  font-size:9px;
+  font-weight:700;
+  line-height:1.15;
+  text-overflow:ellipsis;
+  text-transform:uppercase;
+  white-space:nowrap;
+}
+
+.todayAvailabilityValue{
+  width:max-content;
+  max-width:100%;
+  margin-top:3px;
+  padding:2px 6px;
+  border:1px solid rgba(255,255,255,.20);
+  border-radius:7px;
+  color:rgba(255,255,255,.92);
+  background:rgba(255,255,255,.10);
+  font-size:11px;
+  font-weight:600;
+  line-height:1.35;
+}
+
+.todayAvailabilityValue.free{
+  border-color:rgba(72,230,142,.52);
+  color:#82f0b3;
+}
+
+.todayAvailabilityValue.closed{
+  color:rgba(255,255,255,.60);
+}
+
+.todayAvailabilityValue.full{
+  border-color:rgba(255,189,88,.34);
+  color:#ffcf86;
+}
+
+.todayAvailabilityValue.loading{
+  color:rgba(255,255,255,.48);
+}
+
 body.planningpaddock-page .card{
   width:calc(100% - 36px);
   margin:0 auto 22px;
@@ -391,6 +509,38 @@ body.planningpaddock-page .changeSlotBtn{
 }
 
 @media(max-width:380px){
+  .todayAvailability{
+    width:calc(100% - 24px);
+    padding-right:7px;
+    padding-left:7px;
+  }
+
+  .todayAvailabilityItem{
+    padding-right:4px;
+    padding-left:4px;
+    column-gap:5px;
+  }
+
+  .todayAvailabilityIcon{
+    width:25px;
+    height:25px;
+  }
+
+  .todayAvailabilityIcon img{
+    width:14px;
+    height:14px;
+  }
+
+  .todayAvailabilityName{
+    font-size:8px;
+  }
+
+  .todayAvailabilityValue{
+    padding-right:4px;
+    padding-left:4px;
+    font-size:10px;
+  }
+
   body.planningpaddock-page .card{
     width:calc(100% - 24px);
     padding:18px;
