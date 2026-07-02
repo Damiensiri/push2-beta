@@ -65,6 +65,8 @@ Architecture pilote :
 assets/
   css/
     app.css
+    components/
+      bottom-nav.css
     pages/
       travail.css
       horaires.css
@@ -89,6 +91,8 @@ assets/
   js/
     app-config.js
     app-layout.js
+    components/
+      bottom-nav.js
     pages/
       travail.js
       horaires.js
@@ -303,6 +307,45 @@ par `scripts/bump-app-version.sh`. Aucun thème saisonnier, fond commun,
 `.ambient-stage` ou cache `html::after` n’est chargé. Une éventuelle future
 barre d’accès rapide devra être intégrée comme composant isolé et ne pourra pas
 introduire `app.css` ou le moteur de fond commun dans cette page.
+
+## Dock d’accès rapide
+
+Avant l’ajout du dock, l’état complet validé a été conservé par le tag Git
+`backup-avant-dock-20260702`, placé sur le commit `631de22`.
+
+Le dock commun est défini uniquement dans :
+
+```text
+assets/css/components/bottom-nav.css
+assets/js/components/bottom-nav.js
+```
+
+Les pages migrées et `meteo.html` ne contiennent que les références vers ces
+deux ressources. Le composant injecte quatre accès : Accueil, Notifications,
+Plan et Mes réservations. Son ordre, ses libellés et ses SVG sont centralisés
+dans `bottom-nav.js`.
+
+Sur `index.html`, le composant déplace le nœud existant `#bellBox` dans le
+dock. Il ne le clone pas et conserve `#bellBadge`, le `onclick`, les IDs et la
+logique JavaScript historique de mise à jour. Les autres pages affichent un
+simple accès à Notifications sans compteur artificiel. La centralisation
+éventuelle du compteur sur toutes les pages reste un chantier séparé.
+
+L’emplacement libéré dans l’en-tête de l’index reçoit uniquement un aperçu
+visuel non interactif de la future zone utilisateur. La gestion du prénom, de
+la photo et du profil n’est pas implémentée.
+
+Le style du dock ne contient aucune couleur propre à une saison. Il consomme
+exclusivement les variables `--bottom-nav-*` et `--user-preview-*` fournies
+par les thèmes. Le thème Summer définit ses variantes claire et sombre ; les
+thèmes préparés exposent les mêmes points d’extension. La météo fournit ces
+variables dans sa propre feuille sans charger `app.css`, les thèmes ou le
+moteur de fond commun.
+
+Le composant ajoute uniquement l’espace inférieur nécessaire aux pages
+concernées. Il respecte la Safe Area iPhone, se masque pendant la saisie dans
+un formulaire ainsi que lors de l’ouverture des panneaux Panier, Plan et de
+la confirmation Paddock, et ne bloque pas le défilement des pages longues.
 
 ## Fond global et Safe Area iPhone — technique validée
 
