@@ -405,6 +405,52 @@ synchronise dans `index.html`, `manifest.json`, `OneSignalSDKWorker.js` et
 CSS et JavaScript déjà migrés. Il ne crée aucun commit et ne déclenche aucun
 push.
 
+## Historique du chantier dock inférieur — tentative abandonnée
+
+Un dock commun Accueil, Notifications, Plan et Mes réservations a été testé
+les 2 et 3 juillet 2026. Le nœud historique `#bellBox` de l’index était déplacé
+sans être cloné afin de conserver sa logique, ses IDs, son badge et ses
+listeners. Une sauvegarde a été créée avant ce chantier :
+
+```text
+tag : backup-avant-dock-20260702
+commit : 631de22
+```
+
+Les approches suivantes ont été testées successivement :
+
+- composant commun injecté en `position:fixed` avec prise en compte de
+  `env(safe-area-inset-bottom)` ;
+- réduction de la hauteur et de la réserve inférieure du dock ;
+- prolongement et fondu du cache `html::after` sous le dock ;
+- calque fixe commun indépendant de la hauteur du contenu ;
+- prolongement du calque avec les Safe Areas supérieure et inférieure ;
+- rattachement du calque directement à l’élément racine `html` ;
+- restauration du cache inférieur historique derrière le dock ;
+- utilisation de la Top Layer native via l’API Popover.
+
+Constats sur iPhone :
+
+- l’index et la météo pouvaient afficher la position souhaitée ;
+- selon les autres pages, le dock apparaissait trop haut ou trop bas ;
+- le cache inférieur iOS pouvait recouvrir ou découper le dock avec une bande
+  bleue, malgré un `z-index` élevé ;
+- les coordonnées mesurées dans les DevTools étaient identiques, mais le rendu
+  de la PWA installée différait à cause du canvas et de la Safe Area iOS ;
+- la Top Layer fonctionnait dans Safari, mais pas correctement dans la PWA
+  installée.
+
+Conclusion : le problème ne venait pas de la logique de navigation ni d’un
+simple `z-index`, mais du rendu différent du viewport et de la zone système
+dans la PWA iOS. Le chantier a été arrêté conformément à la décision de
+Damien. Le retour stable a été réalisé par le commit `f8e7941`, avec la version
+`20260703-002645`.
+
+Si ce chantier est repris un jour, ne pas réappliquer directement l’une de ces
+solutions. Commencer par un prototype iOS PWA isolé, sans modifier
+l’application, puis intégrer uniquement une technique validée simultanément
+dans Safari et dans la PWA installée.
+
 ## Reprise d’une nouvelle session
 
 À chaque nouvelle conversation ou reprise du projet :
@@ -430,6 +476,8 @@ push.
 - Validation définitive du fond Summer sur `travail.html` et `horaires.html`,
   avec cache inférieur thémable supprimant la démarcation de la Safe Area
   iPhone sans micro-scroll.
+- Tentative de dock inférieur commun, puis abandon et restauration complète de
+  la sauvegarde stable après divergence de rendu entre Safari et la PWA iOS.
 
 Cette section doit être maintenue afin de résumer les principales évolutions de
 la PWA et de retrouver facilement les grandes étapes du projet.
