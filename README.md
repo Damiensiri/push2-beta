@@ -349,11 +349,12 @@ la confirmation Paddock, et ne bloque pas le défilement des pages longues.
 Le dock est placé dans une couche fixe commune `.bottom-nav-layer`,
 indépendante de la hauteur et du défilement du contenu. Sa position utilise
 directement `env(safe-area-inset-bottom)` afin de rester strictement identique
-sur toutes les pages. Sur les pages standard, cette couche est prolongée sous
-le viewport CSS de la plus grande valeur entre `--safe-top` et
-`--safe-bottom`. Cela compense la zone système qu’iOS retranche parfois au
-calque fixe en mode PWA, sans modifier les coordonnées du dock. L’index, qui
-est la référence visuelle validée, reste inchangé.
+sur toutes les pages. Sur les pages standard, cette couche est attachée
+directement à l’élément racine `html` avec la classe
+`.bottom-nav-layer--root`. Elle partage ainsi le même repère physique que le
+cache iOS et ne dépend plus de la hauteur utile du `body`. Aucun décalage
+artificiel n’est ajouté. L’index et la météo conservent leur montage validé
+dans le `body`.
 
 Lorsque cette couche est présente, elle neutralise l’ancien cache
 `html::after` et porte elle-même la transition inférieure iOS derrière le

@@ -16,11 +16,7 @@ html.has-bottom-nav::after{
   pointer-events:none;
 }
 
-body.app-page .bottom-nav-layer{
-  bottom:calc(0px - max(var(--safe-top),var(--safe-bottom)));
-}
-
-body.app-page .bottom-nav-layer::before{
+.bottom-nav-layer--root::before{
   content:"";
   position:absolute;
   right:0;
@@ -184,7 +180,9 @@ body.has-bottom-nav #cartBtn{
 }
 
 body.bottom-nav-overlay-open .bottom-nav,
-body.bottom-nav-input-active .bottom-nav{
+body.bottom-nav-input-active .bottom-nav,
+body.bottom-nav-overlay-open + .bottom-nav-layer .bottom-nav,
+body.bottom-nav-input-active + .bottom-nav-layer .bottom-nav{
   opacity:0;
   pointer-events:none;
   transform:translate3d(-50%,calc(100% + var(--safe-bottom) + 18px),0);

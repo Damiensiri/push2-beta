@@ -160,6 +160,12 @@
     const page=currentPage();
     const layer=document.createElement("div");
     layer.className="bottom-nav-layer";
+    const useRootLayer=document.body.classList.contains("app-page");
+
+    if(useRootLayer){
+      layer.classList.add("bottom-nav-layer--root");
+    }
+
     const nav=document.createElement("nav");
     nav.className="bottom-nav";
     nav.setAttribute("aria-label","Accès rapides");
@@ -178,7 +184,11 @@
     });
 
     layer.appendChild(nav);
-    document.body.appendChild(layer);
+    if(useRootLayer){
+      document.documentElement.appendChild(layer);
+    }else{
+      document.body.appendChild(layer);
+    }
     document.body.classList.add("has-bottom-nav");
     document.documentElement.classList.add("has-bottom-nav");
     createUserPreview();
