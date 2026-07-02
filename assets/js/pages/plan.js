@@ -7,6 +7,12 @@ const ICONS={
 "hors-service":"image/horsservice.png"
 };
 
+const PADDOCK_ICONS={
+"maison":"image/paddock-maison.svg",
+"grande-voie":"image/paddock-grande-voie.svg",
+"beudot":"image/paddock-beudot.svg"
+};
+
 let DATA=[];
 
 const panel=document.getElementById("panel");
@@ -26,7 +32,7 @@ function setPanelIcon(espace){
 if(espace==="carriere" || espace==="manege"){
 panelIconImg.src="image/travail.svg";
 }else{
-panelIconImg.src="image/paddock.svg";
+panelIconImg.src=PADDOCK_ICONS[espace]||"image/paddock.svg";
 }
 }
 

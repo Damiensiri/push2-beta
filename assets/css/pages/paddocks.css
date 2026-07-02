@@ -60,6 +60,19 @@
   filter:drop-shadow(0 8px 14px rgba(12,42,82,.22));
 }
 
+.left-title img[src*="paddock-"]{
+  filter:
+    brightness(0)
+    saturate(100%)
+    invert(31%)
+    sepia(57%)
+    saturate(1778%)
+    hue-rotate(342deg)
+    brightness(89%)
+    contrast(91%)
+    drop-shadow(0 8px 14px rgba(12,42,82,.22));
+}
+
 .card-title{
   color:var(--text-strong);
   font-size:22px;

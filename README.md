@@ -152,12 +152,18 @@ La migration de `paddocks.html` vers l’architecture commune est implémentée.
 Elle conserve l’API des statuts, le cache local, l’actualisation toutes les
 10 secondes, les trois paddocks, le bouton de réservation et la navigation
 vers `planningpaddock.html`. Elle a été validée par Damien le 1er juillet 2026.
+Les pictogrammes SVG Maison, Grande Voie et Beudot créés pour le récapitulatif
+de `planningpaddock.html` remplacent désormais les trois pictogrammes
+génériques dans les titres, sans modifier les cartes ni leur fonctionnement.
 
 La migration de `plan.html` vers l’architecture commune est implémentée. Elle
 conserve le plan, les cinq marqueurs, le panneau d’information, le halo de
 statut, les horaires, les activités possibles, le bouton de réservation,
 l’API des statuts, le cache local et l’actualisation toutes les 10 secondes.
 Elle a été validée par Damien le 1er juillet 2026.
+Dans le panneau d’information, chaque paddock utilise désormais son
+pictogramme SVG dédié. Les cinq marqueurs du plan conservent volontairement
+leurs icônes de statut Ouvert, Prévision, Fermé ou Hors service.
 
 La migration de `service.html` vers l’architecture commune est implémentée.
 Elle conserve le catalogue, le produit mis en avant, le panier local,
