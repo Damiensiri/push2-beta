@@ -1,17 +1,35 @@
 :root{
   --bottom-nav-height:56px;
-  --bottom-nav-clearance:68px;
+  --bottom-nav-clearance:62px;
+}
+
+html.has-bottom-nav::after{
+  height:calc(var(--safe-bottom,env(safe-area-inset-bottom,0px)) + var(--bottom-nav-height));
+  -webkit-mask-image:linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 var(--bottom-nav-height),
+    #000 100%
+  );
+  mask-image:linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 var(--bottom-nav-height),
+    #000 100%
+  );
 }
 
 .bottom-nav{
   position:fixed;
   top:auto;
   right:auto;
-  bottom:calc(2px + var(--safe-bottom,env(safe-area-inset-bottom,0px)));
+  bottom:max(0px,calc(env(safe-area-inset-bottom,0px) - 2px));
   left:50%;
   z-index:1200;
   width:min(calc(100% - 24px),484px);
   height:var(--bottom-nav-height);
+  min-height:var(--bottom-nav-height);
+  max-height:var(--bottom-nav-height);
   margin:0;
   padding:3px;
   display:grid;
@@ -22,7 +40,7 @@
   color:var(--bottom-nav-icon);
   background:var(--bottom-nav-bg);
   box-shadow:var(--bottom-nav-shadow);
-  transform:translateX(-50%);
+  transform:translate3d(-50%,0,0);
   backdrop-filter:blur(24px) saturate(155%);
   -webkit-backdrop-filter:blur(24px) saturate(155%);
   transition:
@@ -150,7 +168,7 @@ body.bottom-nav-overlay-open .bottom-nav,
 body.bottom-nav-input-active .bottom-nav{
   opacity:0;
   pointer-events:none;
-  transform:translate(-50%,calc(100% + var(--safe-bottom) + 18px));
+  transform:translate3d(-50%,calc(100% + var(--safe-bottom) + 18px),0);
 }
 
 .user-preview{

@@ -346,6 +346,11 @@ Le composant ajoute uniquement l’espace inférieur nécessaire aux pages
 concernées. Il respecte la Safe Area iPhone, se masque pendant la saisie dans
 un formulaire ainsi que lors de l’ouverture des panneaux Panier, Plan et de
 la confirmation Paddock, et ne bloque pas le défilement des pages longues.
+Sa position utilise directement `env(safe-area-inset-bottom)` afin de rester
+strictement identique sur toutes les pages. Lorsque le cache inférieur iOS est
+présent, sa transition est étendue sous toute la hauteur du dock pour éviter
+qu’une ligne de raccord redevienne visible, notamment sur Alertes. L’index
+conserve son exception validée sans cache `html::after`.
 
 ## Fond global et Safe Area iPhone — technique validée
 

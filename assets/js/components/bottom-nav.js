@@ -177,6 +177,7 @@
 
     document.body.appendChild(nav);
     document.body.classList.add("has-bottom-nav");
+    document.documentElement.classList.add("has-bottom-nav");
     createUserPreview();
     observeOverlays();
     observeFormFocus();
