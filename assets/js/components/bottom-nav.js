@@ -158,6 +158,8 @@
     if(document.querySelector(".bottom-nav"))return;
 
     const page=currentPage();
+    const layer=document.createElement("div");
+    layer.className="bottom-nav-layer";
     const nav=document.createElement("nav");
     nav.className="bottom-nav";
     nav.setAttribute("aria-label","Accès rapides");
@@ -175,7 +177,8 @@
       nav.appendChild(createStandardItem(item,page));
     });
 
-    document.body.appendChild(nav);
+    layer.appendChild(nav);
+    document.body.appendChild(layer);
     document.body.classList.add("has-bottom-nav");
     document.documentElement.classList.add("has-bottom-nav");
     createUserPreview();

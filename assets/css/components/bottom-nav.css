@@ -4,28 +4,42 @@
 }
 
 html.has-bottom-nav::after{
-  height:calc(var(--safe-bottom,env(safe-area-inset-bottom,0px)) + var(--bottom-nav-height));
-  -webkit-mask-image:linear-gradient(
+  display:none;
+}
+
+.bottom-nav-layer{
+  position:fixed;
+  inset:0;
+  z-index:1200;
+  margin:0;
+  padding:0;
+  pointer-events:none;
+}
+
+body.app-page .bottom-nav-layer::before{
+  content:"";
+  position:absolute;
+  right:0;
+  bottom:0;
+  left:0;
+  z-index:0;
+  height:calc(var(--bottom-nav-height) + var(--safe-bottom) + 4px);
+  pointer-events:none;
+  background:linear-gradient(
     to bottom,
     transparent 0,
-    #000 var(--bottom-nav-height),
-    #000 100%
-  );
-  mask-image:linear-gradient(
-    to bottom,
-    transparent 0,
-    #000 var(--bottom-nav-height),
-    #000 100%
+    var(--app-safearea-bottom-background,var(--sky-bottom,#8dcced)) var(--bottom-nav-height),
+    var(--app-safearea-bottom-background,var(--sky-bottom,#8dcced)) 100%
   );
 }
 
 .bottom-nav{
-  position:fixed;
+  position:absolute;
   top:auto;
   right:auto;
   bottom:max(0px,calc(env(safe-area-inset-bottom,0px) - 2px));
   left:50%;
-  z-index:1200;
+  z-index:1;
   width:min(calc(100% - 24px),484px);
   height:var(--bottom-nav-height);
   min-height:var(--bottom-nav-height);
@@ -43,6 +57,7 @@ html.has-bottom-nav::after{
   transform:translate3d(-50%,0,0);
   backdrop-filter:blur(24px) saturate(155%);
   -webkit-backdrop-filter:blur(24px) saturate(155%);
+  pointer-events:auto;
   transition:
     opacity .2s ease,
     transform .24s ease;
