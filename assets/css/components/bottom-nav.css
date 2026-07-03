@@ -1,0 +1,190 @@
+:root{
+  --bottom-nav-height:56px;
+  --bottom-nav-clearance:62px;
+}
+
+.bottom-nav{
+  position:fixed;
+  top:auto;
+  right:auto;
+  bottom:max(0px,calc(env(safe-area-inset-bottom,0px) - 2px));
+  left:50%;
+  z-index:1200;
+  width:min(calc(100% - 24px),484px);
+  height:var(--bottom-nav-height);
+  min-height:var(--bottom-nav-height);
+  max-height:var(--bottom-nav-height);
+  margin:0;
+  padding:3px;
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:2px;
+  border:1px solid var(--bottom-nav-border);
+  border-radius:20px;
+  color:var(--bottom-nav-icon);
+  background:var(--bottom-nav-bg);
+  box-shadow:var(--bottom-nav-shadow);
+  transform:translate3d(-50%,0,0);
+  backdrop-filter:blur(24px) saturate(155%);
+  -webkit-backdrop-filter:blur(24px) saturate(155%);
+}
+
+.bottom-nav__item,
+.bottom-nav #bellBox{
+  position:relative;
+  min-width:0;
+  height:100%;
+  padding:2px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:2px;
+  border:1px solid transparent;
+  border-radius:15px;
+  color:var(--bottom-nav-icon);
+  background:transparent;
+  box-shadow:none;
+  text-decoration:none;
+  cursor:pointer;
+  touch-action:manipulation;
+  transition:
+    color .18s ease,
+    background .18s ease,
+    border-color .18s ease,
+    transform .18s ease;
+}
+
+.bottom-nav__item:active,
+.bottom-nav #bellBox:active{
+  color:var(--bottom-nav-icon-active);
+  background:var(--bottom-nav-item-active-bg);
+  transform:scale(.95);
+}
+
+.bottom-nav__item--active{
+  border-color:var(--bottom-nav-item-active-border);
+  color:var(--bottom-nav-icon-active);
+  background:var(--bottom-nav-item-active-bg);
+  box-shadow:var(--bottom-nav-item-active-shadow);
+}
+
+.bottom-nav__icon{
+  width:25px;
+  height:25px;
+  display:flex;
+  flex:0 0 auto;
+  align-items:center;
+  justify-content:center;
+  color:inherit;
+}
+
+.bottom-nav__icon svg{
+  width:100%;
+  height:100%;
+  display:block;
+  overflow:visible;
+  stroke:currentColor;
+  stroke-width:1.9;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+
+.bottom-nav__label{
+  width:100%;
+  overflow:hidden;
+  color:var(--bottom-nav-label);
+  font-family:var(--font-main);
+  font-size:8.5px;
+  font-weight:700;
+  line-height:1;
+  text-align:center;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.bottom-nav__item--active .bottom-nav__label{
+  color:var(--bottom-nav-label-active);
+}
+
+.bottom-nav #bellBox{
+  right:auto;
+  width:auto;
+  font-size:0;
+}
+
+.bottom-nav #bellBox .bottom-nav__label{
+  color:var(--bottom-nav-label);
+}
+
+.bottom-nav #bellBadge{
+  top:2px;
+  right:calc(50% - 24px);
+  width:18px;
+  height:18px;
+  border:2px solid var(--bottom-nav-badge-border);
+  color:var(--bottom-nav-badge-text);
+  background:var(--bottom-nav-badge-bg);
+  box-shadow:var(--bottom-nav-badge-shadow);
+  font-size:9px;
+}
+
+body.has-bottom-nav.index-page .page-content{
+  padding-bottom:calc(var(--bottom-nav-clearance) + var(--safe-bottom));
+}
+
+.user-preview{
+  position:absolute;
+  top:calc(var(--safe-top) + 7px);
+  right:15px;
+  width:48px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:2px;
+  color:var(--user-preview-label);
+  pointer-events:none;
+}
+
+.user-preview__avatar{
+  width:36px;
+  height:36px;
+  display:grid;
+  place-items:center;
+  border:1px solid var(--user-preview-border);
+  border-radius:50%;
+  color:var(--user-preview-icon);
+  background:var(--user-preview-bg);
+  box-shadow:var(--user-preview-shadow);
+  backdrop-filter:blur(18px) saturate(140%);
+  -webkit-backdrop-filter:blur(18px) saturate(140%);
+}
+
+.user-preview__avatar svg{
+  width:21px;
+  height:21px;
+  stroke:currentColor;
+  stroke-width:1.8;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+
+.user-preview__label{
+  max-width:58px;
+  overflow:hidden;
+  font-family:var(--font-main);
+  font-size:7.5px;
+  font-weight:700;
+  line-height:1;
+  text-align:center;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+@media(prefers-reduced-motion:reduce){
+  .bottom-nav,
+  .bottom-nav__item,
+  .bottom-nav #bellBox{
+    transition-duration:1ms !important;
+  }
+}

@@ -451,6 +451,26 @@ solutions. Commencer par un prototype iOS PWA isolé, sans modifier
 l’application, puis intégrer uniquement une technique validée simultanément
 dans Safari et dans la PWA installée.
 
+## Essai contrôlé d’un socle commun basé sur l’index
+
+Un nouvel essai progressif débute le 3 juillet 2026 sans modifier la sauvegarde
+`backup-avant-dock-20260702` ni la production. L’objectif n’est plus
+d’injecter le dock dans les différents socles existants, mais de vérifier si
+chaque page peut adopter progressivement le même socle extérieur que
+`index.html`, sans modification de sa logique métier ou de son rendu.
+
+Ordre de validation obligatoire :
+
+1. `index.html` seule avec le dock de référence ;
+2. `travail.html` ;
+3. `notifications.html` ;
+4. `soins.html`.
+
+Chaque étape doit avoir son propre commit et être validée dans la PWA iPhone
+avant de commencer la suivante. Au premier défaut, l’essai s’arrête. La
+première étape charge le composant uniquement dans `index.html` ; aucune autre
+page ne contient encore le dock.
+
 ## Reprise d’une nouvelle session
 
 À chaque nouvelle conversation ou reprise du projet :

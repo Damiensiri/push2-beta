@@ -19,6 +19,25 @@
   --solar-opacity:.40;
   --celestial-glow:rgba(255,241,184,.36);
   --browser-theme-color:#287fbd;
+  --bottom-nav-bg:linear-gradient(145deg,rgba(242,250,255,.76),rgba(207,231,247,.62));
+  --bottom-nav-border:rgba(255,255,255,.70);
+  --bottom-nav-shadow:0 18px 44px rgba(10,35,70,.26),inset 0 1px 0 rgba(255,255,255,.82);
+  --bottom-nav-icon:rgba(24,54,82,.84);
+  --bottom-nav-icon-active:#1878b6;
+  --bottom-nav-label:rgba(24,54,82,.82);
+  --bottom-nav-label-active:#1878b6;
+  --bottom-nav-item-active-bg:rgba(255,255,255,.34);
+  --bottom-nav-item-active-border:rgba(255,255,255,.38);
+  --bottom-nav-item-active-shadow:0 8px 20px rgba(34,111,164,.15),inset 0 1px 0 rgba(255,255,255,.38);
+  --bottom-nav-badge-bg:#e92e35;
+  --bottom-nav-badge-text:#fff;
+  --bottom-nav-badge-border:rgba(255,255,255,.90);
+  --bottom-nav-badge-shadow:0 5px 12px rgba(185,18,28,.34);
+  --user-preview-bg:rgba(255,255,255,.16);
+  --user-preview-border:rgba(255,255,255,.27);
+  --user-preview-shadow:0 10px 24px rgba(10,35,70,.16),inset 0 1px 0 rgba(255,255,255,.20);
+  --user-preview-icon:rgba(255,255,255,.94);
+  --user-preview-label:rgba(255,255,255,.88);
   --app-background:
     radial-gradient(circle at 22% 12%,rgba(255,225,151,.22),transparent 32%),
     radial-gradient(circle at 84% 20%,rgba(115,224,255,.16),transparent 34%),
@@ -33,6 +52,16 @@
   --celestial-glow:rgba(176,207,255,.26);
   --solar-opacity:.26;
   --browser-theme-color:#061225;
+  --bottom-nav-bg:linear-gradient(145deg,rgba(22,42,68,.82),rgba(30,61,91,.70));
+  --bottom-nav-border:rgba(255,255,255,.22);
+  --bottom-nav-shadow:0 18px 46px rgba(0,0,0,.38),inset 0 1px 0 rgba(255,255,255,.17);
+  --bottom-nav-icon:rgba(255,255,255,.72);
+  --bottom-nav-icon-active:#8ed7ff;
+  --bottom-nav-label:rgba(255,255,255,.70);
+  --bottom-nav-label-active:#a4e0ff;
+  --bottom-nav-item-active-bg:rgba(255,255,255,.12);
+  --bottom-nav-item-active-border:rgba(255,255,255,.18);
+  --bottom-nav-item-active-shadow:0 8px 22px rgba(0,0,0,.20),inset 0 1px 0 rgba(255,255,255,.14);
 }
 
 :root[data-theme="summer"][data-day-phase="dawn"]{
@@ -87,5 +116,15 @@
     --glass-line:rgba(255,255,255,.16);
     --shadow-card:0 24px 70px rgba(0,0,0,.34);
     --shadow-soft:0 14px 36px rgba(0,0,0,.26);
+    --bottom-nav-bg:linear-gradient(145deg,rgba(22,42,68,.82),rgba(30,61,91,.70));
+    --bottom-nav-border:rgba(255,255,255,.22);
+    --bottom-nav-shadow:0 18px 46px rgba(0,0,0,.38),inset 0 1px 0 rgba(255,255,255,.17);
+    --bottom-nav-icon:rgba(255,255,255,.72);
+    --bottom-nav-icon-active:#8ed7ff;
+    --bottom-nav-label:rgba(255,255,255,.70);
+    --bottom-nav-label-active:#a4e0ff;
+    --bottom-nav-item-active-bg:rgba(255,255,255,.12);
+    --bottom-nav-item-active-border:rgba(255,255,255,.18);
+    --bottom-nav-item-active-shadow:0 8px 22px rgba(0,0,0,.20),inset 0 1px 0 rgba(255,255,255,.14);
   }
 }
