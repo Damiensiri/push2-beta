@@ -495,8 +495,14 @@ La même mécanique est désormais appliquée uniquement aux trois cartes de
 `paddocks.html` : Maison, Grande Voie et Beudot. Elle réutilise le cache
 `statuts` et la confirmation `statuts_confirmed_at` déjà alimentés par
 l’index. Le bouton Réserver, la légende, les calculs de statut et le
-rafraîchissement automatique restent inchangés. Cette étape doit être validée
-sur iPhone avant toute adaptation à `plan.html`.
+rafraîchissement automatique restent inchangés. Cette étape a été validée par
+Damien sur iPhone le 3 juillet 2026.
+
+La dernière étape est limitée à la carte interactive de `plan.html`. Le
+shimmer couvre uniquement l’image du plan, sous les cinq marqueurs, sans
+toucher à la légende ni au panneau de détail. Les marqueurs, leur animation,
+les statuts, l’ouverture du panneau et la réservation restent inchangés. Cette
+étape attend sa validation sur iPhone.
 
 ## Reprise d’une nouvelle session
 
