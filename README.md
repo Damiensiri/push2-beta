@@ -451,43 +451,25 @@ solutions. Commencer par un prototype iOS PWA isolé, sans modifier
 l’application, puis intégrer uniquement une technique validée simultanément
 dans Safari et dans la PWA installée.
 
-## Essai contrôlé d’un socle commun basé sur l’index
+### Seconde tentative contrôlée du 3 juillet 2026
 
-Un nouvel essai progressif débute le 3 juillet 2026 sans modifier la sauvegarde
-`backup-avant-dock-20260702` ni la production. L’objectif n’est plus
-d’injecter le dock dans les différents socles existants, mais de vérifier si
-chaque page peut adopter progressivement le même socle extérieur que
-`index.html`, sans modification de sa logique métier ou de son rendu.
+Une reprise limitée a ensuite été testée page par page :
 
-Ordre de validation obligatoire :
+- dock réintroduit uniquement sur `index.html`, avec un rendu validé ;
+- ajout du même composant à `travail.html` ;
+- partage littéral du moteur de fond entre Index et Travail ;
+- reconstruction de Travail autour des mêmes conteneurs extérieurs
+  `body.index-page`, `.app`, `.scroll` et `.page-content` que l’index.
 
-1. `index.html` seule avec le dock de référence ;
-2. `travail.html` ;
-3. `notifications.html` ;
-4. `soins.html`.
+Malgré ces alignements, le test dans la PWA iPhone a encore montré une
+différence de canvas inférieur : le dock de Travail restait plus haut que celui
+de l’index et une zone bleue demeurait sous lui. Cette seconde tentative a donc
+été abandonnée sans poursuivre vers Notifications ou Soins.
 
-Chaque étape doit avoir son propre commit et être validée dans la PWA iPhone
-avant de commencer la suivante. Au premier défaut, l’essai s’arrête. La
-première étape sur `index.html` a été validée par Damien le 3 juillet 2026.
-
-La deuxième étape est limitée à `travail.html`. Son contenu et son JavaScript
-métier restent inchangés. Après un premier essai insuffisant fondé sur une
-simple adaptation de sa toile précédente, Index et Travail chargent désormais
-le même moteur de fond dans
-`assets/css/components/index-background.css`. La classe racine commune
-`index-background-shell` neutralise le cache inférieur `html::after` et fait
-couvrir tout le document par la même `.ambient-stage`, avec les mêmes voiles
-lumineux et les mêmes animations.
-
-Le test iPhone a montré que partager uniquement le CSS du fond ne suffisait
-pas : le `body.app-page` et ses conteneurs conservaient un canvas différent.
-Travail a donc été reconstruit autour du socle extérieur exact de l’index :
-`body.index-page`, `.app`, `.scroll` et `.page-content` sont désormais communs.
-Le contenu métier d’origine reste intact dans `.page`, et ses règles d’en-tête
-ont seulement été déplacées sous `body.travail-page`. Le dock conserve
-exactement le composant, les dimensions et la position validés sur l’index.
-Cette étape attend sa validation dans la PWA iPhone avant toute intervention
-sur `notifications.html`.
+L’application a été restaurée sur l’état stable précédant le dock, conservé
+par le commit `f8e7941` et le tag `backup-avant-dock-20260702`. Le commit de
+restauration utilise la version `20260703-193728` afin de forcer le retour
+stable sur les PWA déjà mises à jour.
 
 ## Reprise d’une nouvelle session
 
