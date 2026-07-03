@@ -471,12 +471,15 @@ avant de commencer la suivante. Au premier défaut, l’essai s’arrête. La
 première étape sur `index.html` a été validée par Damien le 3 juillet 2026.
 
 La deuxième étape est limitée à `travail.html`. Son contenu et son JavaScript
-métier restent inchangés. La page adopte le même principe de toile racine que
-l’index pour le dock : le cache inférieur `html::after` est neutralisé
-uniquement par la classe `bottom-nav-shell`, et `.ambient-stage` couvre tout le
-document sans créer de hauteur supplémentaire. Le composant commun est chargé
-avec les mêmes dimensions et la même position que sur l’index. Cette étape
-attend sa validation dans la PWA iPhone avant toute intervention sur
+métier restent inchangés. Après un premier essai insuffisant fondé sur une
+simple adaptation de sa toile précédente, Index et Travail chargent désormais
+le même moteur de fond dans
+`assets/css/components/index-background.css`. La classe racine commune
+`index-background-shell` neutralise le cache inférieur `html::after` et fait
+couvrir tout le document par la même `.ambient-stage`, avec les mêmes voiles
+lumineux et les mêmes animations. Le dock conserve exactement le composant,
+les dimensions et la position validés sur l’index. Cette étape attend sa
+validation dans la PWA iPhone avant toute intervention sur
 `notifications.html`.
 
 ## Reprise d’une nouvelle session

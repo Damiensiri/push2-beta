@@ -15,12 +15,6 @@ html{
   scrollbar-width:none;
 }
 
-/* L'index possède déjà sa propre toile pleine hauteur : ne pas superposer
-   le cache Safe Area réservé aux autres pages migrées. */
-html::after{
-  display:none;
-}
-
 body.index-page{
   position:relative;
   min-height:100vh;
@@ -50,43 +44,6 @@ body.index-page::-webkit-scrollbar{
   width:0;
   height:0;
   display:none;
-}
-
-.ambient-stage{
-  position:absolute;
-  inset:0;
-  min-height:100vh;
-  min-height:100dvh;
-  z-index:0;
-  overflow:hidden;
-  pointer-events:none;
-  background:var(--app-background);
-}
-
-.ambient-stage::before{
-  content:"";
-  position:absolute;
-  inset:-4%;
-  pointer-events:none;
-  background:var(--app-background);
-  transform:translateZ(0);
-  animation:ambientBreath 18s ease-in-out infinite alternate;
-}
-
-.ambient-stage::after{
-  content:"";
-  position:absolute;
-  inset:-24%;
-  pointer-events:none;
-  opacity:var(--solar-opacity);
-  mix-blend-mode:screen;
-  background:
-    radial-gradient(circle at var(--solar-x) var(--solar-y),var(--celestial-glow),transparent 18%),
-    linear-gradient(112deg,transparent 0 28%,rgba(255,255,255,.14) 38%,transparent 52% 100%),
-    radial-gradient(circle at 64% 34%,rgba(255,255,255,.18),transparent 24%);
-  transform:translate3d(-5%,0,0) rotate(-3deg);
-  animation:lightVeil 28s ease-in-out infinite alternate;
-  transition:opacity 2.8s ease;
 }
 
 .app{
@@ -457,16 +414,6 @@ header h1{
   text-align:center;
   user-select:none;
   -webkit-user-select:none;
-}
-
-@keyframes ambientBreath{
-  0%{filter:saturate(1);transform:scale(1);}
-  100%{filter:saturate(1.08);transform:scale(1.035);}
-}
-
-@keyframes lightVeil{
-  0%{transform:translate3d(-5%,0,0) rotate(-3deg);}
-  100%{transform:translate3d(7%,2%,0) rotate(2deg);}
 }
 
 @keyframes contentReveal{

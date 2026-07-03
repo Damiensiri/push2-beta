@@ -3,20 +3,7 @@
   --bottom-nav-clearance:62px;
 }
 
-html.bottom-nav-shell::after{
-  display:none;
-}
-
-html.bottom-nav-shell body.app-page > .ambient-stage{
-  position:absolute;
-  inset:0;
-  width:100%;
-  height:auto;
-  min-height:100vh;
-  min-height:100dvh;
-}
-
-html.bottom-nav-shell body.app-page .page{
+html.index-background-shell body.app-page .page{
   z-index:1;
   padding-bottom:calc(28px + var(--bottom-nav-clearance) + var(--safe-bottom));
 }
