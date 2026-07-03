@@ -489,8 +489,14 @@ les dix secondes restent visuellement silencieux. Après au moins une minute en
 arrière-plan, une nouvelle synchronisation visible n’est demandée que si le
 cache n’a pas été confirmé entre-temps.
 
-Cette étape doit être validée sur iPhone avant toute adaptation à
-`paddocks.html` ou `plan.html`.
+Le pilote Travail a été validé par Damien sur iPhone le 3 juillet 2026.
+
+La même mécanique est désormais appliquée uniquement aux trois cartes de
+`paddocks.html` : Maison, Grande Voie et Beudot. Elle réutilise le cache
+`statuts` et la confirmation `statuts_confirmed_at` déjà alimentés par
+l’index. Le bouton Réserver, la légende, les calculs de statut et le
+rafraîchissement automatique restent inchangés. Cette étape doit être validée
+sur iPhone avant toute adaptation à `plan.html`.
 
 ## Reprise d’une nouvelle session
 

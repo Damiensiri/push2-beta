@@ -1,4 +1,7 @@
 const API="https://script.google.com/macros/s/AKfycbzWEB8PPqSQ4rinnTbh4414U3QPX836XtPOPBmKr0Bw2W4mRFWAl7Chv6WKHOjrcWoZew/exec?sheet=statuts";
+const FRESHNESS=60000;
+const CACHE_KEY="statuts";
+const CACHE_CONFIRMED_AT_KEY="statuts_confirmed_at";
 
 const ESPACES=["maison","grande-voie","beudot"];
 
@@ -10,6 +13,8 @@ const ICONS={
 };
 
 let lastData="";
+let syncPending=false;
+let backgroundedAt=null;
 
 function render(data){
 
@@ -52,19 +57,57 @@ document.getElementById("reserveBox").style.display=bouton?"flex":"none";
 
 }
 
+function getSyncCards(){
+return document.querySelectorAll(".card");
+}
+
+function setSyncState(state){
+getSyncCards().forEach(card=>{
+card.classList.toggle("is-syncing",state==="syncing");
+card.classList.toggle("is-sync-waiting",state==="waiting");
+});
+}
+
+function requireSync(){
+syncPending=true;
+setSyncState("syncing");
+}
+
+function confirmSync(){
+syncPending=false;
+setSyncState("");
+}
+
+function cacheIsFresh(){
+try{
+const cached=localStorage.getItem(CACHE_KEY);
+const confirmedAt=Number(localStorage.getItem(CACHE_CONFIRMED_AT_KEY));
+return Boolean(cached) &&
+Number.isFinite(confirmedAt) &&
+Date.now()-confirmedAt<FRESHNESS;
+}catch(e){
+return false;
+}
+}
+
 async function load(){
 
 try{
 
 const r=await fetch(API+"&t="+Date.now(),{cache:"no-store"});
+if(!r.ok) throw new Error("Réponse réseau invalide");
 const data=await r.json();
 
-localStorage.setItem("statuts",JSON.stringify(data));
+localStorage.setItem(CACHE_KEY,JSON.stringify(data));
+localStorage.setItem(CACHE_CONFIRMED_AT_KEY,String(Date.now()));
 
 render(data);
 
+if(syncPending) confirmSync();
+
 }catch(e){
 console.log("API error",e);
+if(syncPending) setSyncState("waiting");
 }
 
 }
@@ -77,15 +120,40 @@ window.addEventListener("load",()=>{
 
 /* affichage instantané depuis cache */
 
-const cache=localStorage.getItem("statuts");
+const cache=localStorage.getItem(CACHE_KEY);
 if(cache){
 try{
 render(JSON.parse(cache));
 }catch(e){}
 }
 
+if(!cacheIsFresh()) requireSync();
+
 load();
 
 setInterval(load,10000);
 
+});
+
+document.addEventListener("visibilitychange",()=>{
+
+if(document.visibilityState==="hidden"){
+backgroundedAt=Date.now();
+return;
+}
+
+if(backgroundedAt===null) return;
+
+const timeAway=Date.now()-backgroundedAt;
+backgroundedAt=null;
+
+if(timeAway>=FRESHNESS && !cacheIsFresh()){
+requireSync();
+load();
+}
+
+});
+
+window.addEventListener("online",()=>{
+if(syncPending) load();
 });
