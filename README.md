@@ -477,10 +477,17 @@ le même moteur de fond dans
 `assets/css/components/index-background.css`. La classe racine commune
 `index-background-shell` neutralise le cache inférieur `html::after` et fait
 couvrir tout le document par la même `.ambient-stage`, avec les mêmes voiles
-lumineux et les mêmes animations. Le dock conserve exactement le composant,
-les dimensions et la position validés sur l’index. Cette étape attend sa
-validation dans la PWA iPhone avant toute intervention sur
-`notifications.html`.
+lumineux et les mêmes animations.
+
+Le test iPhone a montré que partager uniquement le CSS du fond ne suffisait
+pas : le `body.app-page` et ses conteneurs conservaient un canvas différent.
+Travail a donc été reconstruit autour du socle extérieur exact de l’index :
+`body.index-page`, `.app`, `.scroll` et `.page-content` sont désormais communs.
+Le contenu métier d’origine reste intact dans `.page`, et ses règles d’en-tête
+ont seulement été déplacées sous `body.travail-page`. Le dock conserve
+exactement le composant, les dimensions et la position validés sur l’index.
+Cette étape attend sa validation dans la PWA iPhone avant toute intervention
+sur `notifications.html`.
 
 ## Reprise d’une nouvelle session
 

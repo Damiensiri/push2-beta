@@ -2,6 +2,37 @@ html.index-background-shell::after{
   display:none;
 }
 
+body.index-page{
+  position:relative;
+  min-height:100vh;
+  min-height:100dvh;
+  margin:0;
+  overflow-x:hidden;
+  --text-main:rgba(255,255,255,.88);
+  --text-soft:rgba(255,255,255,.68);
+  --text-muted:rgba(255,255,255,.52);
+  font-family:var(--font-main);
+  color:var(--text-main);
+  background:transparent;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+  scrollbar-width:none;
+  transition:
+    --sky-top 2.8s ease,
+    --sky-mid 2.8s ease,
+    --sky-bottom 2.8s ease,
+    --solar-x 60s linear,
+    --solar-y 60s linear,
+    --solar-opacity 2.8s ease;
+}
+
+html::-webkit-scrollbar,
+body.index-page::-webkit-scrollbar{
+  width:0;
+  height:0;
+  display:none;
+}
+
 html.index-background-shell body > .ambient-stage{
   position:absolute;
   inset:0;
@@ -39,6 +70,32 @@ html.index-background-shell body > .ambient-stage::after{
   transform:translate3d(-5%,0,0) rotate(-3deg);
   animation:lightVeil 28s ease-in-out infinite alternate;
   transition:opacity 2.8s ease;
+}
+
+.app{
+  position:relative;
+  z-index:1;
+  width:min(100%,520px);
+  min-height:100svh;
+  margin:0 auto;
+}
+
+.scroll{
+  position:relative;
+  width:100%;
+  min-height:100%;
+  padding-top:calc(70px + var(--safe-top));
+  scrollbar-width:none;
+  box-sizing:border-box;
+}
+
+.scroll::-webkit-scrollbar{
+  display:none;
+}
+
+.page-content{
+  min-height:100%;
+  padding:18px 0 calc(44px + var(--safe-bottom));
 }
 
 @keyframes ambientBreath{
