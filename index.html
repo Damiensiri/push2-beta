@@ -8,7 +8,7 @@
 <title>Ecurie Damien Siri</title>
 
 <script>
-const APP_VERSION="20260703-193728";
+const APP_VERSION="20260703-202544";
 const APP_BASE_URL=new URL("./",window.location.href);
 const IS_BETA=window.location.hostname==="damiensiri.github.io" &&
               APP_BASE_URL.pathname==="/push2-beta/";
@@ -71,15 +71,15 @@ cancelButton:"Plus tard"
 }
 </script>
 
-<script src="assets/js/app-config.js?v=20260703-193728"></script>
-<script src="assets/js/app-layout.js?v=20260703-193728"></script>
+<script src="assets/js/app-config.js?v=20260703-202544"></script>
+<script src="assets/js/app-layout.js?v=20260703-202544"></script>
 
-<link rel="stylesheet" href="assets/css/app.css?v=20260703-193728">
-<link rel="stylesheet" href="assets/css/themes/summer.css?v=20260703-193728">
-<link rel="stylesheet" href="assets/css/themes/autumn.css?v=20260703-193728">
-<link rel="stylesheet" href="assets/css/themes/christmas.css?v=20260703-193728">
-<link rel="stylesheet" href="assets/css/themes/spring.css?v=20260703-193728">
-<link rel="stylesheet" href="assets/css/pages/index.css?v=20260703-193728">
+<link rel="stylesheet" href="assets/css/app.css?v=20260703-202544">
+<link rel="stylesheet" href="assets/css/themes/summer.css?v=20260703-202544">
+<link rel="stylesheet" href="assets/css/themes/autumn.css?v=20260703-202544">
+<link rel="stylesheet" href="assets/css/themes/christmas.css?v=20260703-202544">
+<link rel="stylesheet" href="assets/css/themes/spring.css?v=20260703-202544">
+<link rel="stylesheet" href="assets/css/pages/index.css?v=20260703-202544">
 </head>
 
 <!-- REMPLACE UNIQUEMENT ÇA -->
@@ -201,6 +201,11 @@ fetch(HORAIRES_URL,{cache:"no-store"}).then(r=>r.json()),
 fetch(EXCEPTIONS_URL,{cache:"no-store"}).then(r=>r.json()),
 fetch(STATUTS_URL,{cache:"no-store"}).then(r=>r.json())
 ]);
+
+try{
+localStorage.setItem("statuts",JSON.stringify(statuts));
+localStorage.setItem("statuts_confirmed_at",String(Date.now()));
+}catch(e){}
 
 updateUI(horaires,exceptions,statuts);
 

@@ -471,6 +471,27 @@ par le commit `f8e7941` et le tag `backup-avant-dock-20260702`. Le commit de
 restauration utilise la version `20260703-193728` afin de forcer le retour
 stable sur les PWA déjà mises à jour.
 
+## Micro-interaction de fraîcheur des données
+
+Un nouveau chantier pilote est limité à `travail.html`. Les cartes Carrière et
+Manège affichent un shimmer discret uniquement lorsque le cache `statuts` n’a
+pas reçu de confirmation réseau depuis une minute. Une réponse réussie
+enregistre son heure dans `statuts_confirmed_at` puis retire immédiatement
+l’effet.
+
+L’index récupérant déjà la même feuille `statuts`, il mémorise désormais cette
+réponse et son heure de confirmation. Une ouverture de Travail après une mise
+à jour réussie de l’index ne déclenche donc aucune animation.
+
+En cas d’échec réseau, le shimmer devient un halo fixe discret et reste présent
+jusqu’à une confirmation ultérieure. Les rafraîchissements automatiques toutes
+les dix secondes restent visuellement silencieux. Après au moins une minute en
+arrière-plan, une nouvelle synchronisation visible n’est demandée que si le
+cache n’a pas été confirmé entre-temps.
+
+Cette étape doit être validée sur iPhone avant toute adaptation à
+`paddocks.html` ou `plan.html`.
+
 ## Reprise d’une nouvelle session
 
 À chaque nouvelle conversation ou reprise du projet :
