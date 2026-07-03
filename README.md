@@ -468,8 +468,16 @@ Ordre de validation obligatoire :
 
 Chaque étape doit avoir son propre commit et être validée dans la PWA iPhone
 avant de commencer la suivante. Au premier défaut, l’essai s’arrête. La
-première étape charge le composant uniquement dans `index.html` ; aucune autre
-page ne contient encore le dock.
+première étape sur `index.html` a été validée par Damien le 3 juillet 2026.
+
+La deuxième étape est limitée à `travail.html`. Son contenu et son JavaScript
+métier restent inchangés. La page adopte le même principe de toile racine que
+l’index pour le dock : le cache inférieur `html::after` est neutralisé
+uniquement par la classe `bottom-nav-shell`, et `.ambient-stage` couvre tout le
+document sans créer de hauteur supplémentaire. Le composant commun est chargé
+avec les mêmes dimensions et la même position que sur l’index. Cette étape
+attend sa validation dans la PWA iPhone avant toute intervention sur
+`notifications.html`.
 
 ## Reprise d’une nouvelle session
 

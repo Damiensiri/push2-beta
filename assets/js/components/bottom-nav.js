@@ -1,7 +1,8 @@
 (function initializeIndexBottomNavigation(){
   const currentPage=location.pathname.split("/").pop() || "index.html";
+  const supportedPages=["index.html","travail.html"];
 
-  if(currentPage!=="index.html")return;
+  if(!supportedPages.includes(currentPage))return;
 
   const componentScript=document.currentScript;
   const componentVersion=componentScript
@@ -61,7 +62,7 @@
     link.innerHTML=iconMarkup(item.icon);
     link.appendChild(labelMarkup(item.label));
 
-    if(item.id==="home"){
+    if(currentPage==="index.html" && item.id==="home"){
       link.classList.add("bottom-nav__item--active");
       link.setAttribute("aria-current","page");
     }
