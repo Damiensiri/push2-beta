@@ -8,7 +8,7 @@
 <title>Ecurie Damien Siri</title>
 
 <script>
-const APP_VERSION="20260703-234945";
+const APP_VERSION="20260704-075227";
 const APP_BASE_URL=new URL("./",window.location.href);
 const IS_BETA=window.location.hostname==="damiensiri.github.io" &&
               APP_BASE_URL.pathname==="/push2-beta/";
@@ -71,15 +71,17 @@ cancelButton:"Plus tard"
 }
 </script>
 
-<script src="assets/js/app-config.js?v=20260703-234945"></script>
-<script src="assets/js/app-layout.js?v=20260703-234945"></script>
+<script src="assets/js/app-config.js?v=20260704-075227"></script>
+<script src="assets/js/app-layout.js?v=20260704-075227"></script>
+<script src="assets/js/profile-store.js?v=20260704-075227" defer></script>
+<script src="assets/js/pages/index-profile.js?v=20260704-075227" defer></script>
 
-<link rel="stylesheet" href="assets/css/app.css?v=20260703-234945">
-<link rel="stylesheet" href="assets/css/themes/summer.css?v=20260703-234945">
-<link rel="stylesheet" href="assets/css/themes/autumn.css?v=20260703-234945">
-<link rel="stylesheet" href="assets/css/themes/christmas.css?v=20260703-234945">
-<link rel="stylesheet" href="assets/css/themes/spring.css?v=20260703-234945">
-<link rel="stylesheet" href="assets/css/pages/index.css?v=20260703-234945">
+<link rel="stylesheet" href="assets/css/app.css?v=20260704-075227">
+<link rel="stylesheet" href="assets/css/themes/summer.css?v=20260704-075227">
+<link rel="stylesheet" href="assets/css/themes/autumn.css?v=20260704-075227">
+<link rel="stylesheet" href="assets/css/themes/christmas.css?v=20260704-075227">
+<link rel="stylesheet" href="assets/css/themes/spring.css?v=20260704-075227">
+<link rel="stylesheet" href="assets/css/pages/index.css?v=20260704-075227">
 </head>
 
 <!-- REMPLACE UNIQUEMENT ÇA -->
@@ -98,6 +100,17 @@ cancelButton:"Plus tard"
 ECURIE DAMIEN SIRI
 <span class="eggs"><br></span>
 </h1>
+
+<button id="userShortcut" type="button" onclick="go('profil.html')" aria-label="Ouvrir mon profil">
+<span class="user-shortcut__avatar">
+<img id="userShortcutPhoto" alt="" hidden>
+<svg id="userShortcutFallback" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+<circle cx="12" cy="8" r="3.2"/>
+<path d="M5.5 20c.6-4 2.8-6 6.5-6s5.9 2 6.5 6"/>
+</svg>
+</span>
+<span class="user-shortcut__name" id="userShortcutName">Profil</span>
+</button>
 
 <div id="bellBox" onclick="go('notifications.html')">
 🔔

@@ -502,7 +502,35 @@ La dernière étape est limitée à la carte interactive de `plan.html`. Le
 shimmer couvre uniquement l’image du plan, sous les cinq marqueurs, sans
 toucher à la légende ni au panneau de détail. Les marqueurs, leur animation,
 les statuts, l’ouverture du panneau et la réservation restent inchangés. Cette
-étape attend sa validation sur iPhone.
+étape a été validée par Damien sur iPhone le 4 juillet 2026.
+
+## Espace utilisateur local — Phase 1
+
+La Phase 1 crée un profil entièrement local, sans compte, serveur, Firebase,
+Google Forms ou accès à OneSignal.
+
+- `profil.html` reprend le fond, le header, les Safe Areas et le glassmorphism
+  de la PWA ;
+- `assets/js/profile-store.js` enregistre le prénom, l’adresse mail et la photo
+  dans IndexedDB ;
+- la photo est redimensionnée à 512 px maximum, convertie en JPEG et
+  débarrassée de ses métadonnées avant stockage ;
+- le numéro de carte continue d’utiliser exclusivement la clé historique
+  `paddockCardNumber`, afin de ne pas modifier le fonctionnement de
+  `mesreservations.html` ;
+- la page affiche uniquement l’autorisation locale des notifications, sans
+  interroger le SDK OneSignal ;
+- la réinitialisation supprime le profil IndexedDB et la clé locale de la
+  carte.
+
+L’index possède un petit bouton utilisateur à côté de la cloche. Il affiche la
+photo et le prénom lorsqu’ils existent, sinon une icône neutre et le libellé
+« Profil ». La cloche, son badge, ses IDs, ses listeners et toute sa logique
+restent inchangés.
+
+Les formulaires existants, l’affichage conditionnel de la carte dans Mes
+réservations et l’éventuelle collecte OneSignal appartiennent aux phases
+suivantes et ne sont pas encore modifiés.
 
 ## Reprise d’une nouvelle session
 

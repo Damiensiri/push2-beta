@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Mon profil</title>
+
+<meta name="theme-color" content="#287fbd">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+
+<script src="assets/js/app-config.js?v=20260704-075227"></script>
+<script src="assets/js/app-layout.js?v=20260704-075227"></script>
+
+<link rel="stylesheet" href="assets/css/app.css?v=20260704-075227">
+<link rel="stylesheet" href="assets/css/themes/summer.css?v=20260704-075227">
+<link rel="stylesheet" href="assets/css/themes/autumn.css?v=20260704-075227">
+<link rel="stylesheet" href="assets/css/themes/christmas.css?v=20260704-075227">
+<link rel="stylesheet" href="assets/css/themes/spring.css?v=20260704-075227">
+<link rel="stylesheet" href="assets/css/pages/profil.css?v=20260704-075227">
+</head>
+
+<body class="app-page">
+
+<div class="ambient-stage" aria-hidden="true"></div>
+
+<div class="page" id="page">
+
+<header class="plan-header">
+<div id="backBtn" onclick="goBack()">
+<img src="image/back.svg" alt="">
+</div>
+<h1>MON PROFIL</h1>
+</header>
+
+<section class="profile-card profile-photo" aria-labelledby="photoTitle">
+<div class="profile-section-title" id="photoTitle">Photo de profil</div>
+<div class="profile-photo__preview">
+<img id="profilePhotoPreview" alt="Photo de profil" hidden>
+<svg id="profilePhotoFallback" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+<circle cx="12" cy="8" r="3.2"/>
+<path d="M5.5 20c.6-4 2.8-6 6.5-6s5.9 2 6.5 6"/>
+</svg>
+</div>
+<div class="profile-photo__actions">
+<label class="profile-photo__button">
+Choisir une photo
+<input id="profilePhotoInput" type="file" accept="image/*">
+</label>
+<button class="profile-secondary" id="removePhoto" type="button" hidden>Supprimer</button>
+</div>
+</section>
+
+<form class="profile-card profile-form" id="profileForm">
+<div class="profile-field">
+<label for="profileFirstName">Prénom</label>
+<input id="profileFirstName" type="text" autocomplete="given-name" maxlength="60" placeholder="Votre prénom">
+</div>
+
+<div class="profile-field">
+<label for="profileEmail">Adresse mail</label>
+<input id="profileEmail" type="email" inputmode="email" autocomplete="email" maxlength="160" placeholder="votre@email.fr">
+</div>
+
+<div class="profile-field">
+<label for="profileCardNumber">Numéro de carte paddock</label>
+<input id="profileCardNumber" type="text" autocomplete="off" maxlength="80" placeholder="Numéro de carte">
+</div>
+
+<button class="profile-primary" type="submit">Enregistrer mon profil</button>
+<p class="profile-save-status" id="profileSaveStatus" aria-live="polite"></p>
+</form>
+
+<section class="profile-card profile-notifications">
+<div>
+<div class="profile-section-title">Notifications</div>
+<p>Autorisation sur cet appareil</p>
+</div>
+<span class="profile-notification-state" id="notificationState">Vérification…</span>
+</section>
+
+<section class="profile-card">
+<button class="profile-danger" id="openReset" type="button">Réinitialiser mon profil</button>
+</section>
+
+</div>
+
+<div class="profile-dialog" id="resetDialog" role="dialog" aria-modal="true" aria-labelledby="resetTitle" hidden>
+<div class="profile-dialog__card">
+<h2 id="resetTitle">Réinitialiser le profil ?</h2>
+<p>La photo, le prénom, l’adresse mail et le numéro de carte seront supprimés de cet appareil.</p>
+<div class="profile-dialog__actions">
+<button class="profile-secondary" id="cancelReset" type="button">Annuler</button>
+<button class="profile-danger" id="confirmReset" type="button">Réinitialiser</button>
+</div>
+</div>
+</div>
+
+<script src="assets/js/profile-store.js?v=20260704-075227"></script>
+<script src="assets/js/pages/profil.js?v=20260704-075227"></script>
+
+</body>
+</html>
