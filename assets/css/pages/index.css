@@ -144,8 +144,8 @@ header{
 
 .header-left img{
   display:block;
-  max-width:37.4px;
-  max-height:37.4px;
+  max-width:34px;
+  max-height:34px;
   object-fit:contain;
   filter:drop-shadow(0 8px 14px rgba(20,52,92,.16));
 }
@@ -169,8 +169,7 @@ header h1{
 }
 
 .eggs{
-  font-size:28px;
-  letter-spacing:6px;
+  display:none;
 }
 
 #bellBox{

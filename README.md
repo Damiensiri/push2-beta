@@ -530,11 +530,13 @@ L’index possède un petit bouton utilisateur à côté de la cloche. Il affich
 photo et le prénom lorsqu’ils existent, sinon une icône neutre et le libellé
 « Profil ». La bulle de profil et celle de la cloche ont exactement le même
 diamètre et la même hauteur. Le prénom reste centré sous l’avatar, sur une seule
-ligne. Le logo est légèrement agrandi pour conserver l’équilibre du header.
+ligne. Le logo conserve sa taille de référence de 34 px.
 Le titre « ECURIE DAMIEN SIRI » est centré sur le point médian entre le centre
 du logo et le centre de l’ensemble formé par les bulles Profil et
 Notifications. Il est également aligné verticalement sur le centre des deux
-bulles et doit toujours rester sur une seule ligne.
+bulles et doit toujours rester sur une seule ligne. L’ancien saut de ligne
+invisible du titre est neutralisé afin de ne plus fausser cet alignement
+vertical.
 La cloche, son badge, ses IDs, ses listeners et toute sa logique restent
 inchangés.
 
