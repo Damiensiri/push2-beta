@@ -151,7 +151,14 @@ header{
 }
 
 header h1{
+  position:absolute;
+  top:var(--safe-top);
+  left:62px;
+  right:101px;
+  height:70px;
   margin:0;
+  display:grid;
+  place-items:center;
   color:var(--text-strong);
   font-size:17px;
   font-weight:700;
@@ -159,7 +166,6 @@ header h1{
   text-align:center;
   text-shadow:0 8px 24px rgba(18,48,90,.20);
   white-space:nowrap;
-  transform:translateX(-32px);
 }
 
 .eggs{
@@ -569,6 +575,11 @@ header h1{
 
   .header-left{
     left:12px;
+  }
+
+  header h1{
+    left:58px;
+    right:96px;
   }
 
   #bellBox{
