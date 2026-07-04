@@ -536,7 +536,8 @@ du logo et le centre de l’ensemble formé par les bulles Profil et
 Notifications. Il est également aligné verticalement sur le centre des deux
 bulles et doit toujours rester sur une seule ligne. L’ancien saut de ligne
 invisible du titre est neutralisé afin de ne plus fausser cet alignement
-vertical.
+vertical. Sa taille est fixée à 15,5 px afin de conserver un espace net avant
+la bulle de profil.
 La cloche, son badge, ses IDs, ses listeners et toute sa logique restent
 inchangés.
 
