@@ -87,6 +87,10 @@
   gap:16px;
 }
 
+.profile-form-shell{
+  display:block;
+}
+
 .profile-field{
   display:grid;
   gap:7px;
@@ -137,41 +141,6 @@
   font-size:11px;
   line-height:1.45;
   text-align:center;
-}
-
-.profile-notifications{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:14px;
-}
-
-.profile-notifications p{
-  margin:5px 0 0;
-  color:rgba(255,255,255,.68);
-  font-size:12px;
-  line-height:1.45;
-}
-
-.profile-notification-state{
-  flex:0 0 auto;
-  padding:7px 10px;
-  border:1px solid rgba(255,255,255,.18);
-  border-radius:999px;
-  color:white;
-  background:rgba(255,255,255,.12);
-  font-size:11px;
-  font-weight:700;
-}
-
-.profile-notification-state[data-state="granted"]{
-  color:#bfffd7;
-  background:rgba(39,167,96,.30);
-}
-
-.profile-notification-state[data-state="denied"]{
-  color:#ffd0d0;
-  background:rgba(196,49,58,.28);
 }
 
 .profile-danger{
@@ -228,4 +197,60 @@
 .profile-dialog__actions .profile-danger{
   color:white;
   background:linear-gradient(135deg,#df5a62,#a71f2b);
+}
+
+.profile-crop{
+  position:relative;
+  width:min(100%,360px);
+  margin:0 auto 16px;
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,.34);
+  border-radius:24px;
+  background:rgba(7,22,39,.34);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.18),var(--shadow-soft);
+  touch-action:none;
+}
+
+.profile-crop::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  border:1px solid rgba(255,255,255,.34);
+  border-radius:50%;
+  box-shadow:0 0 0 120px rgba(7,22,39,.30);
+}
+
+.profile-crop canvas{
+  width:100%;
+  height:auto;
+  display:block;
+  cursor:grab;
+  touch-action:none;
+}
+
+.profile-crop canvas:active{
+  cursor:grabbing;
+}
+
+.profile-crop__zoom{
+  margin:0 0 18px;
+  display:grid;
+  grid-template-columns:auto 1fr;
+  align-items:center;
+  gap:12px;
+  color:rgba(255,255,255,.78);
+  font-size:11px;
+  font-weight:700;
+  letter-spacing:.10em;
+  text-transform:uppercase;
+}
+
+.profile-crop__zoom input{
+  width:100%;
+  accent-color:#4cc3ff;
+}
+
+.profile-crop-dialog .profile-primary{
+  margin:0;
 }

@@ -10,15 +10,15 @@
 
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
 
-<script src="assets/js/app-config.js?v=20260703-002645"></script>
-<script src="assets/js/app-layout.js?v=20260703-002645"></script>
+<script src="assets/js/app-config.js?v=20260704-090746"></script>
+<script src="assets/js/app-layout.js?v=20260704-090746"></script>
 
-<link rel="stylesheet" href="assets/css/app.css?v=20260703-002645">
-<link rel="stylesheet" href="assets/css/themes/summer.css?v=20260703-002645">
-<link rel="stylesheet" href="assets/css/themes/autumn.css?v=20260703-002645">
-<link rel="stylesheet" href="assets/css/themes/christmas.css?v=20260703-002645">
-<link rel="stylesheet" href="assets/css/themes/spring.css?v=20260703-002645">
-<link rel="stylesheet" href="assets/css/pages/mesreservations.css?v=20260703-002645">
+<link rel="stylesheet" href="assets/css/app.css?v=20260704-090746">
+<link rel="stylesheet" href="assets/css/themes/summer.css?v=20260704-090746">
+<link rel="stylesheet" href="assets/css/themes/autumn.css?v=20260704-090746">
+<link rel="stylesheet" href="assets/css/themes/christmas.css?v=20260704-090746">
+<link rel="stylesheet" href="assets/css/themes/spring.css?v=20260704-090746">
+<link rel="stylesheet" href="assets/css/pages/mesreservations.css?v=20260704-090746">
 </head>
 
 <body class="app-page mesreservations-page">
@@ -310,41 +310,17 @@ headers.map((header,index)=>[header,(row[index] || "").trim()])
 
 /* ===== CARTE DE MISES ===== */
 
-function showCardNumberForm(message=""){
-const paddockCard=document.getElementById("paddockCard")
-paddockCard.innerHTML=`
-<div class="card">
-<h3>🐴 Ma carte de mises au paddock</h3>
-${message ? `<p class="card-message">${escapeHTML(message)}</p>` : `<p>Entrez votre numéro de carte pour consulter vos mises.</p>`}
-<form class="card-number-form" id="cardNumberForm">
-<input id="cardNumberInput" type="text" inputmode="text" autocomplete="off" placeholder="Numéro de carte" aria-label="Numéro de carte" required>
-<button type="submit">Enregistrer</button>
-</form>
-</div>`
-
-document.getElementById("cardNumberForm").addEventListener("submit",event=>{
-event.preventDefault()
-const number=normalizeCardNumber(document.getElementById("cardNumberInput").value)
-if(!number) return
-localStorage.setItem("paddockCardNumber",number)
-loadPaddockCard()
-})
-}
-
-function changePaddockCard(){
-localStorage.removeItem("paddockCardNumber")
-showCardNumberForm()
-}
-
 async function loadPaddockCard(){
 const paddockCard=document.getElementById("paddockCard")
 const savedNumber=normalizeCardNumber(localStorage.getItem("paddockCardNumber"))
 
 if(!savedNumber){
-showCardNumberForm()
+paddockCard.hidden=true
+paddockCard.innerHTML=""
 return
 }
 
+paddockCard.hidden=false
 paddockCard.innerHTML=`
 <div class="card">
 <h3>🐴 Ma carte de mises au paddock</h3>
@@ -361,7 +337,6 @@ paddockCard.innerHTML=`
 <h3>🐴 Ma carte de mises au paddock</h3>
 <p><strong>Numéro :</strong> ${escapeHTML(savedNumber)}</p>
 <p class="card-message">Carte introuvable. Vérifiez votre numéro ou contactez l’accueil.</p>
-<button type="button" onclick="changePaddockCard()">Changer de carte</button>
 </div>`
 return
 }
@@ -384,7 +359,6 @@ paddockCard.innerHTML=`
 <div class="progress-bar ${progressColor}" style="width:${progress}%"></div>
 </div>
 <p><strong>Dernière mise :</strong> ${escapeHTML(lastUse)}</p>
-<button type="button" onclick="changePaddockCard()">Changer de carte</button>
 </div>`
 }catch(error){
 console.error(error)
@@ -393,7 +367,6 @@ paddockCard.innerHTML=`
 <h3>🐴 Ma carte de mises au paddock</h3>
 <p class="card-message">Impossible d’actualiser la carte pour le moment.</p>
 <button type="button" onclick="loadPaddockCard()">Réessayer</button>
-<button type="button" onclick="changePaddockCard()">Changer de carte</button>
 </div>`
 }
 }

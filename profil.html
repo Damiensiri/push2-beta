@@ -10,15 +10,15 @@
 
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
 
-<script src="assets/js/app-config.js?v=20260704-075227"></script>
-<script src="assets/js/app-layout.js?v=20260704-075227"></script>
+<script src="assets/js/app-config.js?v=20260704-090746"></script>
+<script src="assets/js/app-layout.js?v=20260704-090746"></script>
 
-<link rel="stylesheet" href="assets/css/app.css?v=20260704-075227">
-<link rel="stylesheet" href="assets/css/themes/summer.css?v=20260704-075227">
-<link rel="stylesheet" href="assets/css/themes/autumn.css?v=20260704-075227">
-<link rel="stylesheet" href="assets/css/themes/christmas.css?v=20260704-075227">
-<link rel="stylesheet" href="assets/css/themes/spring.css?v=20260704-075227">
-<link rel="stylesheet" href="assets/css/pages/profil.css?v=20260704-075227">
+<link rel="stylesheet" href="assets/css/app.css?v=20260704-090746">
+<link rel="stylesheet" href="assets/css/themes/summer.css?v=20260704-090746">
+<link rel="stylesheet" href="assets/css/themes/autumn.css?v=20260704-090746">
+<link rel="stylesheet" href="assets/css/themes/christmas.css?v=20260704-090746">
+<link rel="stylesheet" href="assets/css/themes/spring.css?v=20260704-090746">
+<link rel="stylesheet" href="assets/css/pages/profil.css?v=20260704-090746">
 </head>
 
 <body class="app-page">
@@ -52,7 +52,8 @@ Choisir une photo
 </div>
 </section>
 
-<form class="profile-card profile-form" id="profileForm">
+<form class="profile-form-shell" id="profileForm">
+<section class="profile-card profile-form">
 <div class="profile-field">
 <label for="profileFirstName">Prénom</label>
 <input id="profileFirstName" type="text" autocomplete="given-name" maxlength="60" placeholder="Votre prénom">
@@ -62,7 +63,10 @@ Choisir une photo
 <label for="profileEmail">Adresse mail</label>
 <input id="profileEmail" type="email" inputmode="email" autocomplete="email" maxlength="160" placeholder="votre@email.fr">
 </div>
+</section>
 
+<section class="profile-card profile-form">
+<div class="profile-section-title">Carte paddock</div>
 <div class="profile-field">
 <label for="profileCardNumber">Numéro de carte paddock</label>
 <input id="profileCardNumber" type="text" autocomplete="off" maxlength="80" placeholder="Numéro de carte">
@@ -70,15 +74,8 @@ Choisir une photo
 
 <button class="profile-primary" type="submit">Enregistrer mon profil</button>
 <p class="profile-save-status" id="profileSaveStatus" aria-live="polite"></p>
-</form>
-
-<section class="profile-card profile-notifications">
-<div>
-<div class="profile-section-title">Notifications</div>
-<p>Autorisation sur cet appareil</p>
-</div>
-<span class="profile-notification-state" id="notificationState">Vérification…</span>
 </section>
+</form>
 
 <section class="profile-card">
 <button class="profile-danger" id="openReset" type="button">Réinitialiser mon profil</button>
@@ -97,8 +94,26 @@ Choisir une photo
 </div>
 </div>
 
-<script src="assets/js/profile-store.js?v=20260704-075227"></script>
-<script src="assets/js/pages/profil.js?v=20260704-075227"></script>
+<div class="profile-dialog profile-crop-dialog" id="cropDialog" role="dialog" aria-modal="true" aria-labelledby="cropTitle" hidden>
+<div class="profile-dialog__card">
+<h2 id="cropTitle">Recadrer la photo</h2>
+<p>Déplacez et agrandissez la photo pour choisir votre cadrage.</p>
+<div class="profile-crop">
+<canvas id="cropCanvas" width="512" height="512" aria-label="Aperçu du recadrage"></canvas>
+</div>
+<label class="profile-crop__zoom" for="cropZoom">
+Zoom
+<input id="cropZoom" type="range" min="1" max="3" step="0.01" value="1">
+</label>
+<div class="profile-dialog__actions">
+<button class="profile-secondary" id="cancelCrop" type="button">Annuler</button>
+<button class="profile-primary" id="confirmCrop" type="button">Valider la photo</button>
+</div>
+</div>
+</div>
+
+<script src="assets/js/profile-store.js?v=20260704-090746"></script>
+<script src="assets/js/pages/profil.js?v=20260704-090746"></script>
 
 </body>
 </html>

@@ -513,24 +513,30 @@ Google Forms ou accès à OneSignal.
   de la PWA ;
 - `assets/js/profile-store.js` enregistre le prénom, l’adresse mail et la photo
   dans IndexedDB ;
-- la photo est redimensionnée à 512 px maximum, convertie en JPEG et
-  débarrassée de ses métadonnées avant stockage ;
+- la photo est recadrée par l’utilisateur dans un carré avant validation,
+  puis convertie en JPEG 512 × 512 et débarrassée de ses métadonnées avant
+  stockage ;
 - le numéro de carte continue d’utiliser exclusivement la clé historique
   `paddockCardNumber`, afin de ne pas modifier le fonctionnement de
   `mesreservations.html` ;
-- la page affiche uniquement l’autorisation locale des notifications, sans
-  interroger le SDK OneSignal ;
+- la carte paddock est présentée dans une bulle séparée du prénom et de
+  l’adresse mail ;
+- la partie Notifications du profil est volontairement reportée à un chantier
+  ultérieur ;
 - la réinitialisation supprime le profil IndexedDB et la clé locale de la
   carte.
 
 L’index possède un petit bouton utilisateur à côté de la cloche. Il affiche la
 photo et le prénom lorsqu’ils existent, sinon une icône neutre et le libellé
-« Profil ». La cloche, son badge, ses IDs, ses listeners et toute sa logique
-restent inchangés.
+« Profil ». Les dimensions de la cloche et du bouton utilisateur sont adaptées
+pour les aligner côte à côte. La cloche, son badge, ses IDs, ses listeners et
+toute sa logique restent inchangés.
 
-Les formulaires existants, l’affichage conditionnel de la carte dans Mes
-réservations et l’éventuelle collecte OneSignal appartiennent aux phases
-suivantes et ne sont pas encore modifiés.
+Dans `mesreservations.html`, le bloc carte paddock n’est affiché que lorsqu’un
+numéro a été enregistré depuis le profil. La page ne permet plus d’ajouter, de
+changer ou de supprimer ce numéro. Le chargement de la carte, le calcul du
+solde restant, la jauge et l’affichage de la dernière mise sont conservés à
+l’identique.
 
 ## Reprise d’une nouvelle session
 

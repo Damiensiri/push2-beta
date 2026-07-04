@@ -8,14 +8,27 @@ const photoPreview=document.getElementById("profilePhotoPreview");
 const photoFallback=document.getElementById("profilePhotoFallback");
 const removePhoto=document.getElementById("removePhoto");
 const saveStatus=document.getElementById("profileSaveStatus");
-const notificationState=document.getElementById("notificationState");
 const resetDialog=document.getElementById("resetDialog");
 const openReset=document.getElementById("openReset");
 const cancelReset=document.getElementById("cancelReset");
 const confirmReset=document.getElementById("confirmReset");
+const cropDialog=document.getElementById("cropDialog");
+const cropCanvas=document.getElementById("cropCanvas");
+const cropZoom=document.getElementById("cropZoom");
+const cancelCrop=document.getElementById("cancelCrop");
+const confirmCrop=document.getElementById("confirmCrop");
+const cropContext=cropCanvas.getContext("2d",{alpha:false});
 
 let photoBlob=null;
 let photoUrl="";
+let cropImage=null;
+let cropBaseScale=1;
+let cropScale=1;
+let cropOffsetX=0;
+let cropOffsetY=0;
+let cropPointerId=null;
+let cropPointerX=0;
+let cropPointerY=0;
 
 function setPreview(photo){
 if(photoUrl){
@@ -39,19 +52,6 @@ removePhoto.hidden=true;
 }
 }
 
-function notificationLabel(){
-if(!("Notification" in window))return["Non disponible","unavailable"];
-if(Notification.permission==="granted")return["Autorisées","granted"];
-if(Notification.permission==="denied")return["Refusées","denied"];
-return["Non activées","default"];
-}
-
-function renderNotificationState(){
-const [label,state]=notificationLabel();
-notificationState.textContent=label;
-notificationState.dataset.state=state;
-}
-
 function imageFromFile(file){
 return new Promise((resolve,reject)=>{
 const url=URL.createObjectURL(file);
@@ -62,22 +62,51 @@ image.src=url;
 });
 }
 
-async function preparePhoto(file){
-const image=await imageFromFile(file);
-const maxSize=512;
-const ratio=Math.min(1,maxSize/Math.max(image.naturalWidth,image.naturalHeight));
-const width=Math.max(1,Math.round(image.naturalWidth*ratio));
-const height=Math.max(1,Math.round(image.naturalHeight*ratio));
-const canvas=document.createElement("canvas");
-canvas.width=width;
-canvas.height=height;
-const context=canvas.getContext("2d",{alpha:false});
-context.fillStyle="#ffffff";
-context.fillRect(0,0,width,height);
-context.drawImage(image,0,0,width,height);
+function clampCropOffsets(){
+if(!cropImage)return;
+const width=cropImage.naturalWidth*cropBaseScale*cropScale;
+const height=cropImage.naturalHeight*cropBaseScale*cropScale;
+const maxX=Math.max(0,(width-cropCanvas.width)/2);
+const maxY=Math.max(0,(height-cropCanvas.height)/2);
+cropOffsetX=Math.max(-maxX,Math.min(maxX,cropOffsetX));
+cropOffsetY=Math.max(-maxY,Math.min(maxY,cropOffsetY));
+}
 
+function drawCrop(){
+if(!cropImage)return;
+clampCropOffsets();
+const width=cropImage.naturalWidth*cropBaseScale*cropScale;
+const height=cropImage.naturalHeight*cropBaseScale*cropScale;
+const x=(cropCanvas.width-width)/2+cropOffsetX;
+const y=(cropCanvas.height-height)/2+cropOffsetY;
+cropContext.fillStyle="#ffffff";
+cropContext.fillRect(0,0,cropCanvas.width,cropCanvas.height);
+cropContext.drawImage(cropImage,x,y,width,height);
+}
+
+async function openCropper(file){
+cropImage=await imageFromFile(file);
+cropBaseScale=Math.max(
+cropCanvas.width/cropImage.naturalWidth,
+cropCanvas.height/cropImage.naturalHeight
+);
+cropScale=1;
+cropOffsetX=0;
+cropOffsetY=0;
+cropZoom.value="1";
+cropDialog.hidden=false;
+drawCrop();
+}
+
+function closeCropper(){
+cropDialog.hidden=true;
+cropImage=null;
+cropPointerId=null;
+}
+
+function cropToBlob(){
 return new Promise((resolve,reject)=>{
-canvas.toBlob(blob=>{
+cropCanvas.toBlob(blob=>{
 if(blob)resolve(blob);
 else reject(new Error("Compression impossible"));
 },"image/jpeg",.84);
@@ -90,7 +119,6 @@ firstName.value=profile.firstName;
 email.value=profile.email;
 cardNumber.value=profile.cardNumber;
 setPreview(profile.photo);
-renderNotificationState();
 }
 
 photoInput.addEventListener("change",async()=>{
@@ -99,12 +127,76 @@ if(!file)return;
 
 saveStatus.textContent="Préparation de la photo…";
 try{
-setPreview(await preparePhoto(file));
-saveStatus.textContent="Photo prête à être enregistrée.";
+await openCropper(file);
+saveStatus.textContent="";
 }catch(e){
 saveStatus.textContent="Cette photo ne peut pas être utilisée.";
 }
 photoInput.value="";
+});
+
+cropCanvas.addEventListener("pointerdown",event=>{
+if(!cropImage)return;
+cropPointerId=event.pointerId;
+cropPointerX=event.clientX;
+cropPointerY=event.clientY;
+cropCanvas.setPointerCapture(event.pointerId);
+});
+
+cropCanvas.addEventListener("pointermove",event=>{
+if(event.pointerId!==cropPointerId||!cropImage)return;
+const rect=cropCanvas.getBoundingClientRect();
+const ratio=cropCanvas.width/rect.width;
+cropOffsetX+=(event.clientX-cropPointerX)*ratio;
+cropOffsetY+=(event.clientY-cropPointerY)*ratio;
+cropPointerX=event.clientX;
+cropPointerY=event.clientY;
+drawCrop();
+});
+
+function stopCropDrag(event){
+if(event.pointerId!==cropPointerId)return;
+cropPointerId=null;
+}
+
+cropCanvas.addEventListener("pointerup",stopCropDrag);
+cropCanvas.addEventListener("pointercancel",stopCropDrag);
+
+cropZoom.addEventListener("input",()=>{
+if(!cropImage)return;
+const nextScale=Number(cropZoom.value)||1;
+const ratio=nextScale/cropScale;
+cropOffsetX*=ratio;
+cropOffsetY*=ratio;
+cropScale=nextScale;
+drawCrop();
+});
+
+cancelCrop.addEventListener("click",()=>{
+closeCropper();
+saveStatus.textContent="";
+});
+
+confirmCrop.addEventListener("click",async()=>{
+if(!cropImage)return;
+confirmCrop.disabled=true;
+try{
+drawCrop();
+setPreview(await cropToBlob());
+closeCropper();
+saveStatus.textContent="Photo prête à être enregistrée.";
+}catch(e){
+saveStatus.textContent="Cette photo ne peut pas être utilisée.";
+}finally{
+confirmCrop.disabled=false;
+}
+});
+
+cropDialog.addEventListener("click",event=>{
+if(event.target===cropDialog){
+closeCropper();
+saveStatus.textContent="";
+}
 });
 
 removePhoto.addEventListener("click",()=>{
@@ -144,7 +236,6 @@ form.reset();
 setPreview(null);
 resetDialog.hidden=true;
 saveStatus.textContent="Profil réinitialisé sur cet appareil.";
-renderNotificationState();
 });
 
 resetDialog.addEventListener("click",event=>{
