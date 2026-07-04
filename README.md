@@ -528,9 +528,14 @@ Google Forms ou accès à OneSignal.
 
 L’index possède un petit bouton utilisateur à côté de la cloche. Il affiche la
 photo et le prénom lorsqu’ils existent, sinon une icône neutre et le libellé
-« Profil ». Les dimensions de la cloche et du bouton utilisateur sont adaptées
-pour les aligner côte à côte. La cloche, son badge, ses IDs, ses listeners et
-toute sa logique restent inchangés.
+« Profil ». La bulle de profil et celle de la cloche ont exactement le même
+diamètre et la même hauteur. Le prénom reste centré sous l’avatar, sur une seule
+ligne. Le logo est légèrement agrandi pour conserver l’équilibre du header.
+La cloche, son badge, ses IDs, ses listeners et toute sa logique restent
+inchangés.
+
+Les boutons « Enregistrer mon profil » et « Réinitialiser mon profil » sont
+regroupés dans une même bulle sur la page Profil.
 
 Dans `mesreservations.html`, le bloc carte paddock n’est affiché que lorsqu’un
 numéro a été enregistré depuis le profil. La page ne permet plus d’ajouter, de
