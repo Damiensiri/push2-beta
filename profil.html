@@ -59,6 +59,11 @@ Choisir une photo
 </div>
 
 <div class="profile-field">
+<label for="profileLastName">Nom</label>
+<input id="profileLastName" type="text" autocomplete="family-name" maxlength="80" placeholder="Votre nom">
+</div>
+
+<div class="profile-field">
 <label for="profileEmail">Adresse mail</label>
 <input id="profileEmail" type="email" inputmode="email" autocomplete="email" maxlength="160" placeholder="votre@email.fr">
 </div>
@@ -88,7 +93,7 @@ Choisir une photo
 <div class="profile-dialog" id="resetDialog" role="dialog" aria-modal="true" aria-labelledby="resetTitle" hidden>
 <div class="profile-dialog__card">
 <h2 id="resetTitle">Réinitialiser le profil ?</h2>
-<p>La photo, le prénom, l’adresse mail et le numéro de carte seront supprimés de cet appareil.</p>
+<p>La photo, le prénom, le nom, l’adresse mail et le numéro de carte seront supprimés de cet appareil.</p>
 <div class="profile-dialog__actions">
 <button class="profile-secondary" id="cancelReset" type="button">Annuler</button>
 <button class="profile-danger" id="confirmReset" type="button">Réinitialiser</button>

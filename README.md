@@ -523,8 +523,8 @@ Google Forms ou accès à OneSignal.
 
 - `profil.html` reprend le fond, le header, les Safe Areas et le glassmorphism
   de la PWA ;
-- `assets/js/profile-store.js` enregistre le prénom, l’adresse mail et la photo
-  dans IndexedDB ;
+- `assets/js/profile-store.js` enregistre le prénom, le nom, l’adresse mail et
+  la photo dans IndexedDB ;
 - la photo est recadrée par l’utilisateur dans un carré avant validation,
   puis convertie en JPEG 512 × 512 et débarrassée de ses métadonnées avant
   stockage ;
@@ -535,8 +535,8 @@ Google Forms ou accès à OneSignal.
   l’adresse mail ;
 - la partie Notifications du profil est volontairement reportée à un chantier
   ultérieur ;
-- la réinitialisation supprime le profil IndexedDB et la clé locale de la
-  carte.
+- la réinitialisation supprime le profil IndexedDB — prénom, nom, mail et
+  photo — ainsi que la clé locale de la carte.
 
 L’index possède un petit bouton utilisateur à côté de la cloche. Il affiche la
 photo et le prénom lorsqu’ils existent, sinon une icône neutre et le libellé
@@ -592,10 +592,9 @@ fonction de réservation, de créneau, de blocage ou d’annulation.
 ### Préremplissage de Soins
 
 `assets/js/pages/service-profile.js` préremplit uniquement les champs vides
-Prénom et Email du panier de `soins.html`. Ces deux informations étant
-obligatoires pour une commande Soins, elles sont toutes les deux reprises
-depuis le profil local. Une éventuelle saisie déjà présente n’est jamais
-écrasée.
+Nom, Prénom et Email du panier de `soins.html`. Ces trois informations étant
+obligatoires pour une commande Soins, elles sont reprises depuis le profil
+local. Une éventuelle saisie déjà présente n’est jamais écrasée.
 
 Le préremplissage reste isolé de `service.js`. Le même script pourra ensuite
 être réutilisé dans Services et Laverie après validation.

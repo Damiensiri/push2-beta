@@ -2,6 +2,7 @@
 const form=document.getElementById("profileForm");
 const cardForm=document.getElementById("profileCardForm");
 const firstName=document.getElementById("profileFirstName");
+const lastName=document.getElementById("profileLastName");
 const email=document.getElementById("profileEmail");
 const cardNumber=document.getElementById("profileCardNumber");
 const photoInput=document.getElementById("profilePhotoInput");
@@ -119,6 +120,7 @@ else reject(new Error("Compression impossible"));
 async function loadProfile(){
 const profile=await ProfileStore.get();
 firstName.value=profile.firstName;
+lastName.value=profile.lastName;
 email.value=profile.email;
 cardNumber.value=profile.cardNumber;
 setPreview(profile.photo);
@@ -215,6 +217,7 @@ saveStatus.textContent="Enregistrement…";
 try{
 await ProfileStore.saveProfile({
 firstName:firstName.value,
+lastName:lastName.value,
 email:email.value,
 photo:photoBlob
 });

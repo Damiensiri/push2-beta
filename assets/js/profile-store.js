@@ -72,6 +72,7 @@ record=await readRecord();
 
 return{
 firstName:String(record?.firstName||""),
+lastName:String(record?.lastName||""),
 email:String(record?.email||""),
 photo:record?.photo instanceof Blob?record.photo:null,
 cardNumber:readCardNumber()
@@ -82,6 +83,7 @@ async function saveProfile(profile){
 const record={
 id:PROFILE_ID,
 firstName:String(profile.firstName||"").trim(),
+lastName:String(profile.lastName||"").trim(),
 email:String(profile.email||"").trim(),
 photo:profile.photo instanceof Blob?profile.photo:null
 };
