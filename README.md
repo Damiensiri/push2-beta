@@ -597,10 +597,20 @@ obligatoires pour une commande Soins, elles sont toutes les deux reprises
 depuis le profil local. Une éventuelle saisie déjà présente n’est jamais
 écrasée.
 
-Ce premier test ne modifie pas `service.js` : EmailJS, le panier, le formulaire
-Google, l’historique local et la navigation après commande restent
-strictement inchangés. Le même script pourra ensuite être réutilisé dans
-Services et Laverie après validation.
+Le préremplissage reste isolé de `service.js`. Le même script pourra ensuite
+être réutilisé dans Services et Laverie après validation.
+
+### Commandes indépendantes du quota EmailJS
+
+EmailJS reste utilisé pour tenter l’envoi de la confirmation des commandes
+Soins, Services et Laverie. Cette tentative n’est toutefois plus bloquante :
+un quota dépassé, une erreur du SDK ou un échec réseau ne peut plus empêcher
+la validation de la commande.
+
+Dans tous les cas, la commande poursuit immédiatement son parcours normal :
+enregistrement dans l’historique local, envoi vers le formulaire Google,
+vidage du panier et navigation vers Mes commandes. L’erreur EmailJS est
+uniquement inscrite dans la console pour diagnostic.
 
 Dans `mesreservations.html`, le bloc carte paddock n’est affiché que lorsqu’un
 numéro a été enregistré depuis le profil. La page ne permet plus d’ajouter, de

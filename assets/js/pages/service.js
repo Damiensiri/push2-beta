@@ -176,14 +176,19 @@ total += lineTotal
 
 })
 
-emailjs.send("service_mkpsbdf","template_ftv15rb",{
+try{
+Promise.resolve(emailjs.send("service_mkpsbdf","template_ftv15rb",{
 nom,
 prenom,
 email,
 commande,
 total
+})).catch(error=>{
+console.warn("Confirmation EmailJS non envoyée",error)
 })
-.then(()=>{
+}catch(error){
+console.warn("Confirmation EmailJS indisponible",error)
+}
 
 let orderId = Date.now()
 let dateISO = new Date().toISOString()
@@ -225,7 +230,6 @@ setTimeout(()=>{
 window.location.href="mes-commandes.html"
 },700)
 
-})
 }
 
 /* SCROLL */
