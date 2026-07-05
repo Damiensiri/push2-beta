@@ -589,6 +589,19 @@ métier sensible de `planningpaddock.html`. Il lit uniquement le profil local :
 Ce script ne lit ni n’écrit aucune donnée Firebase et ne modifie aucune
 fonction de réservation, de créneau, de blocage ou d’annulation.
 
+### Préremplissage de Soins
+
+`assets/js/pages/service-profile.js` préremplit uniquement les champs vides
+Prénom et Email du panier de `soins.html`. Ces deux informations étant
+obligatoires pour une commande Soins, elles sont toutes les deux reprises
+depuis le profil local. Une éventuelle saisie déjà présente n’est jamais
+écrasée.
+
+Ce premier test ne modifie pas `service.js` : EmailJS, le panier, le formulaire
+Google, l’historique local et la navigation après commande restent
+strictement inchangés. Le même script pourra ensuite être réutilisé dans
+Services et Laverie après validation.
+
 Dans `mesreservations.html`, le bloc carte paddock n’est affiché que lorsqu’un
 numéro a été enregistré depuis le profil. La page ne permet plus d’ajouter, de
 changer ou de supprimer ce numéro. Le chargement de la carte, le calcul du
