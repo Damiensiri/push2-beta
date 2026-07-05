@@ -69,7 +69,8 @@ function envoyerMailStatutCommande_(email, id, statut, commentaire) {
     to: email,
     subject,
     body: plainBody,
-    htmlBody
+    htmlBody,
+    name: "Écurie Damien Siri"
   });
 }
 

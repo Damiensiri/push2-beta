@@ -689,6 +689,12 @@ Panier constitue encore une exception technique : ses commandes restent
 locales et devront rejoindre le circuit Commandes/Google Sheet avant de pouvoir
 bénéficier des changements de statut côté serveur.
 
+Les deux scripts de changement de statut
+`apps-script-notification-commandes.js` et
+`apps-script-notification-mises-paddock.js` déclarent explicitement
+« Écurie Damien Siri » comme nom d’expéditeur. Gmail ne doit donc plus afficher
+l’adresse technique brute pour ces notifications.
+
 Dans `mesreservations.html`, le bloc carte paddock n’est affiché que lorsqu’un
 numéro a été enregistré depuis le profil. La page ne permet plus d’ajouter, de
 changer ou de supprimer ce numéro. Le chargement de la carte, le calcul du

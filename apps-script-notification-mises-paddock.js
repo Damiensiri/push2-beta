@@ -77,7 +77,8 @@ function envoyerMailStatutMisePaddock_(email, nom, date, statut, commentaire) {
     to: email,
     subject,
     body: plainBody,
-    htmlBody
+    htmlBody,
+    name: "Écurie Damien Siri"
   });
 }
 
