@@ -615,6 +615,33 @@ conserve l’historique local, `lastOrder`, le vidage du panier et la navigation
 vers Confirmation. L’erreur EmailJS est uniquement inscrite dans la console
 pour diagnostic.
 
+### Migration progressive des emails vers Apps Script
+
+L’audit du 5 juillet 2026 a confirmé que les scripts Apps Script existants
+envoient déjà les changements de statut des commandes et des demandes de mise
+au paddock avec `MailApp`. Aucun endpoint Apps Script existant dans le dépôt ne
+permet toutefois encore à la PWA de demander une confirmation initiale.
+
+La première étape, volontairement sans effet sur la PWA, est préparée dans
+`apps-script-mailer-common.js`. Ce fichier est destiné à être ajouté au projet
+Apps Script **Commandes** existant. Il accepte uniquement une confirmation de
+commande structurée, fabrique lui-même le contenu du mail, contrôle les
+champs, limite les sources autorisées et protège pendant six heures contre un
+double envoi portant la même clé.
+
+Deux propriétés Apps Script permettent de tester sans risque :
+
+- `MAILER_TEST_EMAIL` redirige tous les envois vers une adresse de test et
+  désactive toute copie au gérant ;
+- `MAILER_MANAGER_EMAIL` ajoute, uniquement hors mode test, une copie cachée
+  facultative au gérant.
+
+Ce fichier n’est encore chargé par aucune page, ne remplace pas EmailJS et ne
+modifie aucun parcours de commande. Avant de l’ajouter au projet Apps Script,
+il faut vérifier que ce projet ne possède pas déjà une fonction `doPost`.
+S’il en possède une, les deux routes devront être réunies dans son unique
+`doPost` au lieu d’en créer un second.
+
 Dans `mesreservations.html`, le bloc carte paddock n’est affiché que lorsqu’un
 numéro a été enregistré depuis le profil. La page ne permet plus d’ajouter, de
 changer ou de supprimer ce numéro. Le chargement de la carte, le calcul du
