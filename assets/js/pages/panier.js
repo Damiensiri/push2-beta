@@ -1,7 +1,11 @@
 /* EMAILJS */
 
 (function(){
-emailjs.init("03cdce-AcdCC03k_v");
+try{
+if(window.emailjs) emailjs.init("03cdce-AcdCC03k_v");
+}catch(error){
+console.warn("Initialisation EmailJS indisponible",error);
+}
 })();
 
 /* PANIER */
@@ -106,7 +110,8 @@ total+=lineTotal
 
 })
 
-emailjs.send("service_mkpsbdf","template_ftv15rb",{
+try{
+Promise.resolve(emailjs.send("service_mkpsbdf","template_ftv15rb",{
 
 nom:nom,
 prenom:prenom,
@@ -114,9 +119,12 @@ email:email,
 commande:commandeHTML,
 total:total
 
+})).catch(error=>{
+console.warn("Confirmation EmailJS non envoyée",error)
 })
-
-.then(()=>{
+}catch(error){
+console.warn("Confirmation EmailJS indisponible",error)
+}
 
 let orders = JSON.parse(localStorage.getItem("orders") || "[]")
 
@@ -132,12 +140,5 @@ localStorage.setItem("lastOrder", JSON.stringify({items:cart,total:total}))
 localStorage.removeItem("cart")
 
 window.location.href="confirmation.html"
-
-})
-
-.catch(()=>{
-alert("Erreur envoi email")
-updateCommanderState()
-})
 
 }

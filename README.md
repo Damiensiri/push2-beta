@@ -589,27 +589,31 @@ métier sensible de `planningpaddock.html`. Il lit uniquement le profil local :
 Ce script ne lit ni n’écrit aucune donnée Firebase et ne modifie aucune
 fonction de réservation, de créneau, de blocage ou d’annulation.
 
-### Préremplissage de Soins
+### Préremplissage de Soins, Services, Laverie et Panier
 
 `assets/js/pages/service-profile.js` préremplit uniquement les champs vides
-Nom, Prénom et Email du panier de `soins.html`. Ces trois informations étant
-obligatoires pour une commande Soins, elles sont reprises depuis le profil
-local. Une éventuelle saisie déjà présente n’est jamais écrasée.
+Nom, Prénom et Email des paniers de `soins.html`, `service.html`,
+`laverie.html` et `panier.html`. Ces trois informations étant obligatoires,
+elles sont reprises depuis le profil local. Une éventuelle saisie déjà
+présente n’est jamais écrasée.
 
-Le préremplissage reste isolé de `service.js`. Le même script pourra ensuite
-être réutilisé dans Services et Laverie après validation.
+Le préremplissage reste isolé des logiques de commande. Il émet les événements
+de saisie habituels après avoir rempli les champs afin que le bouton Commander
+de `panier.html` soit activé selon ses validations existantes.
 
 ### Commandes indépendantes du quota EmailJS
 
 EmailJS reste utilisé pour tenter l’envoi de la confirmation des commandes
-Soins, Services et Laverie. Cette tentative n’est toutefois plus bloquante :
-un quota dépassé, une erreur du SDK ou un échec réseau ne peut plus empêcher
-la validation de la commande.
+Soins, Services, Laverie et Panier. Cette tentative n’est toutefois plus
+bloquante : un quota dépassé, une absence du SDK ou un échec réseau ne peut
+plus empêcher la validation de la commande.
 
-Dans tous les cas, la commande poursuit immédiatement son parcours normal :
-enregistrement dans l’historique local, envoi vers le formulaire Google,
-vidage du panier et navigation vers Mes commandes. L’erreur EmailJS est
-uniquement inscrite dans la console pour diagnostic.
+Dans tous les cas, chaque commande poursuit immédiatement son parcours normal.
+Soins, Services et Laverie conservent l’historique local, le formulaire
+Google, le vidage du panier et la navigation vers Mes commandes. Panier
+conserve l’historique local, `lastOrder`, le vidage du panier et la navigation
+vers Confirmation. L’erreur EmailJS est uniquement inscrite dans la console
+pour diagnostic.
 
 Dans `mesreservations.html`, le bloc carte paddock n’est affiché que lorsqu’un
 numéro a été enregistré depuis le profil. La page ne permet plus d’ajouter, de

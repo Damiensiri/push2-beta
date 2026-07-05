@@ -1,4 +1,8 @@
-emailjs.init("03cdce-AcdCC03k_v")
+try{
+if(window.emailjs) emailjs.init("03cdce-AcdCC03k_v")
+}catch(error){
+console.warn("Initialisation EmailJS indisponible",error)
+}
 
 const SHEET_URL=document.body.dataset.catalogUrl ||
 "https://opensheet.elk.sh/1ka6djXZhsDBbF77OVgH5wjqQwLpMUUPbMl1RD_rssXI/service"
