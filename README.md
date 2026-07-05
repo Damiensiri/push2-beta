@@ -573,6 +573,22 @@ dissociés :
 Ainsi, modifier ou supprimer le numéro de carte ne peut jamais réécrire ni
 effacer la photo du profil.
 
+### Préremplissage de Planning paddock
+
+`assets/js/pages/planningpaddock-profile.js` est volontairement séparé du code
+métier sensible de `planningpaddock.html`. Il lit uniquement le profil local :
+
+- le prénom est prérempli si le champ est vide ;
+- l’adresse mail reste vide pour une réservation classique, où elle est
+  facultative ;
+- l’adresse mail est préremplie uniquement pour une demande de mise au
+  paddock, après que la page l’a déclarée obligatoire ;
+- un mail prérempli automatiquement est retiré si le formulaire revient au
+  mode facultatif, mais une saisie manuelle de l’utilisateur est conservée.
+
+Ce script ne lit ni n’écrit aucune donnée Firebase et ne modifie aucune
+fonction de réservation, de créneau, de blocage ou d’annulation.
+
 Dans `mesreservations.html`, le bloc carte paddock n’est affiché que lorsqu’un
 numéro a été enregistré depuis le profil. La page ne permet plus d’ajouter, de
 changer ou de supprimer ce numéro. Le chargement de la carte, le calcul du
