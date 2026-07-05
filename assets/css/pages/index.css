@@ -148,6 +148,8 @@ header{
   max-height:34px;
   object-fit:contain;
   filter:drop-shadow(0 8px 14px rgba(20,52,92,.16));
+  transform:scale(1.10);
+  transform-origin:center;
 }
 
 header h1{

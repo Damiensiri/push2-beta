@@ -538,6 +538,11 @@ bulles et doit toujours rester sur une seule ligne. L’ancien saut de ligne
 invisible du titre est neutralisé afin de ne plus fausser cet alignement
 vertical. Sa taille est fixée à 15,5 px afin de conserver un espace net avant
 la bulle de profil.
+
+Un essai visuel isolé du 5 juillet 2026 remplace ce titre par
+« ÉCURIE D.SIRI » et applique au logo DS un agrandissement centré de 10 % avec
+`scale(1.10)`. Le conteneur, le centre du logo, le header et les bulles ne sont
+pas déplacés.
 La cloche, son badge, ses IDs, ses listeners et toute sa logique restent
 inchangés.
 
