@@ -78,7 +78,7 @@ cardNumber:readCardNumber()
 };
 }
 
-async function save(profile){
+async function saveProfile(profile){
 const record={
 id:PROFILE_ID,
 firstName:String(profile.firstName||"").trim(),
@@ -88,16 +88,24 @@ photo:profile.photo instanceof Blob?profile.photo:null
 
 await writeRecord(record);
 
-const cardNumber=normalizeCardNumber(profile.cardNumber);
-try{
-if(cardNumber){
-localStorage.setItem(CARD_KEY,cardNumber);
-}else{
-localStorage.removeItem(CARD_KEY);
+return get();
 }
+
+function saveCardNumber(value){
+const cardNumber=normalizeCardNumber(value);
+if(!cardNumber)return readCardNumber();
+
+try{
+localStorage.setItem(CARD_KEY,cardNumber);
 }catch(e){}
 
-return get();
+return readCardNumber();
+}
+
+function removeCardNumber(){
+try{
+localStorage.removeItem(CARD_KEY);
+}catch(e){}
 }
 
 async function reset(){
@@ -109,5 +117,11 @@ localStorage.removeItem(CARD_KEY);
 }catch(e){}
 }
 
-window.ProfileStore=Object.freeze({get,save,reset});
+window.ProfileStore=Object.freeze({
+get,
+saveProfile,
+saveCardNumber,
+removeCardNumber,
+reset
+});
 })();

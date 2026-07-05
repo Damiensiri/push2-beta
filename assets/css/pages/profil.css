@@ -87,10 +87,6 @@
   gap:16px;
 }
 
-.profile-form-shell{
-  display:block;
-}
-
 .profile-field{
   display:grid;
   gap:7px;
@@ -143,10 +139,25 @@
   text-align:center;
 }
 
+.profile-card-actions{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+
+.profile-card-actions .profile-primary{
+  margin-top:0;
+}
+
 .profile-danger{
   width:100%;
   color:#ffe4e4;
   background:rgba(176,38,48,.24);
+}
+
+.profile-reset-standalone{
+  width:calc(100% - 36px);
+  margin:0 18px 18px;
 }
 
 .profile-dialog[hidden]{

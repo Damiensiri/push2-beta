@@ -52,8 +52,7 @@ Choisir une photo
 </div>
 </section>
 
-<form class="profile-form-shell" id="profileForm">
-<section class="profile-card profile-form">
+<form class="profile-card profile-form" id="profileForm">
 <div class="profile-field">
 <label for="profileFirstName">Prénom</label>
 <input id="profileFirstName" type="text" autocomplete="given-name" maxlength="60" placeholder="Votre prénom">
@@ -63,22 +62,26 @@ Choisir une photo
 <label for="profileEmail">Adresse mail</label>
 <input id="profileEmail" type="email" inputmode="email" autocomplete="email" maxlength="160" placeholder="votre@email.fr">
 </div>
-</section>
 
-<section class="profile-card profile-form">
+<button class="profile-primary" type="submit">Enregistrer mon profil</button>
+<p class="profile-save-status" id="profileSaveStatus" aria-live="polite"></p>
+</form>
+
+<form class="profile-card profile-form" id="profileCardForm">
 <div class="profile-section-title">Carte paddock</div>
 <div class="profile-field">
 <label for="profileCardNumber">Numéro de carte paddock</label>
-<input id="profileCardNumber" type="text" autocomplete="off" maxlength="80" placeholder="Numéro de carte">
+<input id="profileCardNumber" type="text" autocomplete="off" maxlength="80" placeholder="Numéro de carte" required>
 </div>
-</section>
 
-<section class="profile-card profile-form profile-actions">
-<button class="profile-primary" type="submit">Enregistrer mon profil</button>
-<p class="profile-save-status" id="profileSaveStatus" aria-live="polite"></p>
-<button class="profile-danger" id="openReset" type="button">Réinitialiser mon profil</button>
-</section>
+<div class="profile-card-actions">
+<button class="profile-primary" type="submit">Enregistrer la carte</button>
+<button class="profile-danger" id="removeCard" type="button">Supprimer la carte</button>
+</div>
+<p class="profile-save-status" id="profileCardStatus" aria-live="polite"></p>
 </form>
+
+<button class="profile-danger profile-reset-standalone" id="openReset" type="button">Réinitialiser mon profil</button>
 
 </div>
 

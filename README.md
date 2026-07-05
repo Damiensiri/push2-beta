@@ -547,8 +547,19 @@ sont pas déplacés.
 La cloche, son badge, ses IDs, ses listeners et toute sa logique restent
 inchangés.
 
-Les boutons « Enregistrer mon profil » et « Réinitialiser mon profil » sont
-regroupés dans une même bulle sur la page Profil.
+L’enregistrement du profil et celui de la carte paddock sont strictement
+dissociés :
+
+- la bulle Profil enregistre uniquement le prénom, l’adresse mail et la photo
+  dans IndexedDB ;
+- la bulle Carte paddock possède ses propres boutons « Enregistrer la carte »
+  et « Supprimer la carte » et ne modifie que la clé locale historique
+  `paddockCardNumber` ;
+- le bouton « Réinitialiser mon profil », placé seul hors d’une bulle, supprime
+  à la fois le profil, la photo et la carte.
+
+Ainsi, modifier ou supprimer le numéro de carte ne peut jamais réécrire ni
+effacer la photo du profil.
 
 Dans `mesreservations.html`, le bloc carte paddock n’est affiché que lorsqu’un
 numéro a été enregistré depuis le profil. La page ne permet plus d’ajouter, de

@@ -1,5 +1,6 @@
 (function initializeProfilePage(){
 const form=document.getElementById("profileForm");
+const cardForm=document.getElementById("profileCardForm");
 const firstName=document.getElementById("profileFirstName");
 const email=document.getElementById("profileEmail");
 const cardNumber=document.getElementById("profileCardNumber");
@@ -8,6 +9,8 @@ const photoPreview=document.getElementById("profilePhotoPreview");
 const photoFallback=document.getElementById("profilePhotoFallback");
 const removePhoto=document.getElementById("removePhoto");
 const saveStatus=document.getElementById("profileSaveStatus");
+const cardStatus=document.getElementById("profileCardStatus");
+const removeCard=document.getElementById("removeCard");
 const resetDialog=document.getElementById("resetDialog");
 const openReset=document.getElementById("openReset");
 const cancelReset=document.getElementById("cancelReset");
@@ -210,16 +213,35 @@ if(!form.reportValidity())return;
 
 saveStatus.textContent="Enregistrement…";
 try{
-await ProfileStore.save({
+await ProfileStore.saveProfile({
 firstName:firstName.value,
 email:email.value,
-cardNumber:cardNumber.value,
 photo:photoBlob
 });
 saveStatus.textContent="Profil enregistré sur cet appareil.";
 }catch(e){
 saveStatus.textContent="Impossible d’enregistrer le profil.";
 }
+});
+
+cardForm.addEventListener("submit",event=>{
+event.preventDefault();
+if(!cardForm.reportValidity())return;
+
+cardStatus.textContent="Enregistrement…";
+try{
+const savedNumber=ProfileStore.saveCardNumber(cardNumber.value);
+cardNumber.value=savedNumber;
+cardStatus.textContent="Carte paddock enregistrée sur cet appareil.";
+}catch(e){
+cardStatus.textContent="Impossible d’enregistrer la carte.";
+}
+});
+
+removeCard.addEventListener("click",()=>{
+ProfileStore.removeCardNumber();
+cardForm.reset();
+cardStatus.textContent="Carte paddock supprimée de cet appareil.";
 });
 
 openReset.addEventListener("click",()=>{
@@ -233,9 +255,11 @@ resetDialog.hidden=true;
 confirmReset.addEventListener("click",async()=>{
 await ProfileStore.reset();
 form.reset();
+cardForm.reset();
 setPreview(null);
 resetDialog.hidden=true;
 saveStatus.textContent="Profil réinitialisé sur cet appareil.";
+cardStatus.textContent="";
 });
 
 resetDialog.addEventListener("click",event=>{
