@@ -540,9 +540,10 @@ vertical. Sa taille est fixée à 15,5 px afin de conserver un espace net avant
 la bulle de profil.
 
 Un essai visuel isolé du 5 juillet 2026 remplace ce titre par
-« ÉCURIE D.SIRI » et applique au logo DS un agrandissement centré de 5 % avec
-`scale(1.05)`. Le conteneur, le centre du logo, le header et les bulles ne sont
-pas déplacés.
+« ÉCURIE D.SIRI ». Le logo DS conserve son premier agrandissement de 10 %, puis
+reçoit un agrandissement supplémentaire de 5 %. Le facteur combiné est donc
+`scale(1.155)`. Le conteneur, le centre du logo, le header et les bulles ne
+sont pas déplacés.
 La cloche, son badge, ses IDs, ses listeners et toute sa logique restent
 inchangés.
 
