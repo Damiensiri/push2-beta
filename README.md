@@ -504,6 +504,18 @@ toucher à la légende ni au panneau de détail. Les marqueurs, leur animation,
 les statuts, l’ouverture du panneau et la réservation restent inchangés. Cette
 étape a été validée par Damien sur iPhone le 4 juillet 2026.
 
+La mécanique est ensuite étendue aux sept cartes de `horaires.html`. Le halo
+reste actif jusqu’à ce que les deux réponses nécessaires soient confirmées :
+la feuille des horaires habituels et la feuille des exceptions. Les deux
+réponses ainsi que l’heure de leur dernière confirmation sont conservées dans
+les caches `horaires`, `horaires_exceptions` et `horaires_confirmed_at`.
+
+Une reprise après au moins une minute ne déclenche le shimmer que si cet
+ensemble n’a pas été confirmé entre-temps. En cas d’échec d’une des deux
+requêtes, le halo fixe discret reste présent. Le rafraîchissement automatique
+de la page demeure visuellement silencieux et les règles d’application des
+exceptions ne sont pas modifiées.
+
 ## Espace utilisateur local — Phase 1
 
 La Phase 1 crée un profil entièrement local, sans compte, serveur, Firebase,
