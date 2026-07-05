@@ -664,6 +664,31 @@ conserve EmailJS comme solution active sur Services et Laverie tant que ces
 pages ne chargent pas `app-mailer.js`. Le parcours de commande reste non
 bloquant en cas d’échec du mail.
 
+Avant le passage aux destinataires réels, le backend commun est renforcé :
+
+- maximum 30 confirmations par heure et 60 par jour ;
+- maximum 4 confirmations par heure pour une même adresse client ;
+- conservation d’une réserve de 10 destinataires dans le quota Google afin de
+  ne pas bloquer les emails de changement de statut ;
+- refus des requêtes trop volumineuses et des totaux qui ne correspondent pas
+  à la somme des articles ;
+- maintien de la validation stricte, de la liste des sources autorisées et de
+  la protection anti-doublon.
+
+La règle fonctionnelle finale des emails est la suivante :
+
+- Soins, Services, Laverie, Panier et demandes de mise au paddock envoient une
+  confirmation au client ainsi qu’une copie cachée au gérant, car ces actions
+  demandent un service de sa part ;
+- leurs emails de changement de statut au client sont conservés ;
+- une réservation simple de paddock envoie une confirmation uniquement au
+  client s’il a renseigné l’adresse facultative, sans copie au gérant.
+
+Ces règles devront être imposées par le backend et non choisies par les pages.
+Panier constitue encore une exception technique : ses commandes restent
+locales et devront rejoindre le circuit Commandes/Google Sheet avant de pouvoir
+bénéficier des changements de statut côté serveur.
+
 Dans `mesreservations.html`, le bloc carte paddock n’est affiché que lorsqu’un
 numéro a été enregistré depuis le profil. La page ne permet plus d’ajouter, de
 changer ou de supprimer ce numéro. Le chargement de la carte, le calcul du

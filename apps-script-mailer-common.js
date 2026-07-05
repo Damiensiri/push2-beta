@@ -4,7 +4,7 @@
  * Étape pilote :
  * - ce fichier est destiné au projet Google Apps Script « Commandes » existant ;
  * - seul le type `order_confirmation` est accepté ;
- * - aucune page de la PWA ne l'appelle encore.
+ * - la page Soins l'utilise actuellement en mode test.
  *
  * Propriétés de script disponibles :
  * - MAILER_TEST_EMAIL : redirige tous les emails vers cette adresse pendant les tests ;
@@ -18,7 +18,14 @@ const MAILER_COMMON_CONFIG = Object.freeze({
   maxItems: 40,
   maxTextLength: 160,
   maxOrderIdLength: 80,
-  maxTotal: 100000
+  maxTotal: 100000,
+  maxPayloadLength: 20000,
+  totalTolerance: 0.02,
+  maxPerHour: 30,
+  maxPerDay: 60,
+  maxPerRecipientPerHour: 4,
+  minimumQuotaReserve: 10,
+  ratePropertyPrefix: "MAILER_RATE_"
 });
 
 function doPost(event) {
@@ -67,10 +74,6 @@ function mailerCommonSendOrderConfirmation_(payload) {
       throw new Error("MAILER_DUPLICATE");
     }
 
-    if (MailApp.getRemainingDailyQuota() < 1) {
-      throw new Error("Quota quotidien Google Mail atteint.");
-    }
-
     const properties = PropertiesService.getScriptProperties();
     const testEmail = String(properties.getProperty("MAILER_TEST_EMAIL") || "").trim();
     const managerEmail = String(properties.getProperty("MAILER_MANAGER_EMAIL") || "").trim();
@@ -83,6 +86,22 @@ function mailerCommonSendOrderConfirmation_(payload) {
 
     if (managerEmail && !mailerCommonIsEmail_(managerEmail)) {
       throw new Error("Propriété MAILER_MANAGER_EMAIL invalide.");
+    }
+
+    const rateKeys = mailerCommonCheckRateLimits_(
+      properties,
+      payload.customer.email.trim()
+    );
+    const recipientCount = !testMode && managerEmail ? 2 : 1;
+    const remainingQuota = MailApp.getRemainingDailyQuota();
+
+    if (
+      remainingQuota <
+      recipientCount + MAILER_COMMON_CONFIG.minimumQuotaReserve
+    ) {
+      throw new Error(
+        "Envoi suspendu pour préserver le quota des changements de statut."
+      );
     }
 
     const firstName = mailerCommonCleanText_(payload.customer.firstName);
@@ -108,12 +127,13 @@ function mailerCommonSendOrderConfirmation_(payload) {
       name: "Écurie Damien Siri"
     };
 
-    // Le mode test ne doit jamais envoyer de copie involontaire au gérant.
+    // Une commande impose la copie gérant côté serveur. Le mode test la coupe.
     if (!testMode && managerEmail) {
       message.bcc = managerEmail;
     }
 
     MailApp.sendEmail(message);
+    mailerCommonIncrementRateLimits_(properties, rateKeys);
     cache.put(
       duplicateKey,
       "sent",
@@ -141,6 +161,10 @@ function mailerCommonParsePayload_(event) {
 
   if (!raw) {
     throw new Error("Contenu de la requête absent.");
+  }
+
+  if (raw.length > MAILER_COMMON_CONFIG.maxPayloadLength) {
+    throw new Error("Contenu de la requête trop volumineux.");
   }
 
   try {
@@ -211,6 +235,8 @@ function mailerCommonValidateOrderPayload_(payload) {
     throw new Error("Articles de commande invalides.");
   }
 
+  let calculatedTotal = 0;
+
   payload.order.items.forEach(function (item) {
     if (
       !item ||
@@ -232,6 +258,81 @@ function mailerCommonValidateOrderPayload_(payload) {
       lineTotal > MAILER_COMMON_CONFIG.maxTotal
     ) {
       throw new Error("Détail d’article invalide.");
+    }
+
+    calculatedTotal += lineTotal;
+  });
+
+  if (
+    Math.abs(calculatedTotal - total) >
+    MAILER_COMMON_CONFIG.totalTolerance
+  ) {
+    throw new Error("Le total ne correspond pas aux articles.");
+  }
+}
+
+function mailerCommonCheckRateLimits_(properties, customerEmail) {
+  const now = new Date();
+  const hourBucket = Utilities.formatDate(now, "UTC", "yyyyMMddHH");
+  const dayBucket = Utilities.formatDate(now, "UTC", "yyyyMMdd");
+  const recipientHash = mailerCommonDigestHex_(
+    String(customerEmail).trim().toLowerCase()
+  ).slice(0, 24);
+  const prefix = MAILER_COMMON_CONFIG.ratePropertyPrefix;
+  const counters = [
+    {
+      key: prefix + "HOUR_" + hourBucket,
+      limit: MAILER_COMMON_CONFIG.maxPerHour
+    },
+    {
+      key: prefix + "DAY_" + dayBucket,
+      limit: MAILER_COMMON_CONFIG.maxPerDay
+    },
+    {
+      key: prefix + "RECIPIENT_" + hourBucket + "_" + recipientHash,
+      limit: MAILER_COMMON_CONFIG.maxPerRecipientPerHour
+    }
+  ];
+
+  mailerCommonCleanupRateProperties_(
+    properties,
+    [
+      prefix + "HOUR_" + hourBucket,
+      prefix + "DAY_" + dayBucket,
+      prefix + "RECIPIENT_" + hourBucket + "_"
+    ]
+  );
+
+  counters.forEach(function (counter) {
+    const count = Number(properties.getProperty(counter.key) || 0);
+    if (!Number.isFinite(count) || count < 0) {
+      throw new Error("Compteur de sécurité invalide.");
+    }
+    if (count >= counter.limit) {
+      throw new Error("Limite temporaire d’envoi atteinte.");
+    }
+  });
+
+  return counters.map(function (counter) { return counter.key; });
+}
+
+function mailerCommonIncrementRateLimits_(properties, keys) {
+  keys.forEach(function (key) {
+    const count = Number(properties.getProperty(key) || 0);
+    properties.setProperty(key, String(count + 1));
+  });
+}
+
+function mailerCommonCleanupRateProperties_(properties, activePrefixes) {
+  const prefix = MAILER_COMMON_CONFIG.ratePropertyPrefix;
+  const allProperties = properties.getProperties();
+
+  Object.keys(allProperties).forEach(function (key) {
+    const active = activePrefixes.some(function (activePrefix) {
+      return key.indexOf(activePrefix) === 0;
+    });
+    if (key.indexOf(prefix) === 0 && !active) {
+      properties.deleteProperty(key);
     }
   });
 }
@@ -310,6 +411,10 @@ function mailerCommonIsEmail_(value) {
 }
 
 function mailerCommonDuplicateKey_(value) {
+  return "mailer-common-" + mailerCommonDigestHex_(value);
+}
+
+function mailerCommonDigestHex_(value) {
   const digest = Utilities.computeDigest(
     Utilities.DigestAlgorithm.SHA_256,
     String(value),
@@ -319,7 +424,7 @@ function mailerCommonDuplicateKey_(value) {
     const normalized = byte < 0 ? byte + 256 : byte;
     return ("0" + normalized.toString(16)).slice(-2);
   }).join("");
-  return "mailer-common-" + hex;
+  return hex;
 }
 
 function mailerCommonEscapeHtml_(value) {
