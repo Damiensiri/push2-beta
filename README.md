@@ -656,6 +656,14 @@ ce module et restent inchangés fonctionnellement. La propriété
 `MAILER_TEST_EMAIL` demeure active pendant toute cette validation : le mail
 Apps Script est donc envoyé exclusivement à l’adresse de test.
 
+Après validation du premier mail réel et de la protection anti-doublon, la
+version `20260705-223016` désactive EmailJS uniquement dans `soins.html`.
+Cette page ne charge plus le SDK EmailJS et utilise exclusivement le mailer
+Apps Script, toujours redirigé vers l’adresse de test. Le script partagé
+conserve EmailJS comme solution active sur Services et Laverie tant que ces
+pages ne chargent pas `app-mailer.js`. Le parcours de commande reste non
+bloquant en cas d’échec du mail.
+
 Dans `mesreservations.html`, le bloc carte paddock n’est affiché que lorsqu’un
 numéro a été enregistré depuis le profil. La page ne permet plus d’ajouter, de
 changer ou de supprimer ce numéro. Le chargement de la carte, le calcul du

@@ -183,6 +183,7 @@ total += lineTotal
 let orderId = Date.now()
 let dateISO = new Date().toISOString()
 
+if(!window.AppMailer){
 try{
 Promise.resolve(emailjs.send("service_mkpsbdf","template_ftv15rb",{
 nom,
@@ -195,6 +196,7 @@ console.warn("Confirmation EmailJS non envoyée",error)
 })
 }catch(error){
 console.warn("Confirmation EmailJS indisponible",error)
+}
 }
 
 if(window.AppMailer && document.body.dataset.mailSource){
