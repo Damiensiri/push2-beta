@@ -180,6 +180,9 @@ total += lineTotal
 
 })
 
+let orderId = Date.now()
+let dateISO = new Date().toISOString()
+
 try{
 Promise.resolve(emailjs.send("service_mkpsbdf","template_ftv15rb",{
 nom,
@@ -194,8 +197,21 @@ console.warn("Confirmation EmailJS non envoyée",error)
 console.warn("Confirmation EmailJS indisponible",error)
 }
 
-let orderId = Date.now()
-let dateISO = new Date().toISOString()
+if(window.AppMailer && document.body.dataset.mailSource){
+window.AppMailer.sendOrderConfirmation({
+source:document.body.dataset.mailSource,
+orderId,
+customer:{lastName:nom,firstName:prenom,email},
+total,
+items:cart.map(item=>({
+name:item.name,
+quantity:item.qty,
+lineTotal:item.price*item.qty
+}))
+}).catch(error=>{
+console.warn("Confirmation Apps Script non envoyée",error)
+})
+}
 
 let commandeText = commande
 

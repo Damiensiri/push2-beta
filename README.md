@@ -642,6 +642,20 @@ il faut vérifier que ce projet ne possède pas déjà une fonction `doPost`.
 S’il en possède une, les deux routes devront être réunies dans son unique
 `doPost` au lieu d’en créer un second.
 
+Le backend a ensuite été installé dans le projet Apps Script **Commandes** et
+validé en mode test : le premier appel a bien envoyé le mail vers l’adresse de
+test, tandis qu’un second appel portant la même clé a été reconnu comme doublon
+sans nouvel envoi.
+
+La version `20260705-203000` démarre le pilote côté PWA uniquement sur
+`soins.html`. Le module commun `assets/js/app-mailer.js` transmet une
+confirmation structurée au backend sans bloquer le parcours de commande.
+EmailJS reste temporairement actif en parallèle. `service.html`,
+`laverie.html`, `panier.html` et `planningpaddock.html` ne chargent pas encore
+ce module et restent inchangés fonctionnellement. La propriété
+`MAILER_TEST_EMAIL` demeure active pendant toute cette validation : le mail
+Apps Script est donc envoyé exclusivement à l’adresse de test.
+
 Dans `mesreservations.html`, le bloc carte paddock n’est affiché que lorsqu’un
 numéro a été enregistré depuis le profil. La page ne permet plus d’ajouter, de
 changer ou de supprimer ce numéro. Le chargement de la carte, le calcul du
