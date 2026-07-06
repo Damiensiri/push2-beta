@@ -728,6 +728,10 @@ Une réservation simple conserve son email facultatif et ne déclenche une
 confirmation que lorsqu’il est renseigné, exclusivement vers le client.
 L’identifiant du document Firebase créé sert de clé anti-doublon. Les dates
 affichées dans ces emails utilisent le format français `JJ/MM/AAAA`.
+Pour les demandes de mise au paddock, la clé anti-doublon inclut un identifiant
+unique de demande afin que plusieurs tests ou demandes distinctes sur une même
+date ne soient pas bloqués silencieusement par le cache Apps Script. La limite
+de sécurité par destinataire reste active mais adaptée aux phases de test.
 
 Cette migration ne modifie ni la configuration Firebase, ni les écritures ou
 lectures Firestore, ni les créneaux, horaires, blocages, annulations ou règles

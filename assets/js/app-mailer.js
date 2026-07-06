@@ -48,9 +48,10 @@ return sendPayload(payload)
 function sendPaddockRequestConfirmation(data){
 const email=String(data?.customer?.email || "").trim()
 const date=String(data?.date || "").trim()
+const requestId=String(data?.requestId || Date.now()).trim()
 const payload={
 type:"paddock_request_confirmation",
-idempotencyKey:`paddock-request:${date}:${email.toLowerCase()}`,
+idempotencyKey:`paddock-request:${date}:${email.toLowerCase()}:${requestId}`,
 customer:{
 email,
 firstName:String(data?.customer?.firstName || "").trim(),

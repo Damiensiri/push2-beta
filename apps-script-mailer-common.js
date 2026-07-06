@@ -29,7 +29,7 @@ const MAILER_COMMON_CONFIG = Object.freeze({
   totalTolerance: 0.02,
   maxPerHour: 30,
   maxPerDay: 60,
-  maxPerRecipientPerHour: 4,
+  maxPerRecipientPerHour: 20,
   minimumQuotaReserve: 10,
   ratePropertyPrefix: "MAILER_RATE_"
 });
