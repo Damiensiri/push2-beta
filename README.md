@@ -704,6 +704,22 @@ La règle fonctionnelle finale des emails est la suivante :
 Ces règles sont imposées par le backend et non choisies librement par les
 pages.
 
+Le backend prépare ensuite les deux événements paddock sans modifier la PWA :
+
+- `paddock_request_confirmation` accepte un prénom, un email obligatoire et
+  une date valide ; il impose la copie cachée au gérant ;
+- `paddock_reservation_confirmation` accepte l’identifiant Firebase, le
+  paddock, la date, l’heure et une durée de 60 ou 90 minutes ; il interdit la
+  copie gérant et vise uniquement le client.
+
+Les paddocks et durées sont contrôlés par une liste fermée, les dates et heures
+sont validées et les deux événements réutilisent l’anti-doublon, les limites
+d’envoi et la réserve de quota du mailer commun. Les confirmations de commandes
+existantes conservent leur fonctionnement. À cette étape,
+`planningpaddock.html` et Firebase restent strictement inchangés.
+Cette version du backend a été enregistrée puis publiée sur le déploiement
+Apps Script existant, sans changer son URL `/exec`.
+
 Les deux scripts de changement de statut
 `apps-script-notification-commandes.js` et
 `apps-script-notification-mises-paddock.js` déclarent explicitement

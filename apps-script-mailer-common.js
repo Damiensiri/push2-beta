@@ -3,8 +3,8 @@
  *
  * Étape pilote :
  * - ce fichier est destiné au projet Google Apps Script « Commandes » existant ;
- * - seul le type `order_confirmation` est accepté ;
- * - la page Soins l'utilise actuellement en mode test.
+ * - les confirmations de commandes sont actives ;
+ * - les confirmations paddock sont préparées avant leur branchement à la PWA.
  *
  * Propriétés de script disponibles :
  * - MAILER_TEST_EMAIL : redirige tous les emails vers cette adresse pendant les tests ;
@@ -12,8 +12,14 @@
  */
 
 const MAILER_COMMON_CONFIG = Object.freeze({
-  acceptedType: "order_confirmation",
+  acceptedTypes: Object.freeze([
+    "order_confirmation",
+    "paddock_request_confirmation",
+    "paddock_reservation_confirmation"
+  ]),
   acceptedSources: Object.freeze(["soins", "services", "laverie", "panier"]),
+  acceptedPaddocks: Object.freeze(["maison", "grande", "beudot"]),
+  acceptedDurations: Object.freeze([60, 90]),
   duplicateProtectionSeconds: 21600,
   maxItems: 40,
   maxTextLength: 160,
@@ -31,12 +37,14 @@ const MAILER_COMMON_CONFIG = Object.freeze({
 function doPost(event) {
   try {
     const payload = mailerCommonParsePayload_(event);
-    const result = mailerCommonSendOrderConfirmation_(payload);
+    const result = mailerCommonSend_(payload);
 
     return mailerCommonJsonResponse_({
       ok: true,
       sent: true,
       duplicate: false,
+      type: result.type,
+      referenceId: result.referenceId,
       orderId: result.orderId,
       testMode: result.testMode
     });
@@ -60,9 +68,88 @@ function doPost(event) {
   }
 }
 
+function mailerCommonSend_(payload) {
+  mailerCommonValidateBasePayload_(payload);
+
+  if (payload.type === "order_confirmation") {
+    return mailerCommonSendOrderConfirmation_(payload);
+  }
+
+  return mailerCommonSendPaddockConfirmation_(payload);
+}
+
 function mailerCommonSendOrderConfirmation_(payload) {
   mailerCommonValidateOrderPayload_(payload);
 
+  const firstName = mailerCommonCleanText_(payload.customer.firstName);
+  const lastName = mailerCommonCleanText_(payload.customer.lastName);
+  const orderId = mailerCommonCleanText_(payload.order.id);
+  const sourceLabel = mailerCommonSourceLabel_(payload.order.source);
+  const subject = "Confirmation de votre commande #" + orderId;
+  const bodies = mailerCommonBuildOrderBodies_({
+    firstName,
+    lastName,
+    orderId,
+    sourceLabel,
+    total: Number(payload.order.total),
+    items: payload.order.items
+  });
+
+  return mailerCommonDeliver_(payload, {
+    type: payload.type,
+    referenceId: orderId,
+    orderId,
+    customerEmail: payload.customer.email.trim(),
+    copyManager: true,
+    subject,
+    bodies
+  });
+}
+
+function mailerCommonSendPaddockConfirmation_(payload) {
+  mailerCommonValidatePaddockPayload_(payload);
+
+  const firstName = mailerCommonCleanText_(payload.customer.firstName);
+  let subject;
+  let bodies;
+  let referenceId;
+  let copyManager;
+
+  if (payload.type === "paddock_request_confirmation") {
+    const date = mailerCommonCleanText_(payload.request.date);
+    subject = "Demande de mise au paddock enregistrée";
+    referenceId = "mise-" + date;
+    copyManager = true;
+    bodies = mailerCommonBuildPaddockRequestBodies_({ firstName, date });
+  } else {
+    const reservation = payload.reservation;
+    const paddock = mailerCommonCleanText_(reservation.paddock);
+    const date = mailerCommonCleanText_(reservation.date);
+    const time = mailerCommonCleanText_(reservation.time);
+    const duration = Number(reservation.duration);
+    referenceId = mailerCommonCleanText_(reservation.id);
+    subject = "Réservation paddock confirmée";
+    copyManager = false;
+    bodies = mailerCommonBuildPaddockReservationBodies_({
+      firstName,
+      paddock: mailerCommonPaddockLabel_(paddock),
+      date,
+      time,
+      duration
+    });
+  }
+
+  return mailerCommonDeliver_(payload, {
+    type: payload.type,
+    referenceId,
+    customerEmail: payload.customer.email.trim(),
+    copyManager,
+    subject,
+    bodies
+  });
+}
+
+function mailerCommonDeliver_(payload, delivery) {
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
 
@@ -84,7 +171,11 @@ function mailerCommonSendOrderConfirmation_(payload) {
       throw new Error("Adresse destinataire invalide.");
     }
 
-    if (managerEmail && !mailerCommonIsEmail_(managerEmail)) {
+    if (
+      delivery.copyManager &&
+      managerEmail &&
+      !mailerCommonIsEmail_(managerEmail)
+    ) {
       throw new Error("Propriété MAILER_MANAGER_EMAIL invalide.");
     }
 
@@ -92,7 +183,8 @@ function mailerCommonSendOrderConfirmation_(payload) {
       properties,
       payload.customer.email.trim()
     );
-    const recipientCount = !testMode && managerEmail ? 2 : 1;
+    const recipientCount =
+      !testMode && delivery.copyManager && managerEmail ? 2 : 1;
     const remainingQuota = MailApp.getRemainingDailyQuota();
 
     if (
@@ -104,31 +196,17 @@ function mailerCommonSendOrderConfirmation_(payload) {
       );
     }
 
-    const firstName = mailerCommonCleanText_(payload.customer.firstName);
-    const lastName = mailerCommonCleanText_(payload.customer.lastName);
-    const orderId = mailerCommonCleanText_(payload.order.id);
-    const sourceLabel = mailerCommonSourceLabel_(payload.order.source);
     const subjectPrefix = testMode ? "[TEST] " : "";
-    const subject = subjectPrefix + "Confirmation de votre commande #" + orderId;
-    const bodies = mailerCommonBuildOrderBodies_({
-      firstName,
-      lastName,
-      orderId,
-      sourceLabel,
-      total: Number(payload.order.total),
-      items: payload.order.items
-    });
 
     const message = {
       to: recipient,
-      subject,
-      body: bodies.plain,
-      htmlBody: bodies.html,
+      subject: subjectPrefix + delivery.subject,
+      body: delivery.bodies.plain,
+      htmlBody: delivery.bodies.html,
       name: "Écurie Damien Siri"
     };
 
-    // Une commande impose la copie gérant côté serveur. Le mode test la coupe.
-    if (!testMode && managerEmail) {
+    if (!testMode && delivery.copyManager && managerEmail) {
       message.bcc = managerEmail;
     }
 
@@ -140,7 +218,12 @@ function mailerCommonSendOrderConfirmation_(payload) {
       MAILER_COMMON_CONFIG.duplicateProtectionSeconds
     );
 
-    return { orderId, testMode };
+    return {
+      type: delivery.type,
+      referenceId: delivery.referenceId,
+      orderId: delivery.orderId,
+      testMode
+    };
   } finally {
     lock.releaseLock();
   }
@@ -174,8 +257,11 @@ function mailerCommonParsePayload_(event) {
   }
 }
 
-function mailerCommonValidateOrderPayload_(payload) {
-  if (!payload || payload.type !== MAILER_COMMON_CONFIG.acceptedType) {
+function mailerCommonValidateBasePayload_(payload) {
+  if (
+    !payload ||
+    MAILER_COMMON_CONFIG.acceptedTypes.indexOf(payload.type) === -1
+  ) {
     throw new Error("Type d’email non autorisé.");
   }
 
@@ -191,16 +277,33 @@ function mailerCommonValidateOrderPayload_(payload) {
     throw new Error("Adresse client invalide.");
   }
 
-  ["firstName", "lastName"].forEach(function (field) {
-    const value = payload.customer[field];
-    if (
-      typeof value !== "string" ||
-      !value.trim() ||
-      value.length > MAILER_COMMON_CONFIG.maxTextLength
-    ) {
-      throw new Error("Identité client incomplète.");
-    }
-  });
+  const firstName = payload.customer.firstName;
+  if (
+    typeof firstName !== "string" ||
+    !firstName.trim() ||
+    firstName.length > MAILER_COMMON_CONFIG.maxTextLength
+  ) {
+    throw new Error("Prénom client invalide.");
+  }
+
+  if (
+    payload.customer.lastName !== undefined &&
+    (
+      typeof payload.customer.lastName !== "string" ||
+      payload.customer.lastName.length > MAILER_COMMON_CONFIG.maxTextLength
+    )
+  ) {
+    throw new Error("Nom client invalide.");
+  }
+}
+
+function mailerCommonValidateOrderPayload_(payload) {
+  if (
+    typeof payload.customer.lastName !== "string" ||
+    !payload.customer.lastName.trim()
+  ) {
+    throw new Error("Identité client incomplète.");
+  }
 
   if (!payload.order || typeof payload.order !== "object") {
     throw new Error("Commande absente.");
@@ -268,6 +371,60 @@ function mailerCommonValidateOrderPayload_(payload) {
     MAILER_COMMON_CONFIG.totalTolerance
   ) {
     throw new Error("Le total ne correspond pas aux articles.");
+  }
+}
+
+function mailerCommonValidatePaddockPayload_(payload) {
+  if (payload.type === "paddock_request_confirmation") {
+    if (
+      !payload.request ||
+      typeof payload.request.date !== "string" ||
+      !mailerCommonIsDate_(payload.request.date)
+    ) {
+      throw new Error("Date de demande invalide.");
+    }
+    return;
+  }
+
+  const reservation = payload.reservation;
+  if (!reservation || typeof reservation !== "object") {
+    throw new Error("Réservation absente.");
+  }
+
+  if (
+    typeof reservation.id !== "string" ||
+    !reservation.id.trim() ||
+    reservation.id.length > MAILER_COMMON_CONFIG.maxOrderIdLength
+  ) {
+    throw new Error("Identifiant de réservation invalide.");
+  }
+
+  if (
+    MAILER_COMMON_CONFIG.acceptedPaddocks.indexOf(reservation.paddock) === -1
+  ) {
+    throw new Error("Paddock invalide.");
+  }
+
+  if (
+    typeof reservation.date !== "string" ||
+    !mailerCommonIsDate_(reservation.date)
+  ) {
+    throw new Error("Date de réservation invalide.");
+  }
+
+  if (
+    typeof reservation.time !== "string" ||
+    !mailerCommonIsTime_(reservation.time)
+  ) {
+    throw new Error("Heure de réservation invalide.");
+  }
+
+  if (
+    MAILER_COMMON_CONFIG.acceptedDurations.indexOf(
+      Number(reservation.duration)
+    ) === -1
+  ) {
+    throw new Error("Durée de réservation invalide.");
   }
 }
 
@@ -388,6 +545,59 @@ function mailerCommonBuildOrderBodies_(order) {
   return { plain, html };
 }
 
+function mailerCommonBuildPaddockRequestBodies_(request) {
+  const plain =
+    "Bonjour " + request.firstName + ",\n\n" +
+    "Votre demande de mise au paddock pour le " + request.date +
+    " a bien été enregistrée.\n\n" +
+    "Statut : En attente de confirmation.\n\n" +
+    "Vous serez informé par email lors de sa mise à jour.\n\n" +
+    "Écurie Damien Siri";
+
+  const html =
+    "<p>Bonjour " +
+    mailerCommonEscapeHtml_(request.firstName) +
+    ",</p>" +
+    "<p>Votre demande de mise au paddock pour le <strong>" +
+    mailerCommonEscapeHtml_(request.date) +
+    "</strong> a bien été enregistrée.</p>" +
+    "<p><strong>Statut :</strong> En attente de confirmation.</p>" +
+    "<p>Vous serez informé par email lors de sa mise à jour.</p>" +
+    "<p>Écurie Damien Siri</p>";
+
+  return { plain, html };
+}
+
+function mailerCommonBuildPaddockReservationBodies_(reservation) {
+  const durationLabel = reservation.duration === 90 ? "1 h 30" : "1 h";
+  const plain =
+    "Bonjour " + reservation.firstName + ",\n\n" +
+    "Votre réservation paddock est confirmée.\n\n" +
+    "Paddock : " + reservation.paddock + "\n" +
+    "Jour : " + reservation.date + "\n" +
+    "Heure : " + reservation.time + "\n" +
+    "Durée : " + durationLabel + "\n\n" +
+    "Écurie Damien Siri";
+
+  const html =
+    "<p>Bonjour " +
+    mailerCommonEscapeHtml_(reservation.firstName) +
+    ",</p>" +
+    "<p>Votre réservation paddock est confirmée.</p>" +
+    "<p><strong>Paddock :</strong> " +
+    mailerCommonEscapeHtml_(reservation.paddock) +
+    "<br><strong>Jour :</strong> " +
+    mailerCommonEscapeHtml_(reservation.date) +
+    "<br><strong>Heure :</strong> " +
+    mailerCommonEscapeHtml_(reservation.time) +
+    "<br><strong>Durée :</strong> " +
+    durationLabel +
+    "</p>" +
+    "<p>Écurie Damien Siri</p>";
+
+  return { plain, html };
+}
+
 function mailerCommonSourceLabel_(source) {
   const labels = {
     soins: "Soins",
@@ -396,6 +606,37 @@ function mailerCommonSourceLabel_(source) {
     panier: "Panier"
   };
   return labels[source];
+}
+
+function mailerCommonPaddockLabel_(paddock) {
+  const labels = {
+    maison: "Maison",
+    grande: "Grande Voie",
+    beudot: "Beudot"
+  };
+  return labels[paddock];
+}
+
+function mailerCommonIsDate_(value) {
+  const match = String(value).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return false;
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(Date.UTC(year, month - 1, day));
+
+  return (
+    date.getUTCFullYear() === year &&
+    date.getUTCMonth() === month - 1 &&
+    date.getUTCDate() === day
+  );
+}
+
+function mailerCommonIsTime_(value) {
+  const match = String(value).match(/^(\d{2}):(\d{2})$/);
+  if (!match) return false;
+  return Number(match[1]) < 24 && Number(match[2]) < 60;
 }
 
 function mailerCommonFormatEuro_(value) {
