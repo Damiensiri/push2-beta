@@ -546,9 +546,10 @@ function mailerCommonBuildOrderBodies_(order) {
 }
 
 function mailerCommonBuildPaddockRequestBodies_(request) {
+  const dateLabel = mailerCommonFormatFrenchDate_(request.date);
   const plain =
     "Bonjour " + request.firstName + ",\n\n" +
-    "Votre demande de mise au paddock pour le " + request.date +
+    "Votre demande de mise au paddock pour le " + dateLabel +
     " a bien été enregistrée.\n\n" +
     "Statut : En attente de confirmation.\n\n" +
     "Vous serez informé par email lors de sa mise à jour.\n\n" +
@@ -559,7 +560,7 @@ function mailerCommonBuildPaddockRequestBodies_(request) {
     mailerCommonEscapeHtml_(request.firstName) +
     ",</p>" +
     "<p>Votre demande de mise au paddock pour le <strong>" +
-    mailerCommonEscapeHtml_(request.date) +
+    mailerCommonEscapeHtml_(dateLabel) +
     "</strong> a bien été enregistrée.</p>" +
     "<p><strong>Statut :</strong> En attente de confirmation.</p>" +
     "<p>Vous serez informé par email lors de sa mise à jour.</p>" +
@@ -570,11 +571,12 @@ function mailerCommonBuildPaddockRequestBodies_(request) {
 
 function mailerCommonBuildPaddockReservationBodies_(reservation) {
   const durationLabel = reservation.duration === 90 ? "1 h 30" : "1 h";
+  const dateLabel = mailerCommonFormatFrenchDate_(reservation.date);
   const plain =
     "Bonjour " + reservation.firstName + ",\n\n" +
     "Votre réservation paddock est confirmée.\n\n" +
     "Paddock : " + reservation.paddock + "\n" +
-    "Jour : " + reservation.date + "\n" +
+    "Jour : " + dateLabel + "\n" +
     "Heure : " + reservation.time + "\n" +
     "Durée : " + durationLabel + "\n\n" +
     "Écurie Damien Siri";
@@ -587,7 +589,7 @@ function mailerCommonBuildPaddockReservationBodies_(reservation) {
     "<p><strong>Paddock :</strong> " +
     mailerCommonEscapeHtml_(reservation.paddock) +
     "<br><strong>Jour :</strong> " +
-    mailerCommonEscapeHtml_(reservation.date) +
+    mailerCommonEscapeHtml_(dateLabel) +
     "<br><strong>Heure :</strong> " +
     mailerCommonEscapeHtml_(reservation.time) +
     "<br><strong>Durée :</strong> " +
@@ -631,6 +633,11 @@ function mailerCommonIsDate_(value) {
     date.getUTCMonth() === month - 1 &&
     date.getUTCDate() === day
   );
+}
+
+function mailerCommonFormatFrenchDate_(value) {
+  const parts = String(value).split("-");
+  return parts[2] + "/" + parts[1] + "/" + parts[0];
 }
 
 function mailerCommonIsTime_(value) {

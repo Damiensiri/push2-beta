@@ -10,15 +10,15 @@
 
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
 
-<script src="assets/js/app-config.js?v=20260706-061107"></script>
-<script src="assets/js/app-layout.js?v=20260706-061107"></script>
+<script src="assets/js/app-config.js?v=20260706-225732"></script>
+<script src="assets/js/app-layout.js?v=20260706-225732"></script>
 
-<link rel="stylesheet" href="assets/css/app.css?v=20260706-061107">
-<link rel="stylesheet" href="assets/css/themes/summer.css?v=20260706-061107">
-<link rel="stylesheet" href="assets/css/themes/autumn.css?v=20260706-061107">
-<link rel="stylesheet" href="assets/css/themes/christmas.css?v=20260706-061107">
-<link rel="stylesheet" href="assets/css/themes/spring.css?v=20260706-061107">
-<link rel="stylesheet" href="assets/css/pages/planningpaddock.css?v=20260706-061107">
+<link rel="stylesheet" href="assets/css/app.css?v=20260706-225732">
+<link rel="stylesheet" href="assets/css/themes/summer.css?v=20260706-225732">
+<link rel="stylesheet" href="assets/css/themes/autumn.css?v=20260706-225732">
+<link rel="stylesheet" href="assets/css/themes/christmas.css?v=20260706-225732">
+<link rel="stylesheet" href="assets/css/themes/spring.css?v=20260706-225732">
+<link rel="stylesheet" href="assets/css/pages/planningpaddock.css?v=20260706-225732">
 </head>
 
 <body class="app-page planningpaddock-page">
@@ -128,11 +128,9 @@
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
+<script src="assets/js/app-mailer.js?v=20260706-225732"></script>
 
 <script>
-
-emailjs.init("03cdce-AcdCC03k_v")
 
 const firebaseConfig={
 apiKey:"AIzaSyBn6Hgu-xvsWqpwJ-i4lZyI0QjKMBvOeXA",
@@ -976,19 +974,6 @@ alert("Email obligatoire pour une demande de mise au paddock")
 return
 }
 
-emailjs.send("service_mkpsbdf","template_0qhjhhg",{
-title: "📩 Demande de mise au paddock",
-message: `
-📅 <strong>Jour :</strong> ${selectedDate}<br><br>
-
-<span style="color:#e67e22;font-weight:600;">
-⏳ En attente de confirmation
-</span>
-`,
-prenom: name,
-email: email
-}).then(()=>{
-
 // envoi vers Google Form
 fetch("https://docs.google.com/forms/d/e/1FAIpQLScqcDgOy64o6ZyVuLlQrgPbAR60yIoMZzChOANrA_ZzyAD-xg/formResponse",{
 method:"POST",
@@ -1010,19 +995,20 @@ name:name
 
 localStorage.setItem("myMises", JSON.stringify(mises))
 
+AppMailer.sendPaddockRequestConfirmation({
+customer:{
+email:email,
+firstName:name
+},
+date:selectedDate
+}).catch(error=>{
+console.warn("Confirmation email non envoyée",error)
+})
+
 showSheet(
 "Demande envoyée",
 "Jour : "+selectedDate+"<br>Nous vous confirmerons la mise au paddock."
 )
-
-}).catch(()=>{
-
-showSheet(
-"Erreur",
-"L'envoi du mail a échoué."
-)
-
-})
 
 return
 
@@ -1120,19 +1106,18 @@ let email = document.getElementById("email").value.trim()
 // 👉 envoi client uniquement si email
 if(email && email.includes("@")){
 
-emailjs.send("service_mkpsbdf","template_0qhjhhg",{
-title: "✅ Réservation confirmée",
-message: `
-📍 <strong>Paddock :</strong> ${selected.paddock}<br>
-📅 <strong>Jour :</strong> ${selected.date}<br>
-⏰ <strong>Heure :</strong> ${selected.time}<br><br>
-
-<span style="color:#2ecc71;font-weight:600;">
-✔️ Créneau réservé avec succès
-</span>
-`,
-prenom: name,
-email: email
+AppMailer.sendPaddockReservationConfirmation({
+reservationId:doc.id,
+customer:{
+email:email,
+firstName:name
+},
+paddock:selected.paddock,
+date:selected.date,
+time:selected.time,
+duration:selected.duration
+}).catch(error=>{
+console.warn("Confirmation email non envoyée",error)
 })
 }
 
@@ -1189,8 +1174,8 @@ resetAfterPaddockChange()
 }
   
 </script>
-<script src="assets/js/profile-store.js?v=20260706-061107"></script>
-<script src="assets/js/pages/planningpaddock-profile.js?v=20260706-061107"></script>
+<script src="assets/js/profile-store.js?v=20260706-225732"></script>
+<script src="assets/js/pages/planningpaddock-profile.js?v=20260706-225732"></script>
 <div id="confirmSheet">
 
 <div class="sheetContent">

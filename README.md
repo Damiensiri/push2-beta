@@ -720,6 +720,19 @@ existantes conservent leur fonctionnement. À cette étape,
 Cette version du backend a été enregistrée puis publiée sur le déploiement
 Apps Script existant, sans changer son URL `/exec`.
 
+Après validation séparée des deux événements, `planningpaddock.html` utilise
+le mailer Apps Script commun à la place d’EmailJS. Une demande de mise envoie
+la confirmation au client et la copie gérant, sans conditionner
+l’enregistrement dans Google Forms ni le stockage local au succès du mail.
+Une réservation simple conserve son email facultatif et ne déclenche une
+confirmation que lorsqu’il est renseigné, exclusivement vers le client.
+L’identifiant du document Firebase créé sert de clé anti-doublon. Les dates
+affichées dans ces emails utilisent le format français `JJ/MM/AAAA`.
+
+Cette migration ne modifie ni la configuration Firebase, ni les écritures ou
+lectures Firestore, ni les créneaux, horaires, blocages, annulations ou règles
+de réservation.
+
 Les deux scripts de changement de statut
 `apps-script-notification-commandes.js` et
 `apps-script-notification-mises-paddock.js` déclarent explicitement
