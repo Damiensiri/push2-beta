@@ -672,6 +672,15 @@ utilise la source contrôlée `laverie`, charge le même mailer Apps Script et n
 charge plus le SDK EmailJS. Panier et Planning paddock conservent encore
 EmailJS à cette étape.
 
+La version `20260706-061107` migre `panier.html`. EmailJS y est supprimé au
+profit du mailer Apps Script avec la source contrôlée `panier`. Chaque commande
+reçoit désormais un identifiant commun au mail, à l’historique local et au
+Google Form Commandes. Elle rejoint ainsi le Google Sheet avec le statut
+initial « En attente », ce qui permet à Mes commandes et au script de
+notification de suivre ses futurs changements de statut. L’historique local,
+`lastOrder`, la page Confirmation, le vidage du panier et la navigation restent
+conservés. Les envois réseau restent non bloquants.
+
 Avant le passage aux destinataires réels, le backend commun est renforcé :
 
 - maximum 30 confirmations par heure et 60 par jour ;
@@ -692,10 +701,8 @@ La règle fonctionnelle finale des emails est la suivante :
 - une réservation simple de paddock envoie une confirmation uniquement au
   client s’il a renseigné l’adresse facultative, sans copie au gérant.
 
-Ces règles devront être imposées par le backend et non choisies par les pages.
-Panier constitue encore une exception technique : ses commandes restent
-locales et devront rejoindre le circuit Commandes/Google Sheet avant de pouvoir
-bénéficier des changements de statut côté serveur.
+Ces règles sont imposées par le backend et non choisies librement par les
+pages.
 
 Les deux scripts de changement de statut
 `apps-script-notification-commandes.js` et

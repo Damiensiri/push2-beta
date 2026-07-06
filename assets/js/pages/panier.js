@@ -1,13 +1,3 @@
-/* EMAILJS */
-
-(function(){
-try{
-if(window.emailjs) emailjs.init("03cdce-AcdCC03k_v");
-}catch(error){
-console.warn("Initialisation EmailJS indisponible",error);
-}
-})();
-
 /* PANIER */
 
 let cart = JSON.parse(localStorage.getItem("cart") || "[]")
@@ -92,50 +82,67 @@ return
 commanderBtn.disabled=true
 
 let total=0
-let commandeHTML=""
+let commandeText=""
 
 cart.forEach(item=>{
 
 let lineTotal=item.price*item.qty
 
-commandeHTML+=`
-<tr>
-<td>${item.name}</td>
-<td align="center">${item.qty}</td>
-<td align="right">${lineTotal} €</td>
-</tr>
-`
+commandeText+=`${item.name} x${item.qty} = ${lineTotal} €\n`
 
 total+=lineTotal
 
 })
 
-try{
-Promise.resolve(emailjs.send("service_mkpsbdf","template_ftv15rb",{
+let orderId=Date.now()
+let dateISO=new Date().toISOString()
 
-nom:nom,
-prenom:prenom,
-email:email,
-commande:commandeHTML,
-total:total
-
-})).catch(error=>{
-console.warn("Confirmation EmailJS non envoyée",error)
+if(window.AppMailer){
+window.AppMailer.sendOrderConfirmation({
+source:"panier",
+orderId,
+customer:{lastName:nom,firstName:prenom,email},
+total,
+items:cart.map(item=>({
+name:item.name,
+quantity:item.qty,
+lineTotal:item.price*item.qty
+}))
+}).catch(error=>{
+console.warn("Confirmation Apps Script non envoyée",error)
 })
-}catch(error){
-console.warn("Confirmation EmailJS indisponible",error)
 }
 
 let orders = JSON.parse(localStorage.getItem("orders") || "[]")
 
 orders.push({
+id:orderId,
 date:new Date().toLocaleString(),
-items:cart,
+items:[...cart],
 total:total
 })
 
 localStorage.setItem("orders", JSON.stringify(orders))
 localStorage.setItem("lastOrder", JSON.stringify({items:cart,total:total}))
+
+fetch("https://docs.google.com/forms/d/e/1FAIpQLSd7FyCadHVREHz5A_Y3tGIANItJppc-xx2hEtopxd90lU50Hw/formResponse",{
+method:"POST",
+mode:"no-cors",
+keepalive:true,
+body:new URLSearchParams({
+"entry.1196863567":nom,
+"entry.1084486832":prenom,
+"entry.322695866":email,
+"entry.1740027870":commandeText,
+"entry.99574245":total,
+"entry.1184215130":orderId,
+"entry.489600561":dateISO,
+"entry.1098731878":"En attente",
+"entry.484692587":""
+})
+}).catch(error=>{
+console.warn("Enregistrement Google de la commande indisponible",error)
+})
 
 localStorage.removeItem("cart")
 
