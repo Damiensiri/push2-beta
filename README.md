@@ -667,6 +667,11 @@ La version `20260706-053746` applique la même migration uniquement à
 contrôlée `services` et ne charge plus le SDK EmailJS. Laverie et Panier restent
 inchangés à cette étape afin de conserver une validation page par page.
 
+La version `20260706-055429` migre ensuite uniquement `laverie.html`. La page
+utilise la source contrôlée `laverie`, charge le même mailer Apps Script et ne
+charge plus le SDK EmailJS. Panier et Planning paddock conservent encore
+EmailJS à cette étape.
+
 Avant le passage aux destinataires réels, le backend commun est renforcé :
 
 - maximum 30 confirmations par heure et 60 par jour ;
