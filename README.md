@@ -636,11 +636,9 @@ Deux propriétés Apps Script permettent de tester sans risque :
 - `MAILER_MANAGER_EMAIL` ajoute, uniquement hors mode test, une copie cachée
   facultative au gérant.
 
-Ce fichier n’est encore chargé par aucune page, ne remplace pas EmailJS et ne
-modifie aucun parcours de commande. Avant de l’ajouter au projet Apps Script,
-il faut vérifier que ce projet ne possède pas déjà une fonction `doPost`.
-S’il en possède une, les deux routes devront être réunies dans son unique
-`doPost` au lieu d’en créer un second.
+Lors de sa préparation, ce fichier n’était chargé par aucune page et ne
+modifiait aucun parcours de commande. L’audit du projet Apps Script a confirmé
+l’absence de fonction `doPost`, ce qui a permis de l’y ajouter sans conflit.
 
 Le backend a ensuite été installé dans le projet Apps Script **Commandes** et
 validé en mode test : le premier appel a bien envoyé le mail vers l’adresse de
@@ -659,10 +657,15 @@ Apps Script est donc envoyé exclusivement à l’adresse de test.
 Après validation du premier mail réel et de la protection anti-doublon, la
 version `20260705-223016` désactive EmailJS uniquement dans `soins.html`.
 Cette page ne charge plus le SDK EmailJS et utilise exclusivement le mailer
-Apps Script, toujours redirigé vers l’adresse de test. Le script partagé
-conserve EmailJS comme solution active sur Services et Laverie tant que ces
-pages ne chargent pas `app-mailer.js`. Le parcours de commande reste non
-bloquant en cas d’échec du mail.
+Apps Script. Le passage aux destinataires réels a ensuite validé la
+confirmation client, la copie cachée au gérant et le maintien de l’email de
+changement de statut. Le parcours de commande reste non bloquant en cas
+d’échec du mail.
+
+La version `20260706-053746` applique la même migration uniquement à
+`service.html`. Cette page charge désormais `app-mailer.js` avec la source
+contrôlée `services` et ne charge plus le SDK EmailJS. Laverie et Panier restent
+inchangés à cette étape afin de conserver une validation page par page.
 
 Avant le passage aux destinataires réels, le backend commun est renforcé :
 
