@@ -167,7 +167,7 @@ leurs icônes de statut Ouvert, Prévision, Fermé ou Hors service.
 
 La migration de `service.html` vers l’architecture commune est implémentée.
 Elle conserve le catalogue, le produit mis en avant, le panier local,
-l’animation d’ajout, les quantités, EmailJS, l’archivage local des commandes,
+l’animation d’ajout, les quantités, l’archivage local des commandes,
 le formulaire Google et la navigation vers `mes-commandes.html`. Le panneau du
 panier conserve son fond sur toute la hauteur de l’écran, tandis que son
 contenu respecte les Safe Areas supérieure et inférieure. Elle a été validée
@@ -190,8 +190,8 @@ La migration de `panier.html` vers l’architecture commune est implémentée.
 Les boîtes de saisie navigateur ont été remplacées par un formulaire visible
 Nom, Prénom et Email placé après le total. Le bouton Commander reste désactivé
 tant que le panier est vide, qu’un champ est vide ou que l’adresse email est
-invalide. L’envoi EmailJS, l’historique local, `lastOrder`, le vidage du panier
-et la navigation vers `confirmation.html` sont conservés. Elle a été validée
+invalide. L’historique local, `lastOrder`, le vidage du panier et la navigation
+vers `confirmation.html` sont conservés. Elle a été validée
 par Damien le 1er juillet 2026.
 
 La migration de `confirmation.html` vers l’architecture commune est
@@ -231,16 +231,17 @@ caractère par caractère comme identique à la version précédente. La configu
 Firebase, les écoutes temps réel des collections `reservations`, `horaires` et
 `restrictions`, la création et l’annulation des réservations, les blocages
 1 h 30, les contrôles de fermeture et de chevauchement, les demandes de mise
-au paddock et EmailJS sont conservés. Seuls l’ancien habillage embarqué et son
+au paddock sont conservés. Seuls l’ancien habillage embarqué et son
 script d’ambiance visuelle ont été remplacés par le thème commun.
 
 Le test du 1er juillet 2026 a validé les annulations, les blocages et les
 demandes de mise au paddock. Deux ajustements sans modification de Firebase ont
 ensuite été ajoutés : lorsqu’un blocage 1 h 30 entraîne l’affichage de
 créneaux d’une heure, chaque créneau porte désormais explicitement la mention
-« Libre 1 h ». L’échec EmailJS observé pendant le test provenait du quota
-mensuel du service épuisé et non du code de la PWA. L’affichage technique
-temporaire utilisé pour ce diagnostic a ensuite été retiré.
+« Libre 1 h ». L’échec d’email observé pendant le test provenait du quota
+mensuel EmailJS alors utilisé. Cet incident a motivé la migration progressive
+vers Apps Script. L’affichage technique temporaire utilisé pour ce diagnostic
+a ensuite été retiré.
 La page a ensuite été validée par Damien le 1er juillet 2026.
 
 Une amélioration UX indépendante a ensuite été ajoutée après la validation de
@@ -601,18 +602,18 @@ Le préremplissage reste isolé des logiques de commande. Il émet les événeme
 de saisie habituels après avoir rempli les champs afin que le bouton Commander
 de `panier.html` soit activé selon ses validations existantes.
 
-### Commandes indépendantes du quota EmailJS
+### Commandes indépendantes d’EmailJS
 
-EmailJS reste utilisé pour tenter l’envoi de la confirmation des commandes
-Soins, Services, Laverie et Panier. Cette tentative n’est toutefois plus
-bloquante : un quota dépassé, une absence du SDK ou un échec réseau ne peut
-plus empêcher la validation de la commande.
+EmailJS n’est plus utilisé par l’app. Les confirmations de commandes Soins,
+Services, Laverie et Panier passent par le mailer commun Apps Script. Un échec
+réseau ou un problème temporaire d’email ne peut toutefois pas empêcher la
+validation de la commande.
 
 Dans tous les cas, chaque commande poursuit immédiatement son parcours normal.
 Soins, Services et Laverie conservent l’historique local, le formulaire
 Google, le vidage du panier et la navigation vers Mes commandes. Panier
 conserve l’historique local, `lastOrder`, le vidage du panier et la navigation
-vers Confirmation. L’erreur EmailJS est uniquement inscrite dans la console
+vers Confirmation. L’erreur Apps Script est uniquement inscrite dans la console
 pour diagnostic.
 
 ### Migration progressive des emails vers Apps Script
@@ -648,7 +649,8 @@ sans nouvel envoi.
 La version `20260705-203000` démarre le pilote côté PWA uniquement sur
 `soins.html`. Le module commun `assets/js/app-mailer.js` transmet une
 confirmation structurée au backend sans bloquer le parcours de commande.
-EmailJS reste temporairement actif en parallèle. `service.html`,
+À cette étape historique, EmailJS restait temporairement actif en parallèle.
+`service.html`,
 `laverie.html`, `panier.html` et `planningpaddock.html` ne chargent pas encore
 ce module et restent inchangés fonctionnellement. La propriété
 `MAILER_TEST_EMAIL` demeure active pendant toute cette validation : le mail
@@ -664,13 +666,14 @@ d’échec du mail.
 
 La version `20260706-053746` applique la même migration uniquement à
 `service.html`. Cette page charge désormais `app-mailer.js` avec la source
-contrôlée `services` et ne charge plus le SDK EmailJS. Laverie et Panier restent
-inchangés à cette étape afin de conserver une validation page par page.
+contrôlée `services` et ne charge plus le SDK EmailJS. Laverie et Panier
+restaient inchangés à cette étape afin de conserver une validation page par
+page.
 
 La version `20260706-055429` migre ensuite uniquement `laverie.html`. La page
 utilise la source contrôlée `laverie`, charge le même mailer Apps Script et ne
-charge plus le SDK EmailJS. Panier et Planning paddock conservent encore
-EmailJS à cette étape.
+charge plus le SDK EmailJS. Panier et Planning paddock conservaient encore
+EmailJS à cette étape historique.
 
 La version `20260706-061107` migre `panier.html`. EmailJS y est supprimé au
 profit du mailer Apps Script avec la source contrôlée `panier`. Chaque commande
@@ -684,7 +687,9 @@ conservés. Les envois réseau restent non bloquants.
 Avant le passage aux destinataires réels, le backend commun est renforcé :
 
 - maximum 30 confirmations par heure et 60 par jour ;
-- maximum 4 confirmations par heure pour une même adresse client ;
+- maximum 20 confirmations par heure pour une même adresse client, afin de
+  permettre les cas légitimes où une même personne réserve plusieurs paddocks
+  et fait une demande de mise au paddock dans la même période ;
 - conservation d’une réserve de 10 destinataires dans le quota Google afin de
   ne pas bloquer les emails de changement de statut ;
 - refus des requêtes trop volumineuses et des totaux qui ne correspondent pas
@@ -736,6 +741,10 @@ de sécurité par destinataire reste active mais adaptée aux phases de test.
 Cette migration ne modifie ni la configuration Firebase, ni les écritures ou
 lectures Firestore, ni les créneaux, horaires, blocages, annulations ou règles
 de réservation.
+
+À partir de cette étape, EmailJS n’est plus actif dans l’app. Les anciennes
+mentions EmailJS conservées dans ce README décrivent uniquement l’historique
+des migrations et les diagnostics passés.
 
 Les deux scripts de changement de statut
 `apps-script-notification-commandes.js` et

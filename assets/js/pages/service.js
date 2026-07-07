@@ -1,9 +1,3 @@
-try{
-if(window.emailjs) emailjs.init("03cdce-AcdCC03k_v")
-}catch(error){
-console.warn("Initialisation EmailJS indisponible",error)
-}
-
 const SHEET_URL=document.body.dataset.catalogUrl ||
 "https://opensheet.elk.sh/1ka6djXZhsDBbF77OVgH5wjqQwLpMUUPbMl1RD_rssXI/service"
 
@@ -182,22 +176,6 @@ total += lineTotal
 
 let orderId = Date.now()
 let dateISO = new Date().toISOString()
-
-if(!window.AppMailer){
-try{
-Promise.resolve(emailjs.send("service_mkpsbdf","template_ftv15rb",{
-nom,
-prenom,
-email,
-commande,
-total
-})).catch(error=>{
-console.warn("Confirmation EmailJS non envoyée",error)
-})
-}catch(error){
-console.warn("Confirmation EmailJS indisponible",error)
-}
-}
 
 if(window.AppMailer && document.body.dataset.mailSource){
 window.AppMailer.sendOrderConfirmation({
