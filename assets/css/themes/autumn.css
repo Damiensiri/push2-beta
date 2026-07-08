@@ -13,7 +13,7 @@
   --sky-top:#5b3827;
   --sky-mid:#b56f3d;
   --sky-bottom:#f0b66f;
-  --app-safearea-bottom-background:var(--sky-bottom);
+  --app-safearea-bottom-background:var(--app-background);
   --solar-x:76%;
   --solar-y:38%;
   --solar-opacity:.52;
@@ -26,6 +26,14 @@
     radial-gradient(ellipse at 50% 74%,rgba(255,232,190,.18),transparent 34%),
     radial-gradient(ellipse at 50% 91%,rgba(255,126,54,.26),transparent 46%),
     linear-gradient(180deg,var(--sky-top) 0%,var(--sky-mid) 48%,var(--sky-bottom) 100%);
+}
+
+:root[data-theme="autumn"]::after{
+  background-color:var(--sky-bottom);
+  background-image:var(--app-background);
+  background-repeat:no-repeat;
+  background-position:center bottom;
+  background-size:100% var(--app-canvas-height);
 }
 
 :root[data-theme="autumn"][data-day-phase="night"]{
@@ -109,10 +117,13 @@
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath fill='%23e5862f' d='M33 58c-4-12-13-18-25-18 10-5 18-5 25 1-6-9-8-19-5-33 7 12 9 23 4 33 6-6 14-7 24-3-11 2-19 9-21 20h-2Z'/%3E%3C/svg%3E"),
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath fill='%23b94d18' d='M32 58c-2-10-8-18-20-21 10-3 17-1 22 5-5-10-5-20 1-33 5 14 3 24-3 33 7-5 15-5 24-1-11 2-20 8-22 17h-2Z'/%3E%3Cpath fill='%23ffbd61' fill-opacity='.48' d='M32 52c3-12 4-24 0-37 7 10 9 19 5 29 5-5 11-8 19-9-10 6-17 11-24 17Z'/%3E%3C/svg%3E"),
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath fill='%237b3519' d='M33 57c-4-11-12-18-25-17 10-5 18-6 25 0-6-10-8-20-4-33 7 12 8 23 3 33 7-6 15-6 24-2-11 2-19 9-21 19h-2Z'/%3E%3C/svg%3E"),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath fill='%23f0a13b' d='M31 59c-1-12-9-20-22-23 11-3 19-1 24 6-5-11-4-22 2-34 4 13 3 24-3 34 7-6 15-7 24-3-11 3-20 10-23 20h-2Z'/%3E%3C/svg%3E");
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath fill='%23f0a13b' d='M31 59c-1-12-9-20-22-23 11-3 19-1 24 6-5-11-4-22 2-34 4 13 3 24-3 34 7-6 15-7 24-3-11 3-20 10-23 20h-2Z'/%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath fill='%23d2691e' d='M32 58c-3-11-11-18-23-20 10-4 18-3 24 3-6-10-7-20-2-33 7 12 7 23 1 34 7-6 15-7 24-3-11 2-20 9-22 19h-2Z'/%3E%3Cpath fill='%23ffc36b' fill-opacity='.42' d='M31 52c5-12 7-24 5-37 5 10 6 19 2 28 5-4 11-6 18-7-10 6-18 11-25 16Z'/%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath fill='%238b3a16' d='M33 57c-4-10-12-16-24-16 9-5 17-5 24 0-6-9-8-19-4-33 7 12 8 23 3 33 7-5 15-6 24-2-11 2-19 8-21 18h-2Z'/%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath fill='%23e98f2d' d='M31 58c-2-11-10-18-22-21 10-3 18-1 24 5-5-10-5-20 1-33 5 13 4 24-2 33 7-5 15-5 24-1-11 2-20 8-23 17h-2Z'/%3E%3C/svg%3E");
   background-repeat:no-repeat;
-  background-size:48px 48px,64px 64px,42px 42px,58px 58px,34px 34px,46px 46px,28px 28px,40px 40px;
-  background-position:7% 9%,17% 27%,87% 16%,92% 50%,66% 72%,12% 58%,78% 69%,48% 21%;
+  background-size:48px 48px,64px 64px,42px 42px,58px 58px,34px 34px,46px 46px,28px 28px,40px 40px,36px 36px,24px 24px,32px 32px;
+  background-position:7% 9%,17% 27%,87% 16%,92% 50%,66% 72%,12% 58%,78% 69%,48% 21%,28% 82%,72% 8%,39% 62%;
   transform:translate3d(0,0,0) rotate(0deg);
   animation:autumnLeavesFloat 58s ease-in-out infinite alternate;
 }
@@ -143,7 +154,7 @@
   0%{
     opacity:.34;
     transform:translate3d(-1.5%,0,0) rotate(-1.5deg);
-    background-position:7% 9%,17% 27%,87% 16%,92% 50%,66% 72%,12% 58%,78% 69%,48% 21%;
+    background-position:7% 9%,17% 27%,87% 16%,92% 50%,66% 72%,12% 58%,78% 69%,48% 21%,28% 82%,72% 8%,39% 62%;
   }
   48%{
     opacity:.50;
@@ -151,7 +162,7 @@
   100%{
     opacity:.38;
     transform:translate3d(1.5%,1.2%,0) rotate(1.5deg);
-    background-position:8% 10%,16% 29%,86% 17%,91% 52%,67% 73%,11% 60%,79% 70%,47% 22%;
+    background-position:8% 10%,16% 29%,86% 17%,91% 52%,67% 73%,11% 60%,79% 70%,47% 22%,29% 83%,71% 9%,40% 63%;
   }
 }
 
