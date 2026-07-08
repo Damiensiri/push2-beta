@@ -3,8 +3,8 @@ window.METEOALARM_VIGILANCE = {
   "level": "yellow",
   "label": "Jaune",
   "phenomenon": "Canicule",
-  "period": "Du 8 juillet à 00:00 au 9 juillet à 00:00",
-  "updatedAt": "7 juillet à 16:02",
+  "period": "Du 8 juillet à 06:11 au 10 juillet à 00:00",
+  "updatedAt": "8 juillet à 06:11",
   "source": "MeteoAlarm / EUMETNET",
   "sourceUrl": "https://meteoalarm.org"
 };
