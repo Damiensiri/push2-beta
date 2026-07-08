@@ -1,91 +1,91 @@
 :root[data-theme="autumn"]{
   color-scheme:light dark;
-  --text:rgba(255,255,255,.91);
+  --text:rgba(255,255,255,.92);
   --text-strong:rgba(255,255,255,.98);
-  --text-main:rgba(255,255,255,.91);
-  --text-soft:rgba(255,255,255,.72);
-  --glass:rgba(255,255,255,.17);
-  --glass-strong:rgba(255,255,255,.24);
-  --glass-line:rgba(255,224,178,.30);
-  --shadow-card:0 24px 64px rgba(42,28,18,.24);
-  --shadow-soft:0 14px 36px rgba(42,28,18,.18);
-  --info:#ffc05a;
-  --sky-top:#1f4f78;
-  --sky-mid:#4f89a8;
-  --sky-bottom:#d9a66f;
+  --text-main:rgba(255,255,255,.92);
+  --text-soft:rgba(255,242,220,.74);
+  --glass:rgba(255,245,226,.18);
+  --glass-strong:rgba(255,236,204,.26);
+  --glass-line:rgba(255,213,150,.34);
+  --shadow-card:0 24px 68px rgba(58,31,18,.30);
+  --shadow-soft:0 14px 38px rgba(58,31,18,.22);
+  --info:#ffd071;
+  --sky-top:#5b3827;
+  --sky-mid:#b56f3d;
+  --sky-bottom:#f0b66f;
   --app-safearea-bottom-background:var(--sky-bottom);
-  --solar-x:78%;
-  --solar-y:34%;
-  --solar-opacity:.46;
-  --celestial-glow:rgba(255,202,120,.46);
-  --browser-theme-color:#1f4f78;
+  --solar-x:76%;
+  --solar-y:38%;
+  --solar-opacity:.52;
+  --celestial-glow:rgba(255,198,102,.55);
+  --browser-theme-color:#5b3827;
   --app-background:
-    radial-gradient(circle at 78% 34%,rgba(255,202,120,.28),transparent 30%),
-    radial-gradient(circle at 22% 16%,rgba(255,236,190,.12),transparent 34%),
-    radial-gradient(ellipse at 50% 88%,rgba(255,185,105,.16),transparent 42%),
+    radial-gradient(circle at 76% 38%,rgba(255,198,102,.34),transparent 32%),
+    radial-gradient(circle at 20% 14%,rgba(255,232,180,.14),transparent 34%),
+    radial-gradient(ellipse at 50% 88%,rgba(255,146,74,.18),transparent 44%),
     linear-gradient(180deg,var(--sky-top) 0%,var(--sky-mid) 48%,var(--sky-bottom) 100%);
 }
 
 :root[data-theme="autumn"][data-day-phase="night"]{
-  --sky-top:#071527;
-  --sky-mid:#183456;
-  --sky-bottom:#385b78;
-  --celestial-glow:rgba(210,224,255,.22);
-  --solar-opacity:.24;
-  --browser-theme-color:#071527;
+  --sky-top:#20150f;
+  --sky-mid:#3c2418;
+  --sky-bottom:#68452d;
+  --celestial-glow:rgba(255,206,142,.20);
+  --solar-opacity:.22;
+  --browser-theme-color:#20150f;
 }
 
 :root[data-theme="autumn"][data-day-phase="dawn"]{
-  --sky-top:#1b3356;
-  --sky-mid:#786684;
-  --sky-bottom:#d49b77;
-  --celestial-glow:rgba(255,213,158,.34);
-  --solar-opacity:.34;
-  --browser-theme-color:#1b3356;
+  --sky-top:#5a3325;
+  --sky-mid:#a45f3d;
+  --sky-bottom:#e3ad78;
+  --celestial-glow:rgba(255,218,157,.36);
+  --solar-opacity:.36;
+  --browser-theme-color:#5a3325;
 }
 
 :root[data-theme="autumn"][data-day-phase="morning"]{
-  --sky-top:#235f8d;
-  --sky-mid:#5f9aba;
-  --sky-bottom:#d7b185;
-  --celestial-glow:rgba(255,224,157,.38);
-  --solar-opacity:.38;
-  --browser-theme-color:#235f8d;
+  --sky-top:#7a4b2e;
+  --sky-mid:#c27d45;
+  --sky-bottom:#f1c187;
+  --celestial-glow:rgba(255,226,168,.42);
+  --solar-opacity:.42;
+  --browser-theme-color:#7a4b2e;
 }
 
 :root[data-theme="autumn"][data-day-phase="day"]{
-  --sky-top:#1f4f78;
-  --sky-mid:#4f89a8;
-  --sky-bottom:#d9a66f;
-  --celestial-glow:rgba(255,202,120,.46);
-  --solar-opacity:.46;
-  --browser-theme-color:#1f4f78;
+  --sky-top:#5b3827;
+  --sky-mid:#b56f3d;
+  --sky-bottom:#f0b66f;
+  --celestial-glow:rgba(255,198,102,.55);
+  --solar-opacity:.52;
+  --browser-theme-color:#5b3827;
 }
 
 :root[data-theme="autumn"][data-day-phase="golden"]{
-  --sky-top:#254b70;
-  --sky-mid:#9a796d;
-  --sky-bottom:#e4ad73;
-  --celestial-glow:rgba(255,196,105,.52);
-  --solar-opacity:.50;
-  --browser-theme-color:#254b70;
+  --sky-top:#4a2d20;
+  --sky-mid:#bf6b35;
+  --sky-bottom:#f2a85f;
+  --celestial-glow:rgba(255,184,83,.62);
+  --solar-opacity:.58;
+  --browser-theme-color:#4a2d20;
 }
 
 :root[data-theme="autumn"][data-day-phase="dusk"]{
-  --sky-top:#172c4b;
-  --sky-mid:#665878;
-  --sky-bottom:#bd7767;
-  --celestial-glow:rgba(255,174,128,.34);
-  --solar-opacity:.32;
-  --browser-theme-color:#172c4b;
+  --sky-top:#352018;
+  --sky-mid:#87523c;
+  --sky-bottom:#ca7656;
+  --celestial-glow:rgba(255,160,103,.40);
+  --solar-opacity:.36;
+  --browser-theme-color:#352018;
 }
 
 @media (prefers-color-scheme:dark){
   :root[data-theme="autumn"]{
-    --glass:rgba(24,32,48,.38);
-    --glass-strong:rgba(30,42,62,.48);
-    --glass-line:rgba(255,224,178,.18);
-    --shadow-card:0 24px 70px rgba(0,0,0,.36);
-    --shadow-soft:0 14px 36px rgba(0,0,0,.28);
+    --glass:rgba(55,34,24,.38);
+    --glass-strong:rgba(64,40,28,.50);
+    --glass-line:rgba(255,213,150,.20);
+    --shadow-card:0 24px 72px rgba(0,0,0,.38);
+    --shadow-soft:0 14px 38px rgba(0,0,0,.30);
   }
 }
