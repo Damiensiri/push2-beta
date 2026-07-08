@@ -90,7 +90,8 @@
   }
 }
 
-:root[data-theme="autumn"] body.app-page::before{
+:root[data-theme="autumn"] body.app-page::before,
+:root[data-theme="autumn"] body.index-page::before{
   content:"";
   position:fixed;
   inset:0;
@@ -128,7 +129,8 @@
 }
 
 @media (prefers-reduced-motion:reduce){
-  :root[data-theme="autumn"] body.app-page::before{
+  :root[data-theme="autumn"] body.app-page::before,
+  :root[data-theme="autumn"] body.index-page::before{
     animation:none;
     opacity:.16;
   }
