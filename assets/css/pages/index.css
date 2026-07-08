@@ -42,11 +42,7 @@ body.index-page{
     --sky-bottom 2.8s ease,
     --solar-x 60s linear,
     --solar-y 60s linear,
-    --solar-opacity 2.8s ease,
-    --daypart-overlay-top 45s ease,
-    --daypart-overlay-mid 45s ease,
-    --daypart-overlay-bottom 45s ease,
-    --daypart-overlay-opacity 45s ease;
+    --solar-opacity 2.8s ease;
 }
 
 html::-webkit-scrollbar,

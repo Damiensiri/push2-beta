@@ -83,10 +83,43 @@
     }
 
     function daypartFor(minutes){
-      if(minutes>=360 && minutes<600)return"morning";
+      if(minutes>=360 && minutes<600)return"sunrise";
       if(minutes>=600 && minutes<1020)return"day";
-      if(minutes>=1020 && minutes<1260)return"evening";
+      if(minutes>=1020 && minutes<1260)return"sunset";
       return"night";
+    }
+
+    function applyDaypart(daypart){
+      const previous=document.documentElement.dataset.daypart;
+      const stage=document.querySelector(".ambient-stage");
+
+      if(previous && previous!==daypart && stage){
+        const style=getComputedStyle(stage);
+        const fade=document.createElement("div");
+        const existing=stage.querySelector(".daypart-fade");
+
+        if(existing)existing.remove();
+
+        fade.className="daypart-fade";
+        fade.setAttribute("aria-hidden","true");
+        fade.style.backgroundColor=style.backgroundColor;
+        fade.style.backgroundImage=style.backgroundImage;
+        fade.style.backgroundRepeat=style.backgroundRepeat;
+        fade.style.backgroundPosition=style.backgroundPosition;
+        fade.style.backgroundSize=style.backgroundSize;
+        stage.appendChild(fade);
+
+        requestAnimationFrame(()=>{
+          fade.classList.add("is-fading");
+        });
+
+        setTimeout(()=>{
+          fade.remove();
+        },62000);
+      }
+
+      document.documentElement.dataset.daypart=daypart;
+      document.body.dataset.daypart=daypart;
     }
 
     function updateAmbiance(){
@@ -98,9 +131,8 @@
       const solarHeight=Math.sin(Math.PI*daylightProgress);
 
       document.documentElement.dataset.dayPhase=phase;
-      document.documentElement.dataset.daypart=daypart;
       document.body.dataset.dayPhase=phase;
-      document.body.dataset.daypart=daypart;
+      applyDaypart(daypart);
       document.body.style.setProperty("--solar-x",(10+80*daylightProgress).toFixed(2)+"%");
       document.body.style.setProperty("--solar-y",(62-47*solarHeight).toFixed(2)+"%");
       document.body.dataset.sunrise=Math.round(times.sunrise);
@@ -118,16 +150,6 @@
     setInterval(updateAmbiance,60000);
   }
 
-  function initializeDaypartOverlay(){
-    const stage=document.querySelector(".ambient-stage");
-    if(!stage || stage.querySelector(".daypart-overlay"))return;
-
-    const overlay=document.createElement("div");
-    overlay.className="daypart-overlay";
-    overlay.setAttribute("aria-hidden","true");
-    stage.appendChild(overlay);
-  }
-
   window.AppLayout=Object.freeze({
     theme,
     goBack
@@ -136,7 +158,6 @@
 
   window.addEventListener("DOMContentLoaded",()=>{
     document.body.dataset.theme=theme;
-    initializeDaypartOverlay();
     initializeSolarAmbiance();
   });
 })();

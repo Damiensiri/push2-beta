@@ -111,8 +111,14 @@ assets/
         spring-bg.webp
         spring-bg@2x.webp
       summer/
-        summer-bg.webp
-        summer-bg@2x.webp
+        summer-sunrise.webp
+        summer-sunrise@2x.webp
+        summer-day.webp
+        summer-day@2x.webp
+        summer-sunset.webp
+        summer-sunset@2x.webp
+        summer-night.webp
+        summer-night@2x.webp
 ```
 
 Le thème actif est défini uniquement dans `assets/js/app-config.js`.
@@ -123,9 +129,9 @@ finalisés.
 
 Le 8 juillet 2026, Autumn et Summer disposent chacun d’une illustration WebP
 1x/2x branchée dans le même moteur hybride, tout en conservant leur fallback CSS
-complet. Autumn ajoute des décorations CSS saisonnières discrètes ; Summer
-ajoute un overlay horaire léger pour accompagner la journée sans modifier
-l’image de fond.
+complet. Autumn ajoute des décorations CSS saisonnières discrètes. Summer
+utilise désormais quatre illustrations distinctes selon l’heure de la journée,
+sans overlay horaire.
 
 L’architecture des thèmes devient hybride :
 
@@ -453,17 +459,18 @@ que le thème respecte les variables communes :
 Les animations saisonnières doivent rester dans le fichier CSS du thème,
 derrière le contenu, avec `pointer-events:none`.
 
-Summer dispose également d’un calque d’ambiance horaire, piloté par
+Summer dispose également d’un choix d’illustration horaire, piloté par
 `assets/js/app-layout.js` avec `data-daypart` :
 
-- `morning` de 06h00 à 10h00 : fraîcheur très légèrement bleutée ;
-- `day` de 10h00 à 17h00 : rendu neutre, sans overlay ;
-- `evening` de 17h00 à 21h00 : lumière dorée subtile ;
-- `night` de 21h00 à 06h00 : ambiance nocturne douce, propre à Summer.
+- `sunrise` de 06h00 à 10h00 : lever de soleil ;
+- `day` de 10h00 à 17h00 : journée ;
+- `sunset` de 17h00 à 21h00 : coucher de soleil ;
+- `night` de 21h00 à 06h00 : nuit.
 
-Ce calque doit rester un overlay CSS uniquement : l’illustration de fond ne
-doit pas être modifiée. Les transitions se font via les variables
-`--daypart-overlay-*` afin de garder un changement doux et peu coûteux.
+Le changement ne repose plus sur un overlay : l’image de fond change réellement.
+Si l’utilisateur reste dans l’application pendant un changement de période, une
+copie temporaire de l’ancien fond est fondue pendant environ 60 secondes afin
+d’éviter une coupure brutale.
 
 ### Règles à ne pas casser
 

@@ -19,13 +19,8 @@
   --solar-opacity:.40;
   --celestial-glow:rgba(255,241,184,.36);
   --browser-theme-color:#287fbd;
-  --daypart-overlay-top:rgba(255,255,255,0);
-  --daypart-overlay-mid:rgba(255,255,255,0);
-  --daypart-overlay-bottom:rgba(255,255,255,0);
-  --daypart-overlay-opacity:0;
-  --theme-background-image:url("../../images/themes/summer/summer-bg.webp");
-  --theme-background-overlay:
-    linear-gradient(180deg,rgba(20,80,130,.10) 0%,rgba(255,255,255,.02) 42%,rgba(37,117,172,.12) 100%);
+  --theme-background-image:url("../../images/themes/summer/summer-day.webp");
+  --theme-background-overlay:none;
   --theme-background-position:center center,center center,center top;
   --app-background:
     radial-gradient(circle at 22% 12%,rgba(255,225,151,.22),transparent 32%),
@@ -34,12 +29,12 @@
     linear-gradient(180deg,var(--sky-top) 0%,var(--sky-mid) 48%,var(--sky-bottom) 100%);
 }
 
-@supports (background-image:image-set(url("../../images/themes/summer/summer-bg.webp") 1x)){
+@supports (background-image:image-set(url("../../images/themes/summer/summer-day.webp") 1x)){
   :root[data-theme="summer"]{
     --theme-background-image:
       image-set(
-        url("../../images/themes/summer/summer-bg.webp") 1x,
-        url("../../images/themes/summer/summer-bg@2x.webp") 2x
+        url("../../images/themes/summer/summer-day.webp") 1x,
+        url("../../images/themes/summer/summer-day@2x.webp") 2x
       );
   }
 }
@@ -59,23 +54,11 @@
   height:auto;
   background-image:
     var(--theme-background-overlay),
-    url("../../images/themes/summer/summer-bg.webp"),
+    var(--theme-background-image),
     var(--app-background);
   background-repeat:no-repeat,no-repeat,no-repeat;
   background-position:center center,center center,center top;
   background-size:cover,cover,100% 100%;
-}
-
-@supports (background-image:image-set(url("../../images/themes/summer/summer-bg.webp") 1x)){
-  :root[data-theme="summer"] body.app-page > .ambient-stage{
-    background-image:
-      var(--theme-background-overlay),
-      image-set(
-        url("../../images/themes/summer/summer-bg.webp") 1x,
-        url("../../images/themes/summer/summer-bg@2x.webp") 2x
-      ),
-      var(--app-background);
-  }
 }
 
 :root[data-theme="summer"][data-day-phase="night"]{
@@ -132,39 +115,70 @@
   --browser-theme-color:#1f3155;
 }
 
-:root[data-theme="summer"][data-daypart="morning"]{
-  --daypart-overlay-top:rgba(87,174,232,.13);
-  --daypart-overlay-mid:rgba(215,244,255,.07);
-  --daypart-overlay-bottom:rgba(255,255,255,.02);
-  --daypart-overlay-opacity:1;
+:root[data-theme="summer"][data-daypart="sunrise"]{
+  --theme-background-image:url("../../images/themes/summer/summer-sunrise.webp");
+  --sky-top:#6f8fc6;
+  --sky-mid:#f4b887;
+  --sky-bottom:#d9b783;
+  --celestial-glow:rgba(255,218,160,.42);
+  --solar-opacity:.34;
   --browser-theme-color:#2c86c5;
 }
 
 :root[data-theme="summer"][data-daypart="day"]{
-  --daypart-overlay-top:rgba(255,255,255,0);
-  --daypart-overlay-mid:rgba(255,255,255,0);
-  --daypart-overlay-bottom:rgba(255,255,255,0);
-  --daypart-overlay-opacity:0;
+  --theme-background-image:url("../../images/themes/summer/summer-day.webp");
   --browser-theme-color:#287fbd;
 }
 
-:root[data-theme="summer"][data-daypart="evening"]{
-  --daypart-overlay-top:rgba(255,225,165,.04);
-  --daypart-overlay-mid:rgba(255,190,105,.08);
-  --daypart-overlay-bottom:rgba(255,152,72,.14);
-  --daypart-overlay-opacity:1;
-  --celestial-glow:rgba(255,214,146,.44);
-  --browser-theme-color:#5d8fb0;
+:root[data-theme="summer"][data-daypart="sunset"]{
+  --theme-background-image:url("../../images/themes/summer/summer-sunset.webp");
+  --sky-top:#5a4158;
+  --sky-mid:#d0733f;
+  --sky-bottom:#d88a47;
+  --celestial-glow:rgba(255,174,77,.46);
+  --solar-opacity:.40;
+  --browser-theme-color:#5a4158;
 }
 
 :root[data-theme="summer"][data-daypart="night"]{
-  --daypart-overlay-top:rgba(2,13,32,.44);
-  --daypart-overlay-mid:rgba(8,29,58,.36);
-  --daypart-overlay-bottom:rgba(14,48,86,.28);
-  --daypart-overlay-opacity:1;
+  --theme-background-image:url("../../images/themes/summer/summer-night.webp");
   --celestial-glow:rgba(176,207,255,.24);
   --solar-opacity:.24;
   --browser-theme-color:#061225;
+}
+
+@supports (background-image:image-set(url("../../images/themes/summer/summer-sunrise.webp") 1x)){
+  :root[data-theme="summer"][data-daypart="sunrise"]{
+    --theme-background-image:
+      image-set(
+        url("../../images/themes/summer/summer-sunrise.webp") 1x,
+        url("../../images/themes/summer/summer-sunrise@2x.webp") 2x
+      );
+  }
+
+  :root[data-theme="summer"][data-daypart="day"]{
+    --theme-background-image:
+      image-set(
+        url("../../images/themes/summer/summer-day.webp") 1x,
+        url("../../images/themes/summer/summer-day@2x.webp") 2x
+      );
+  }
+
+  :root[data-theme="summer"][data-daypart="sunset"]{
+    --theme-background-image:
+      image-set(
+        url("../../images/themes/summer/summer-sunset.webp") 1x,
+        url("../../images/themes/summer/summer-sunset@2x.webp") 2x
+      );
+  }
+
+  :root[data-theme="summer"][data-daypart="night"]{
+    --theme-background-image:
+      image-set(
+        url("../../images/themes/summer/summer-night.webp") 1x,
+        url("../../images/themes/summer/summer-night@2x.webp") 2x
+      );
+  }
 }
 
 @media (prefers-color-scheme:dark){

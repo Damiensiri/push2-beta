@@ -34,30 +34,6 @@
   initial-value:.40;
 }
 
-@property --daypart-overlay-top{
-  syntax:"<color>";
-  inherits:true;
-  initial-value:rgba(255,255,255,0);
-}
-
-@property --daypart-overlay-mid{
-  syntax:"<color>";
-  inherits:true;
-  initial-value:rgba(255,255,255,0);
-}
-
-@property --daypart-overlay-bottom{
-  syntax:"<color>";
-  inherits:true;
-  initial-value:rgba(255,255,255,0);
-}
-
-@property --daypart-overlay-opacity{
-  syntax:"<number>";
-  inherits:true;
-  initial-value:0;
-}
-
 :root{
   --safe-top:env(safe-area-inset-top,0px);
   --safe-bottom:env(safe-area-inset-bottom,0px);
@@ -73,10 +49,6 @@
   --theme-background-size:cover,cover,100% var(--app-canvas-height);
   --theme-stage-background-size:cover,cover,100% 100%;
   --theme-background-repeat:no-repeat,no-repeat,no-repeat;
-  --daypart-overlay-top:rgba(255,255,255,0);
-  --daypart-overlay-mid:rgba(255,255,255,0);
-  --daypart-overlay-bottom:rgba(255,255,255,0);
-  --daypart-overlay-opacity:0;
 }
 
 @supports(height:100dvh){
@@ -106,11 +78,7 @@ html{
     --sky-bottom 2.8s ease,
     --solar-x 60s linear,
     --solar-y 60s linear,
-    --solar-opacity 2.8s ease,
-    --daypart-overlay-top 45s ease,
-    --daypart-overlay-mid 45s ease,
-    --daypart-overlay-bottom 45s ease,
-    --daypart-overlay-opacity 45s ease;
+    --solar-opacity 2.8s ease;
 }
 
 html::after{
@@ -171,27 +139,19 @@ body.app-page > .ambient-stage{
   background-size:var(--theme-stage-background-size);
 }
 
-body.app-page > .ambient-stage::before{
-  content:none;
-}
-
-body.app-page > .ambient-stage > .daypart-overlay,
-body.index-page > .ambient-stage > .daypart-overlay{
+body.app-page > .ambient-stage > .daypart-fade,
+body.index-page > .ambient-stage > .daypart-fade{
   position:absolute;
-  inset:-2%;
+  inset:0;
   z-index:1;
   pointer-events:none;
-  opacity:var(--daypart-overlay-opacity);
-  background:
-    linear-gradient(180deg,
-      var(--daypart-overlay-top) 0%,
-      var(--daypart-overlay-mid) 46%,
-      var(--daypart-overlay-bottom) 100%);
-  transition:
-    --daypart-overlay-top 45s ease,
-    --daypart-overlay-mid 45s ease,
-    --daypart-overlay-bottom 45s ease,
-    --daypart-overlay-opacity 45s ease;
+  opacity:1;
+  transition:opacity 60s ease;
+}
+
+body.app-page > .ambient-stage > .daypart-fade.is-fading,
+body.index-page > .ambient-stage > .daypart-fade.is-fading{
+  opacity:0;
 }
 
 body.app-page > .ambient-stage::after{
