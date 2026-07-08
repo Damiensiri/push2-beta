@@ -1,10 +1,10 @@
 window.METEOALARM_VIGILANCE = {
   "department": "Aube",
-  "level": "yellow",
-  "label": "Jaune",
+  "level": "orange",
+  "label": "Orange",
   "phenomenon": "Canicule",
-  "period": "Du 8 juillet à 12:26 au 10 juillet à 00:00",
-  "updatedAt": "8 juillet à 12:26",
+  "period": "Du 8 juillet à 16:00 au 10 juillet à 00:00",
+  "updatedAt": "8 juillet à 16:01",
   "source": "MeteoAlarm / EUMETNET",
   "sourceUrl": "https://meteoalarm.org"
 };
