@@ -118,6 +118,16 @@
     setInterval(updateAmbiance,60000);
   }
 
+  function initializeDaypartOverlay(){
+    const stage=document.querySelector(".ambient-stage");
+    if(!stage || stage.querySelector(".daypart-overlay"))return;
+
+    const overlay=document.createElement("div");
+    overlay.className="daypart-overlay";
+    overlay.setAttribute("aria-hidden","true");
+    stage.appendChild(overlay);
+  }
+
   window.AppLayout=Object.freeze({
     theme,
     goBack
@@ -126,6 +136,7 @@
 
   window.addEventListener("DOMContentLoaded",()=>{
     document.body.dataset.theme=theme;
+    initializeDaypartOverlay();
     initializeSolarAmbiance();
   });
 })();

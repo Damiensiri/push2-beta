@@ -172,7 +172,11 @@ body.app-page > .ambient-stage{
 }
 
 body.app-page > .ambient-stage::before{
-  content:"";
+  content:none;
+}
+
+body.app-page > .ambient-stage > .daypart-overlay,
+body.index-page > .ambient-stage > .daypart-overlay{
   position:absolute;
   inset:-2%;
   z-index:1;

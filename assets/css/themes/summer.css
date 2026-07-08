@@ -158,9 +158,9 @@
 }
 
 :root[data-theme="summer"][data-daypart="night"]{
-  --daypart-overlay-top:rgba(2,13,32,.30);
-  --daypart-overlay-mid:rgba(8,29,58,.24);
-  --daypart-overlay-bottom:rgba(14,48,86,.18);
+  --daypart-overlay-top:rgba(2,13,32,.44);
+  --daypart-overlay-mid:rgba(8,29,58,.36);
+  --daypart-overlay-bottom:rgba(14,48,86,.28);
   --daypart-overlay-opacity:1;
   --celestial-glow:rgba(176,207,255,.24);
   --solar-opacity:.24;
