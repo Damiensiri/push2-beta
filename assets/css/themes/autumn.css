@@ -49,6 +49,25 @@
 :root[data-theme="autumn"] body.app-page > .ambient-stage{
   height:calc(var(--app-canvas-height) + var(--safe-bottom) + 160px);
   min-height:calc(var(--app-canvas-height) + var(--safe-bottom) + 160px);
+  background-image:
+    var(--theme-background-overlay),
+    url("../../images/themes/autumn/autumn-bg.webp"),
+    var(--app-background);
+  background-repeat:no-repeat,no-repeat,no-repeat;
+  background-position:center center,center center,center top;
+  background-size:cover,cover,100% 100%;
+}
+
+@supports (background-image:image-set(url("../../images/themes/autumn/autumn-bg.webp") 1x)){
+  :root[data-theme="autumn"] body.app-page > .ambient-stage{
+    background-image:
+      var(--theme-background-overlay),
+      image-set(
+        url("../../images/themes/autumn/autumn-bg.webp") 1x,
+        url("../../images/themes/autumn/autumn-bg@2x.webp") 2x
+      ),
+      var(--app-background);
+  }
 }
 
 :root[data-theme="autumn"][data-day-phase="night"]{
