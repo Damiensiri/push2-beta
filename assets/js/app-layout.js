@@ -82,15 +82,25 @@
       return"dusk";
     }
 
+    function daypartFor(minutes){
+      if(minutes>=360 && minutes<600)return"morning";
+      if(minutes>=600 && minutes<1020)return"day";
+      if(minutes>=1020 && minutes<1260)return"evening";
+      return"night";
+    }
+
     function updateAmbiance(){
       const clock=localClock(new Date());
       const times=solarTimes(clock);
       const phase=phaseFor(clock.minutes,times);
+      const daypart=daypartFor(clock.minutes);
       const daylightProgress=Math.max(0,Math.min(1,(clock.minutes-times.sunrise)/(times.sunset-times.sunrise)));
       const solarHeight=Math.sin(Math.PI*daylightProgress);
 
       document.documentElement.dataset.dayPhase=phase;
+      document.documentElement.dataset.daypart=daypart;
       document.body.dataset.dayPhase=phase;
+      document.body.dataset.daypart=daypart;
       document.body.style.setProperty("--solar-x",(10+80*daylightProgress).toFixed(2)+"%");
       document.body.style.setProperty("--solar-y",(62-47*solarHeight).toFixed(2)+"%");
       document.body.dataset.sunrise=Math.round(times.sunrise);

@@ -121,12 +121,11 @@ Le thème actif est défini uniquement dans `assets/js/app-config.js`.
 `spring` sont enregistrés ; `christmas` et `spring` restent volontairement non
 finalisés.
 
-Le 8 juillet 2026, une première base de test Autumn est activée uniquement sur
-`push2-beta` via `assets/js/app-config.js`. Autumn dispose désormais de sa
-propre ambiance, d’une illustration WebP 1x/2x et de décorations CSS
-saisonnières discrètes. Summer dispose également d’une illustration WebP 1x/2x
-branchée dans le même moteur hybride, tout en conservant son fallback CSS de
-référence.
+Le 8 juillet 2026, Autumn et Summer disposent chacun d’une illustration WebP
+1x/2x branchée dans le même moteur hybride, tout en conservant leur fallback CSS
+complet. Autumn ajoute des décorations CSS saisonnières discrètes ; Summer
+ajoute un overlay horaire léger pour accompagner la journée sans modifier
+l’image de fond.
 
 L’architecture des thèmes devient hybride :
 
@@ -454,11 +453,24 @@ que le thème respecte les variables communes :
 Les animations saisonnières doivent rester dans le fichier CSS du thème,
 derrière le contenu, avec `pointer-events:none`.
 
+Summer dispose également d’un calque d’ambiance horaire, piloté par
+`assets/js/app-layout.js` avec `data-daypart` :
+
+- `morning` de 06h00 à 10h00 : fraîcheur très légèrement bleutée ;
+- `day` de 10h00 à 17h00 : rendu neutre, sans overlay ;
+- `evening` de 17h00 à 21h00 : lumière dorée subtile ;
+- `night` de 21h00 à 06h00 : ambiance nocturne douce, propre à Summer.
+
+Ce calque doit rester un overlay CSS uniquement : l’illustration de fond ne
+doit pas être modifiée. Les transitions se font via les variables
+`--daypart-overlay-*` afin de garder un changement doux et peu coûteux.
+
 ### Règles à ne pas casser
 
 - Ne pas remettre de fond opaque sur `body.app-page`.
-- Ne pas supprimer le cache `html::after` ni son masque progressif pour Summer.
-  Toute exception doit être limitée au thème concerné et documentée.
+- Ne pas réintroduire une bande visible dans la Safe Area iOS. Summer et Autumn
+  utilisent une exception contrôlée où la toile illustrée descend directement
+  sous la zone système.
 - Ne pas augmenter la hauteur du document pour couvrir la Safe Area.
 - Ne pas utiliser `overflow:hidden` global sur `html` ou `body`.
 - Conserver `--safe-bottom:env(safe-area-inset-bottom,0px)`.
