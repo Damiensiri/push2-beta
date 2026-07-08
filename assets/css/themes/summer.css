@@ -19,6 +19,8 @@
   --solar-opacity:.40;
   --celestial-glow:rgba(255,241,184,.36);
   --browser-theme-color:#287fbd;
+  --theme-background-image:none;
+  --theme-background-overlay:none;
   --app-background:
     radial-gradient(circle at 22% 12%,rgba(255,225,151,.22),transparent 32%),
     radial-gradient(circle at 84% 20%,rgba(115,224,255,.16),transparent 34%),

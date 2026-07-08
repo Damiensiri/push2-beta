@@ -3,4 +3,6 @@
  * Ses choix visuels seront définis et validés dans un chantier séparé.
  */
 :root[data-theme="christmas"]{
+  --theme-background-image:none;
+  --theme-background-overlay:none;
 }

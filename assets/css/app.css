@@ -39,6 +39,16 @@
   --safe-bottom:env(safe-area-inset-bottom,0px);
   --app-canvas-height:100vh;
   --font-main:'Montserrat',-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",sans-serif;
+  --theme-background-overlay:none;
+  --theme-background-image:none;
+  --theme-background-layers:
+    var(--theme-background-overlay),
+    var(--theme-background-image),
+    var(--app-background);
+  --theme-background-position:center top,center top,center top;
+  --theme-background-size:cover,cover,100% var(--app-canvas-height);
+  --theme-stage-background-size:cover,cover,100% 100%;
+  --theme-background-repeat:no-repeat,no-repeat,no-repeat;
 }
 
 @supports(height:100dvh){
@@ -55,10 +65,10 @@
 html{
   min-height:100%;
   background-color:var(--sky-bottom,#8dcced);
-  background-image:var(--app-background);
-  background-repeat:no-repeat;
-  background-position:center top;
-  background-size:100% var(--app-canvas-height);
+  background-image:var(--theme-background-layers);
+  background-repeat:var(--theme-background-repeat);
+  background-position:var(--theme-background-position);
+  background-size:var(--theme-background-size);
   background-attachment:fixed;
   overscroll-behavior-y:none;
   scrollbar-width:none;
@@ -123,10 +133,10 @@ body.app-page > .ambient-stage{
   overflow:hidden;
   pointer-events:none;
   background-color:var(--sky-bottom,#8dcced);
-  background-image:var(--app-background);
-  background-repeat:no-repeat;
-  background-position:center top;
-  background-size:100% 100%;
+  background-image:var(--theme-background-layers);
+  background-repeat:var(--theme-background-repeat);
+  background-position:var(--theme-background-position);
+  background-size:var(--theme-stage-background-size);
 }
 
 body.app-page > .ambient-stage::after{

@@ -99,6 +99,16 @@ assets/
       panier.js
       confirmation.js
       meteo.js
+  images/
+    themes/
+      autumn/
+        autumn-bg.webp
+      christmas/
+        christmas-bg.webp
+      spring/
+        spring-bg.webp
+      summer/
+        summer-bg.webp
 ```
 
 Le thème actif est défini uniquement dans `assets/js/app-config.js`.
@@ -108,10 +118,20 @@ validé avant la refonte. Les thèmes `autumn`, `christmas` et `spring` sont
 enregistrés mais restent volontairement non finalisés.
 
 Le 8 juillet 2026, une première base de test Autumn est activée uniquement sur
-`push2-beta` via `assets/js/app-config.js`. Summer reste inchangé. Cette base
-conserve le bleu comme identité principale et ajoute seulement une lumière
-dorée de fin d’après-midi via `assets/css/themes/autumn.css`, sans feuilles ni
-animation saisonnière supplémentaire.
+`push2-beta` via `assets/js/app-config.js`. Summer reste inchangé. Autumn
+dispose désormais de sa propre ambiance, d’une illustration WebP 1x/2x et de
+décorations CSS saisonnières discrètes.
+
+L’architecture des thèmes devient hybride :
+
+1. palette CSS : couleurs, glassmorphism, ombres, halo, Safe Areas et boutons ;
+2. illustration de fond : image WebP optionnelle, propre à chaque saison ;
+3. animations CSS : feuilles, neige, pétales ou particules selon la saison.
+
+Les pages ne doivent jamais référencer directement les illustrations. Le fond
+saisonnier se branche uniquement dans le fichier CSS du thème concerné avec
+`--theme-background-image`. Le fallback `--app-background` doit toujours rester
+présent pour garantir un rendu lisible si l’image n’est pas disponible.
 
 La page `meteo.html` est une exception permanente et contrôlée : son fond et
 ses animations météo ne doivent pas être remplacés par le thème global.
@@ -375,14 +395,64 @@ Le thème Summer définit :
 --app-safearea-bottom-background:var(--sky-bottom);
 ```
 
-Les futurs thèmes `autumn`, `christmas` et `spring` devront définir cette même
-variable avec la teinte correspondant au bas de leur propre fond. La technique
-reste donc commune ; seule la valeur visuelle appartient au thème.
+Chaque thème peut soit définir cette même variable avec la teinte correspondant
+au bas de son propre fond, soit fournir une exception contrôlée lorsque son
+fond illustré ou décoratif doit descendre directement sous la zone iOS. Autumn
+utilise actuellement cette deuxième approche : la toile et ses décorations sont
+prolongées sous iOS et le cache inférieur est désactivé uniquement pour
+`data-theme="autumn"`.
+
+### Fonds illustrés saisonniers
+
+Le moteur de fond accepte trois niveaux :
+
+```css
+--theme-background-overlay:none;
+--theme-background-image:none;
+--app-background:...;
+```
+
+Le rendu final est assemblé par `--theme-background-layers` dans `app.css`.
+Tant que `--theme-background-image` vaut `none`, le thème reste entièrement
+basé sur le fallback CSS. Lorsqu’une illustration sera fournie, elle devra être
+placée dans `assets/images/themes/<saison>/` puis activée uniquement dans le CSS
+du thème concerné, par exemple :
+
+```css
+:root[data-theme="autumn"]{
+  --theme-background-image:url("../../images/themes/autumn/autumn-bg.webp");
+}
+
+@supports (background-image:image-set(url("../../images/themes/autumn/autumn-bg.webp") 1x)){
+  :root[data-theme="autumn"]{
+    --theme-background-image:
+      image-set(
+        url("../../images/themes/autumn/autumn-bg.webp") 1x,
+        url("../../images/themes/autumn/autumn-bg@2x.webp") 2x
+      );
+  }
+}
+```
+
+Pour ajouter un thème futur (`winter`, `halloween`, événementiel, etc.), créer
+un fichier `assets/css/themes/<theme>.css` et, si besoin, un dossier
+`assets/images/themes/<theme>/`. Le cœur commun ne doit pas être modifié tant
+que le thème respecte les variables communes :
+
+- `--theme-background-image` pour l’illustration ;
+- `--theme-background-overlay` pour le voile de correction ;
+- `--app-background` pour le fallback CSS complet ;
+- les variables de palette (`--glass`, `--glass-line`, `--shadow-card`,
+  `--info`, `--app-safearea-bottom-background`, etc.).
+
+Les animations saisonnières doivent rester dans le fichier CSS du thème,
+derrière le contenu, avec `pointer-events:none`.
 
 ### Règles à ne pas casser
 
 - Ne pas remettre de fond opaque sur `body.app-page`.
-- Ne pas supprimer le cache `html::after` ni son masque progressif.
+- Ne pas supprimer le cache `html::after` ni son masque progressif pour Summer.
+  Toute exception doit être limitée au thème concerné et documentée.
 - Ne pas augmenter la hauteur du document pour couvrir la Safe Area.
 - Ne pas utiliser `overflow:hidden` global sur `html` ou `body`.
 - Conserver `--safe-bottom:env(safe-area-inset-bottom,0px)`.

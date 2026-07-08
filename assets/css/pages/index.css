@@ -60,7 +60,11 @@ body.index-page::-webkit-scrollbar{
   z-index:0;
   overflow:hidden;
   pointer-events:none;
-  background:var(--app-background);
+  background-color:var(--sky-bottom,#8dcced);
+  background-image:var(--theme-background-layers);
+  background-repeat:var(--theme-background-repeat);
+  background-position:var(--theme-background-position);
+  background-size:var(--theme-stage-background-size);
 }
 
 .ambient-stage::before{
@@ -68,7 +72,10 @@ body.index-page::-webkit-scrollbar{
   position:absolute;
   inset:-4%;
   pointer-events:none;
-  background:var(--app-background);
+  background-image:var(--theme-background-layers);
+  background-repeat:var(--theme-background-repeat);
+  background-position:var(--theme-background-position);
+  background-size:var(--theme-stage-background-size);
   transform:translateZ(0);
   animation:ambientBreath 18s ease-in-out infinite alternate;
 }
