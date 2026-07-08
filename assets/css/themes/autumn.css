@@ -43,7 +43,16 @@
 }
 
 :root[data-theme="autumn"]::after{
-  display:none;
+  display:block;
+  height:calc(var(--safe-bottom) + 64px);
+  background-color:var(--sky-bottom);
+  background-image:
+    var(--theme-background-overlay),
+    url("../../images/themes/autumn/autumn-bg.webp"),
+    var(--app-background);
+  background-repeat:no-repeat,no-repeat,no-repeat;
+  background-position:center bottom,center bottom,center bottom;
+  background-size:cover,cover,100% 100%;
 }
 
 :root[data-theme="autumn"] body.app-page > .ambient-stage{
@@ -59,6 +68,16 @@
 }
 
 @supports (background-image:image-set(url("../../images/themes/autumn/autumn-bg.webp") 1x)){
+  :root[data-theme="autumn"]::after{
+    background-image:
+      var(--theme-background-overlay),
+      image-set(
+        url("../../images/themes/autumn/autumn-bg.webp") 1x,
+        url("../../images/themes/autumn/autumn-bg@2x.webp") 2x
+      ),
+      var(--app-background);
+  }
+
   :root[data-theme="autumn"] body.app-page > .ambient-stage{
     background-image:
       var(--theme-background-overlay),
