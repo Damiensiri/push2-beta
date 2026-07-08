@@ -1,5 +1,5 @@
 window.APP_CONFIG=Object.freeze({
-  theme:"autumn",
+  theme:"summer",
   themes:Object.freeze([
     "summer",
     "autumn",
