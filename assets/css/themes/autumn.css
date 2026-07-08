@@ -29,11 +29,14 @@
 }
 
 :root[data-theme="autumn"]::after{
+  height:calc(var(--safe-bottom) + 120px);
   background-color:var(--sky-bottom);
   background-image:var(--app-background);
   background-repeat:no-repeat;
   background-position:center bottom;
   background-size:100% var(--app-canvas-height);
+  -webkit-mask-image:linear-gradient(to bottom,transparent 0,rgba(0,0,0,.08) 26px,rgba(0,0,0,.42) 68px,#000 100%);
+  mask-image:linear-gradient(to bottom,transparent 0,rgba(0,0,0,.08) 26px,rgba(0,0,0,.42) 68px,#000 100%);
 }
 
 :root[data-theme="autumn"][data-day-phase="night"]{
