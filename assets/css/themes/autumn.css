@@ -125,7 +125,7 @@
   left:0;
   z-index:1;
   pointer-events:none;
-  opacity:.28;
+  opacity:.16;
   filter:drop-shadow(0 10px 18px rgba(70,28,8,.20));
   background-image:
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath fill='%23c4551f' d='M31 58c-2-10-10-17-20-20 9-2 16-1 22 5-5-9-6-18-1-30 5 12 4 21-1 30 6-6 13-7 22-5-10 3-18 10-20 20h-2Z'/%3E%3Cpath fill='%23f0a247' fill-opacity='.75' d='M32 55c1-10 6-21 17-32-9 4-15 10-19 18 1-10-1-18-8-30 2 14 4 24 8 34-6-6-13-11-23-13 11 6 18 13 25 23Z'/%3E%3C/svg%3E"),
@@ -156,7 +156,7 @@
   left:-10%;
   z-index:1;
   pointer-events:none;
-  opacity:.22;
+  opacity:.10;
   filter:blur(2px);
   background:
     radial-gradient(ellipse at 50% 76%,rgba(255,235,197,.20),transparent 34%),
@@ -173,15 +173,15 @@
 
 @keyframes autumnLeavesFloat{
   0%{
-    opacity:.18;
+    opacity:.08;
     transform:translate3d(-1.5%,0,0) rotate(-1.5deg);
     background-position:7% 9%,17% 27%,87% 16%,92% 50%,66% 72%,12% 58%,78% 69%,48% 21%,28% 82%,72% 8%,39% 62%;
   }
   48%{
-    opacity:.30;
+    opacity:.14;
   }
   100%{
-    opacity:.22;
+    opacity:.10;
     transform:translate3d(1.5%,1.2%,0) rotate(1.5deg);
     background-position:8% 10%,16% 29%,86% 17%,91% 52%,67% 73%,11% 60%,79% 70%,47% 22%,29% 83%,71% 9%,40% 63%;
   }
@@ -189,15 +189,15 @@
 
 @keyframes autumnForegroundDrift{
   0%{
-    opacity:.12;
+    opacity:.05;
     transform:translate3d(-1%,0,0) scale(1);
     background-position:-6% 71%,106% 33%,92% 90%;
   }
   52%{
-    opacity:.22;
+    opacity:.10;
   }
   100%{
-    opacity:.16;
+    opacity:.07;
     transform:translate3d(1.2%,1%,0) scale(1.015);
     background-position:-4% 72%,104% 35%,90% 88%;
   }
@@ -211,12 +211,12 @@
   :root[data-theme="autumn"] body.app-page::before,
   :root[data-theme="autumn"] body.index-page::before{
     animation:none;
-    opacity:.18;
+    opacity:.08;
   }
 
   :root[data-theme="autumn"] body.app-page::after,
   :root[data-theme="autumn"] body.index-page::after{
     animation:none;
-    opacity:.14;
+    opacity:.06;
   }
 }
