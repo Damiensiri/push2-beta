@@ -103,24 +103,30 @@ assets/
     themes/
       autumn/
         autumn-bg.webp
+        autumn-bg@2x.webp
       christmas/
         christmas-bg.webp
+        christmas-bg@2x.webp
       spring/
         spring-bg.webp
+        spring-bg@2x.webp
       summer/
         summer-bg.webp
+        summer-bg@2x.webp
 ```
 
 Le thème actif est défini uniquement dans `assets/js/app-config.js`.
 
-`summer` est le thème de référence et doit conserver exactement le rendu
-validé avant la refonte. Les thèmes `autumn`, `christmas` et `spring` sont
-enregistrés mais restent volontairement non finalisés.
+`summer` est le thème de référence. Les thèmes `autumn`, `christmas` et
+`spring` sont enregistrés ; `christmas` et `spring` restent volontairement non
+finalisés.
 
 Le 8 juillet 2026, une première base de test Autumn est activée uniquement sur
-`push2-beta` via `assets/js/app-config.js`. Summer reste inchangé. Autumn
-dispose désormais de sa propre ambiance, d’une illustration WebP 1x/2x et de
-décorations CSS saisonnières discrètes.
+`push2-beta` via `assets/js/app-config.js`. Autumn dispose désormais de sa
+propre ambiance, d’une illustration WebP 1x/2x et de décorations CSS
+saisonnières discrètes. Summer dispose également d’une illustration WebP 1x/2x
+branchée dans le même moteur hybride, tout en conservant son fallback CSS de
+référence.
 
 L’architecture des thèmes devient hybride :
 
