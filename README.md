@@ -107,6 +107,12 @@ Le thème actif est défini uniquement dans `assets/js/app-config.js`.
 validé avant la refonte. Les thèmes `autumn`, `christmas` et `spring` sont
 enregistrés mais restent volontairement non finalisés.
 
+Le 8 juillet 2026, une première base de test Autumn est activée uniquement sur
+`push2-beta` via `assets/js/app-config.js`. Summer reste inchangé. Cette base
+conserve le bleu comme identité principale et ajoute seulement une lumière
+dorée de fin d’après-midi via `assets/css/themes/autumn.css`, sans feuilles ni
+animation saisonnière supplémentaire.
+
 La page `meteo.html` est une exception permanente et contrôlée : son fond et
 ses animations météo ne doivent pas être remplacés par le thème global.
 Elle participe à la structure du projet et au versioning grâce à ses ressources
