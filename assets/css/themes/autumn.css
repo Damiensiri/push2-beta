@@ -32,6 +32,11 @@
   display:none;
 }
 
+:root[data-theme="autumn"] body.app-page > .ambient-stage{
+  height:calc(var(--app-canvas-height) + var(--safe-bottom) + 160px);
+  min-height:calc(var(--app-canvas-height) + var(--safe-bottom) + 160px);
+}
+
 :root[data-theme="autumn"][data-day-phase="night"]{
   --sky-top:#20150f;
   --sky-mid:#3c2418;
@@ -100,7 +105,10 @@
 :root[data-theme="autumn"] body.index-page::before{
   content:"";
   position:fixed;
-  inset:0;
+  top:0;
+  right:0;
+  bottom:calc((var(--safe-bottom) + 140px) * -1);
+  left:0;
   z-index:1;
   pointer-events:none;
   opacity:.46;
@@ -128,7 +136,10 @@
 :root[data-theme="autumn"] body.index-page::after{
   content:"";
   position:fixed;
-  inset:-10%;
+  top:-10%;
+  right:-10%;
+  bottom:calc((var(--safe-bottom) + 160px) * -1);
+  left:-10%;
   z-index:1;
   pointer-events:none;
   opacity:.36;
