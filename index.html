@@ -79,37 +79,21 @@ to{transform:rotate(360deg);}
 </style>
 
 <script>
-const APP_VERSION="20260709-201655";
+const APP_VERSION="20260709-173608";
 const APP_BASE_URL=new URL("./",window.location.href);
 const IS_BETA=window.location.hostname==="damiensiri.github.io" &&
               APP_BASE_URL.pathname==="/push2-beta/";
 const APP_VERSION_STORAGE_KEY="ecurie-damien-siri-app-version";
-const APP_IS_STANDALONE=window.navigator.standalone===true ||
-                        window.matchMedia("(display-mode: standalone)").matches;
-const APP_UPDATE_TRIGGER=new URLSearchParams(window.location.search).get("update")==="1";
 let APP_VERSION_IS_PENDING=false;
-let APP_VERSION_READY_DONE=false;
-let APP_VERSION_LONG_TIMER=null;
-let APP_VERSION_TIMEOUT_TIMER=null;
 
 try{
-APP_VERSION_IS_PENDING=(APP_IS_STANDALONE || APP_UPDATE_TRIGGER) &&
-                       localStorage.getItem(APP_VERSION_STORAGE_KEY)!==APP_VERSION;
+APP_VERSION_IS_PENDING=localStorage.getItem(APP_VERSION_STORAGE_KEY)!==APP_VERSION;
 if(APP_VERSION_IS_PENDING){
 document.documentElement.classList.add("app-version-pending");
-APP_VERSION_LONG_TIMER=setTimeout(()=>{
-const text=document.getElementById("appUpdateLoaderText");
-if(text) text.textContent="Chargement plus long que prévu…";
-},4500);
-APP_VERSION_TIMEOUT_TIMER=setTimeout(markAppVersionReady,7500);
 }
 }catch(e){}
 
 function markAppVersionReady(){
-if(APP_VERSION_READY_DONE) return;
-APP_VERSION_READY_DONE=true;
-clearTimeout(APP_VERSION_LONG_TIMER);
-clearTimeout(APP_VERSION_TIMEOUT_TIMER);
 try{
 localStorage.setItem(APP_VERSION_STORAGE_KEY,APP_VERSION);
 }catch(e){}
@@ -121,12 +105,6 @@ if(loader) loader.remove();
 },650);
 }
 
-document.addEventListener("DOMContentLoaded",()=>{
-if(APP_VERSION_IS_PENDING){
-setTimeout(markAppVersionReady,1600);
-}
-});
-
 window.addEventListener("load",()=>{
 if(APP_VERSION_IS_PENDING){
 setTimeout(markAppVersionReady,900);
@@ -134,31 +112,6 @@ setTimeout(markAppVersionReady,900);
 markAppVersionReady();
 }
 });
-
-window.addEventListener("pageshow",()=>{
-if(APP_VERSION_IS_PENDING){
-setTimeout(markAppVersionReady,1200);
-}
-});
-
-document.addEventListener("visibilitychange",()=>{
-if(!document.hidden && APP_VERSION_IS_PENDING){
-setTimeout(markAppVersionReady,1200);
-}
-});
-
-if("serviceWorker" in navigator){
-navigator.serviceWorker.addEventListener("controllerchange",()=>{
-if(APP_VERSION_IS_PENDING){
-setTimeout(markAppVersionReady,1000);
-}
-});
-navigator.serviceWorker.addEventListener("message",event=>{
-if(event.data && event.data.type==="APP_UPDATE_READY"){
-markAppVersionReady();
-}
-});
-}
 </script>
 <link rel="manifest" id="app-manifest">
 <script>
@@ -218,18 +171,18 @@ cancelButton:"Plus tard"
 }
 </script>
 
-<script src="assets/js/app-config.js?v=20260709-201655"></script>
-<script src="assets/js/app-layout.js?v=20260709-201655"></script>
-<script src="assets/js/profile-store.js?v=20260709-201655" defer></script>
-<script src="assets/js/pages/index-profile.js?v=20260709-201655" defer></script>
+<script src="assets/js/app-config.js?v=20260709-173608"></script>
+<script src="assets/js/app-layout.js?v=20260709-173608"></script>
+<script src="assets/js/profile-store.js?v=20260709-173608" defer></script>
+<script src="assets/js/pages/index-profile.js?v=20260709-173608" defer></script>
 
-<link rel="stylesheet" href="assets/css/app.css?v=20260709-201655">
-<link rel="stylesheet" href="assets/css/themes/summer.css?v=20260709-201655">
-<link rel="stylesheet" href="assets/css/themes/autumn.css?v=20260709-201655">
-<link rel="stylesheet" href="assets/css/themes/christmas.css?v=20260709-201655">
-<link rel="stylesheet" href="assets/css/themes/winter.css?v=20260709-201655">
-<link rel="stylesheet" href="assets/css/themes/spring.css?v=20260709-201655">
-<link rel="stylesheet" href="assets/css/pages/index.css?v=20260709-201655">
+<link rel="stylesheet" href="assets/css/app.css?v=20260709-173608">
+<link rel="stylesheet" href="assets/css/themes/summer.css?v=20260709-173608">
+<link rel="stylesheet" href="assets/css/themes/autumn.css?v=20260709-173608">
+<link rel="stylesheet" href="assets/css/themes/christmas.css?v=20260709-173608">
+<link rel="stylesheet" href="assets/css/themes/winter.css?v=20260709-173608">
+<link rel="stylesheet" href="assets/css/themes/spring.css?v=20260709-173608">
+<link rel="stylesheet" href="assets/css/pages/index.css?v=20260709-173608">
 </head>
 
 <!-- REMPLACE UNIQUEMENT ÇA -->
@@ -240,7 +193,7 @@ cancelButton:"Plus tard"
 <div class="app-update-loader__panel">
 <div class="app-update-loader__spinner" aria-hidden="true"></div>
 <p class="app-update-loader__title">Mise à jour</p>
-<p class="app-update-loader__text" id="appUpdateLoaderText">Préparation de la nouvelle version de l’application…</p>
+<p class="app-update-loader__text">Préparation de la nouvelle version de l’application…</p>
 </div>
 </div>
 

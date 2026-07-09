@@ -71,10 +71,10 @@ to{transform:rotate(360deg);}
 <main class="update-card" role="status" aria-live="polite">
 <div class="spinner" aria-hidden="true"></div>
 <h1>Mise à jour</h1>
-<p id="updateText">Préparation de la nouvelle version de l’application…</p>
+<p>Préparation de la nouvelle version de l’application…</p>
 </main>
 <script>
-const APP_VERSION="20260709-201655";
+const APP_VERSION="20260709-173608";
 const APP_BASE_URL=new URL("./",window.location.href);
 const APP_URL=new URL(`index.html?v=${APP_VERSION}`,APP_BASE_URL).href;
 const IS_SHARED_BETA_ORIGIN=window.location.hostname==="damiensiri.github.io" &&
@@ -82,16 +82,7 @@ const IS_SHARED_BETA_ORIGIN=window.location.hostname==="damiensiri.github.io" &&
 
 (async()=>{
 const startedAt=Date.now();
-const updateText=document.getElementById("updateText");
-const redirect=()=>window.location.replace(APP_URL);
-const hardTimeout=setTimeout(redirect,8000);
-const longTimer=setTimeout(()=>{
-if(updateText) updateText.textContent="Chargement plus long que prévu…";
-},4500);
-
 try{
-await Promise.race([
-(async()=>{
 if("caches" in window && !IS_SHARED_BETA_ORIGIN){
 const names=await caches.keys();
 await Promise.all(names.map(name=>caches.delete(name)));
@@ -106,20 +97,11 @@ await Promise.all(
 appRegistrations.map(registration=>registration.unregister())
 );
 }
+}catch(e){}
 
 try{
-const controller=new AbortController();
-const fetchTimeout=setTimeout(()=>controller.abort(),4000);
-await fetch(APP_URL,{cache:"reload",signal:controller.signal});
-clearTimeout(fetchTimeout);
+await fetch(APP_URL,{cache:"reload"});
 }catch(e){}
-})(),
-new Promise(resolve=>setTimeout(resolve,7000))
-]);
-}catch(e){}
-
-clearTimeout(longTimer);
-clearTimeout(hardTimeout);
 
 const remainingDelay=Math.max(0,1200-(Date.now()-startedAt));
 if(remainingDelay){
