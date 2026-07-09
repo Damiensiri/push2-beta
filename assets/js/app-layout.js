@@ -2,8 +2,88 @@
   const config=window.APP_CONFIG || {};
   const themes=Array.isArray(config.themes)?config.themes:["summer"];
   const theme=themes.includes(config.theme)?config.theme:"summer";
+  const sunCachePrefix="ecurie-theme-sun-v2:";
+  const latitude=48.391;
+  const longitude=4.527;
+  const timeZone="Europe/Paris";
 
   document.documentElement.dataset.theme=theme;
+
+  function localClock(date){
+    const parts={};
+    new Intl.DateTimeFormat("en-CA",{
+      timeZone,
+      year:"numeric",
+      month:"2-digit",
+      day:"2-digit",
+      hour:"2-digit",
+      minute:"2-digit",
+      hourCycle:"h23",
+    }).formatToParts(date).forEach(part=>{
+      if(part.type!=="literal")parts[part.type]=part.value;
+    });
+
+    return{
+      dateKey:`${parts.year}-${parts.month}-${parts.day}`,
+      minutes:Number(parts.hour)*60+Number(parts.minute),
+      month:Number(parts.month)
+    };
+  }
+
+  function fallbackSunTimes(month,dateKey){
+    const monthly=[
+      [500,1020],
+      [460,1065],
+      [400,1115],
+      [340,1165],
+      [295,1210],
+      [270,1245],
+      [285,1235],
+      [325,1190],
+      [370,1125],
+      [420,1060],
+      [465,1015],
+      [500,1000]
+    ];
+    const pair=monthly[Math.max(0,Math.min(11,month-1))]||[390,1260];
+    return{dateKey,sunrise:pair[0],sunset:pair[1],source:"fallback"};
+  }
+
+  function readCachedSunTimes(dateKey){
+    try{
+      const raw=localStorage.getItem(sunCachePrefix+dateKey);
+      if(!raw)return null;
+      const value=JSON.parse(raw);
+      if(value&&value.dateKey===dateKey&&Number.isFinite(value.sunrise)&&Number.isFinite(value.sunset)){
+        return{dateKey,sunrise:value.sunrise,sunset:value.sunset,source:"cache"};
+      }
+    }catch(error){}
+    return null;
+  }
+
+  function daypartFor(minutes,times){
+    const dawnStart=times.sunrise-45;
+    const dawnEnd=times.sunrise+45;
+    const sunsetStart=times.sunset-60;
+    const sunsetEnd=times.sunset+30;
+
+    if(minutes>=dawnStart&&minutes<dawnEnd)return"dawn";
+    if(minutes>=dawnEnd&&minutes<sunsetStart)return"day";
+    if(minutes>=sunsetStart&&minutes<sunsetEnd)return"sunset";
+    return"night";
+  }
+
+  function applyInitialDaypartHint(){
+    const clock=localClock(new Date());
+    const times=readCachedSunTimes(clock.dateKey)||fallbackSunTimes(clock.month,clock.dateKey);
+    document.documentElement.dataset.daypart=daypartFor(clock.minutes,times);
+  }
+
+  try{
+    applyInitialDaypartHint();
+  }catch(error){
+    document.documentElement.dataset.daypart="day";
+  }
 
   function goBack(){
     const page=document.getElementById("page");
@@ -23,35 +103,10 @@
   }
 
   function initializeThemeBackground(){
-    const latitude=48.391;
-    const longitude=4.527;
-    const timeZone="Europe/Paris";
-    const cachePrefix="ecurie-theme-sun-v2:";
     const defaultTransition=25000;
     const resumeTransition=1000;
     let scheduleTimer;
     let currentTimes;
-
-    function localClock(date){
-      const parts={};
-      new Intl.DateTimeFormat("en-CA",{
-        timeZone,
-        year:"numeric",
-        month:"2-digit",
-        day:"2-digit",
-        hour:"2-digit",
-        minute:"2-digit",
-        hourCycle:"h23",
-      }).formatToParts(date).forEach(part=>{
-        if(part.type!=="literal")parts[part.type]=part.value;
-      });
-
-      return{
-        dateKey:`${parts.year}-${parts.month}-${parts.day}`,
-        minutes:Number(parts.hour)*60+Number(parts.minute),
-        month:Number(parts.month)
-      };
-    }
 
     function minutesFromLocalTime(value){
       const time=String(value||"").split("T")[1]||"";
@@ -60,40 +115,9 @@
       return parts[0]*60+parts[1];
     }
 
-    function fallbackSunTimes(month,dateKey){
-      const monthly=[
-        [500,1020],
-        [460,1065],
-        [400,1115],
-        [340,1165],
-        [295,1210],
-        [270,1245],
-        [285,1235],
-        [325,1190],
-        [370,1125],
-        [420,1060],
-        [465,1015],
-        [500,1000]
-      ];
-      const pair=monthly[Math.max(0,Math.min(11,month-1))]||[390,1260];
-      return{dateKey,sunrise:pair[0],sunset:pair[1],source:"fallback"};
-    }
-
-    function readCachedSunTimes(dateKey){
-      try{
-        const raw=localStorage.getItem(cachePrefix+dateKey);
-        if(!raw)return null;
-        const value=JSON.parse(raw);
-        if(value&&value.dateKey===dateKey&&Number.isFinite(value.sunrise)&&Number.isFinite(value.sunset)){
-          return{dateKey,sunrise:value.sunrise,sunset:value.sunset,source:"cache"};
-        }
-      }catch(error){}
-      return null;
-    }
-
     function writeCachedSunTimes(dateKey,times){
       try{
-        localStorage.setItem(cachePrefix+dateKey,JSON.stringify({
+        localStorage.setItem(sunCachePrefix+dateKey,JSON.stringify({
           dateKey,
           sunrise:Math.round(times.sunrise),
           sunset:Math.round(times.sunset)
@@ -120,18 +144,6 @@
       const times={dateKey,sunrise,sunset,source:"open-meteo"};
       writeCachedSunTimes(dateKey,times);
       return times;
-    }
-
-    function daypartFor(minutes,times){
-      const dawnStart=times.sunrise-45;
-      const dawnEnd=times.sunrise+45;
-      const sunsetStart=times.sunset-60;
-      const sunsetEnd=times.sunset+30;
-
-      if(minutes>=dawnStart&&minutes<dawnEnd)return"dawn";
-      if(minutes>=dawnEnd&&minutes<sunsetStart)return"day";
-      if(minutes>=sunsetStart&&minutes<sunsetEnd)return"sunset";
-      return"night";
     }
 
     function nextBoundaryDelay(minutes,times){
