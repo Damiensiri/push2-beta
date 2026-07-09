@@ -1,45 +1,39 @@
+/*
+ * Thème Autumn.
+ * Palette + illustration horaire + décor discret.
+ * Le thème n'est chargé visuellement que si APP_CONFIG.theme = "autumn".
+ */
 :root[data-theme="autumn"]{
   color-scheme:light dark;
   --text:rgba(255,255,255,.92);
   --text-strong:rgba(255,255,255,.98);
   --text-main:rgba(255,255,255,.92);
   --text-soft:rgba(255,242,220,.74);
-  --glass:rgba(255,245,226,.18);
-  --glass-strong:rgba(255,236,204,.26);
-  --glass-line:rgba(255,213,150,.34);
+  --glass:rgba(255,232,190,.20);
+  --glass-strong:rgba(255,220,165,.28);
+  --glass-line:rgba(255,216,150,.34);
   --shadow-card:0 24px 68px rgba(58,31,18,.30);
   --shadow-soft:0 14px 38px rgba(58,31,18,.22);
-  --info:#ffd071;
+  --info:#ffb640;
   --sky-top:#5b3827;
   --sky-mid:#b56f3d;
-  --sky-bottom:#f0b66f;
-  --app-safearea-bottom-background:var(--app-background);
-  --solar-x:76%;
-  --solar-y:38%;
-  --solar-opacity:.52;
+  --sky-bottom:#efad63;
+  --app-safearea-bottom-background:var(--sky-bottom);
+  --solar-x:74%;
+  --solar-y:35%;
+  --solar-opacity:.48;
   --celestial-glow:rgba(255,198,102,.55);
   --browser-theme-color:#5b3827;
-  --theme-background-image:url("../../images/themes/autumn/autumn-bg.webp");
+  --theme-background-image:url("../../images/themes/autumn/autumn-day.webp");
   --theme-background-overlay:
-    linear-gradient(180deg,rgba(46,23,12,.18) 0%,rgba(255,194,102,.04) 46%,rgba(76,31,10,.20) 100%);
-  --theme-background-position:center center,center center,center top;
+    linear-gradient(180deg,rgba(43,22,10,.16) 0%,rgba(255,194,102,.02) 45%,rgba(70,29,9,.16) 100%);
+  --theme-background-position:center top,center top,center top;
+  --theme-background-size:cover,cover,100% var(--app-canvas-height);
+  --theme-stage-background-size:cover,cover,100% 100%;
   --app-background:
-    radial-gradient(circle at 78% 34%,rgba(255,236,180,.72) 0 3%,rgba(255,194,86,.40) 7%,transparent 31%),
-    radial-gradient(ellipse at 74% 46%,rgba(255,176,76,.34),transparent 38%),
-    radial-gradient(circle at 20% 14%,rgba(255,232,180,.18),transparent 34%),
-    radial-gradient(ellipse at 50% 74%,rgba(255,232,190,.18),transparent 34%),
-    radial-gradient(ellipse at 50% 91%,rgba(255,126,54,.26),transparent 46%),
+    radial-gradient(circle at 78% 34%,rgba(255,236,180,.56) 0 3%,rgba(255,194,86,.30) 7%,transparent 31%),
+    radial-gradient(ellipse at 50% 91%,rgba(255,126,54,.24),transparent 46%),
     linear-gradient(180deg,var(--sky-top) 0%,var(--sky-mid) 48%,var(--sky-bottom) 100%);
-}
-
-@supports (background-image:image-set(url("../../images/themes/autumn/autumn-bg.webp") 1x)){
-  :root[data-theme="autumn"]{
-    --theme-background-image:
-      image-set(
-        url("../../images/themes/autumn/autumn-bg.webp") 1x,
-        url("../../images/themes/autumn/autumn-bg@2x.webp") 2x
-      );
-  }
 }
 
 :root[data-theme="autumn"]::after{
@@ -55,193 +49,68 @@
   inset:0;
   min-height:calc(100% + var(--safe-bottom) + 160px);
   height:auto;
-  background-image:
-    var(--theme-background-overlay),
-    url("../../images/themes/autumn/autumn-bg.webp"),
-    var(--app-background);
-  background-repeat:no-repeat,no-repeat,no-repeat;
-  background-position:center center,center center,center top;
-  background-size:cover,cover,100% 100%;
 }
 
-@supports (background-image:image-set(url("../../images/themes/autumn/autumn-bg.webp") 1x)){
-  :root[data-theme="autumn"] body.app-page > .ambient-stage{
-    background-image:
-      var(--theme-background-overlay),
-      image-set(
-        url("../../images/themes/autumn/autumn-bg.webp") 1x,
-        url("../../images/themes/autumn/autumn-bg@2x.webp") 2x
-      ),
-      var(--app-background);
-  }
+:root[data-theme="autumn"][data-daypart="sunrise"]{
+  --theme-background-image:url("../../images/themes/autumn/autumn-sunrise.webp");
+  --sky-top:#7b5f55;
+  --sky-mid:#d19664;
+  --sky-bottom:#e4b071;
+  --browser-theme-color:#7b5f55;
 }
 
-:root[data-theme="autumn"][data-day-phase="night"]{
-  --sky-top:#20150f;
-  --sky-mid:#3c2418;
-  --sky-bottom:#68452d;
-  --celestial-glow:rgba(255,206,142,.20);
-  --solar-opacity:.22;
-  --browser-theme-color:#20150f;
+:root[data-theme="autumn"][data-daypart="day"]{
+  --theme-background-image:url("../../images/themes/autumn/autumn-day.webp");
+  --sky-top:#3d73a6;
+  --sky-mid:#b57b3b;
+  --sky-bottom:#d79a53;
+  --browser-theme-color:#3d73a6;
 }
 
-:root[data-theme="autumn"][data-day-phase="dawn"]{
-  --sky-top:#5a3325;
-  --sky-mid:#a45f3d;
-  --sky-bottom:#e3ad78;
-  --celestial-glow:rgba(255,218,157,.36);
-  --solar-opacity:.36;
-  --browser-theme-color:#5a3325;
+:root[data-theme="autumn"][data-daypart="sunset"]{
+  --theme-background-image:url("../../images/themes/autumn/autumn-sunset.webp");
+  --sky-top:#4e2d24;
+  --sky-mid:#c96828;
+  --sky-bottom:#a85a2b;
+  --browser-theme-color:#4e2d24;
 }
 
-:root[data-theme="autumn"][data-day-phase="morning"]{
-  --sky-top:#7a4b2e;
-  --sky-mid:#c27d45;
-  --sky-bottom:#f1c187;
-  --celestial-glow:rgba(255,226,168,.42);
-  --solar-opacity:.42;
-  --browser-theme-color:#7a4b2e;
-}
-
-:root[data-theme="autumn"][data-day-phase="day"]{
-  --sky-top:#5b3827;
-  --sky-mid:#b56f3d;
-  --sky-bottom:#f0b66f;
-  --celestial-glow:rgba(255,198,102,.55);
-  --solar-opacity:.52;
-  --browser-theme-color:#5b3827;
-}
-
-:root[data-theme="autumn"][data-day-phase="golden"]{
-  --sky-top:#4a2d20;
-  --sky-mid:#bf6b35;
-  --sky-bottom:#f2a85f;
-  --celestial-glow:rgba(255,184,83,.62);
-  --solar-opacity:.58;
-  --browser-theme-color:#4a2d20;
-}
-
-:root[data-theme="autumn"][data-day-phase="dusk"]{
-  --sky-top:#352018;
-  --sky-mid:#87523c;
-  --sky-bottom:#ca7656;
-  --celestial-glow:rgba(255,160,103,.40);
-  --solar-opacity:.36;
-  --browser-theme-color:#352018;
-}
-
-@media (prefers-color-scheme:dark){
-  :root[data-theme="autumn"]{
-    --glass:rgba(55,34,24,.38);
-    --glass-strong:rgba(64,40,28,.50);
-    --glass-line:rgba(255,213,150,.20);
-    --shadow-card:0 24px 72px rgba(0,0,0,.38);
-    --shadow-soft:0 14px 38px rgba(0,0,0,.30);
-  }
+:root[data-theme="autumn"][data-daypart="night"]{
+  --theme-background-image:url("../../images/themes/autumn/autumn-night.webp");
+  --sky-top:#071226;
+  --sky-mid:#16243c;
+  --sky-bottom:#271d18;
+  --glass:rgba(38,50,64,.42);
+  --glass-strong:rgba(45,58,74,.52);
+  --glass-line:rgba(255,214,150,.18);
+  --shadow-card:0 24px 72px rgba(0,0,0,.44);
+  --shadow-soft:0 14px 38px rgba(0,0,0,.32);
+  --celestial-glow:rgba(255,206,142,.18);
+  --solar-opacity:.18;
+  --browser-theme-color:#071226;
 }
 
 :root[data-theme="autumn"] body.app-page::before,
 :root[data-theme="autumn"] body.index-page::before{
   content:"";
   position:fixed;
-  top:0;
-  right:0;
+  inset:0;
   bottom:calc((var(--safe-bottom) + 140px) * -1);
-  left:0;
   z-index:1;
   pointer-events:none;
-  opacity:.16;
-  filter:drop-shadow(0 10px 18px rgba(70,28,8,.20));
+  opacity:.08;
+  filter:drop-shadow(0 10px 18px rgba(70,28,8,.18));
   background-image:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath fill='%23c4551f' d='M31 58c-2-10-10-17-20-20 9-2 16-1 22 5-5-9-6-18-1-30 5 12 4 21-1 30 6-6 13-7 22-5-10 3-18 10-20 20h-2Z'/%3E%3Cpath fill='%23f0a247' fill-opacity='.75' d='M32 55c1-10 6-21 17-32-9 4-15 10-19 18 1-10-1-18-8-30 2 14 4 24 8 34-6-6-13-11-23-13 11 6 18 13 25 23Z'/%3E%3C/svg%3E"),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath fill='%238c3f1c' d='M32 59c-3-11-12-17-24-17 10-5 19-5 25 1-4-8-6-18-2-34 7 13 7 24 1 34 7-6 16-6 25-1-12 0-21 6-24 17h-1Z'/%3E%3Cpath fill='%23e89a38' fill-opacity='.65' d='M31 54c5-10 9-22 9-38-5 10-8 18-8 27-3-8-8-15-17-22 7 12 12 22 16 33Z'/%3E%3C/svg%3E"),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath fill='%23d97425' d='M34 57c-5-10-14-15-26-13 9-6 17-8 25-4-7-8-10-17-10-31 8 10 12 20 9 31 5-7 13-10 24-10-10 5-17 14-20 27h-2Z'/%3E%3Cpath fill='%23ffc16a' fill-opacity='.55' d='M33 52c2-13 1-24-4-36 8 9 12 18 10 28 4-6 10-11 18-14-9 9-16 16-24 22Z'/%3E%3C/svg%3E"),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath fill='%23a2471b' d='M30 58c-1-12-9-19-21-23 10-2 18 0 23 7-4-11-3-21 3-33 4 13 2 23-3 33 7-5 15-5 24-1-12 1-20 7-24 17h-2Z'/%3E%3C/svg%3E"),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath fill='%23e5862f' d='M33 58c-4-12-13-18-25-18 10-5 18-5 25 1-6-9-8-19-5-33 7 12 9 23 4 33 6-6 14-7 24-3-11 2-19 9-21 20h-2Z'/%3E%3C/svg%3E"),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath fill='%23b94d18' d='M32 58c-2-10-8-18-20-21 10-3 17-1 22 5-5-10-5-20 1-33 5 14 3 24-3 33 7-5 15-5 24-1-11 2-20 8-22 17h-2Z'/%3E%3Cpath fill='%23ffbd61' fill-opacity='.48' d='M32 52c3-12 4-24 0-37 7 10 9 19 5 29 5-5 11-8 19-9-10 6-17 11-24 17Z'/%3E%3C/svg%3E"),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath fill='%237b3519' d='M33 57c-4-11-12-18-25-17 10-5 18-6 25 0-6-10-8-20-4-33 7 12 8 23 3 33 7-6 15-6 24-2-11 2-19 9-21 19h-2Z'/%3E%3C/svg%3E"),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath fill='%23f0a13b' d='M31 59c-1-12-9-20-22-23 11-3 19-1 24 6-5-11-4-22 2-34 4 13 3 24-3 34 7-6 15-7 24-3-11 3-20 10-23 20h-2Z'/%3E%3C/svg%3E"),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath fill='%23d2691e' d='M32 58c-3-11-11-18-23-20 10-4 18-3 24 3-6-10-7-20-2-33 7 12 7 23 1 34 7-6 15-7 24-3-11 2-20 9-22 19h-2Z'/%3E%3Cpath fill='%23ffc36b' fill-opacity='.42' d='M31 52c5-12 7-24 5-37 5 10 6 19 2 28 5-4 11-6 18-7-10 6-18 11-25 16Z'/%3E%3C/svg%3E"),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath fill='%238b3a16' d='M33 57c-4-10-12-16-24-16 9-5 17-5 24 0-6-9-8-19-4-33 7 12 8 23 3 33 7-5 15-6 24-2-11 2-19 8-21 18h-2Z'/%3E%3C/svg%3E"),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath fill='%23e98f2d' d='M31 58c-2-11-10-18-22-21 10-3 18-1 24 5-5-10-5-20 1-33 5 13 4 24-2 33 7-5 15-5 24-1-11 2-20 8-23 17h-2Z'/%3E%3C/svg%3E");
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath fill='%23c4551f' d='M31 58c-2-10-10-17-20-20 9-2 16-1 22 5-5-9-6-18-1-30 5 12 4 21-1 30 6-6 13-7 22-5-10 3-18 10-20 20h-2Z'/%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath fill='%23e89a38' d='M32 59c-3-11-12-17-24-17 10-5 19-5 25 1-4-8-6-18-2-34 7 13 7 24 1 34 7-6 16-6 25-1-12 0-21 6-24 17h-1Z'/%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath fill='%238c3f1c' d='M34 57c-5-10-14-15-26-13 9-6 17-8 25-4-7-8-10-17-10-31 8 10 12 20 9 31 5-7 13-10 24-10-10 5-17 14-20 27h-2Z'/%3E%3C/svg%3E");
   background-repeat:no-repeat;
-  background-size:48px 48px,64px 64px,42px 42px,58px 58px,34px 34px,46px 46px,28px 28px,40px 40px,36px 36px,24px 24px,32px 32px;
-  background-position:7% 9%,17% 27%,87% 16%,92% 50%,66% 72%,12% 58%,78% 69%,48% 21%,28% 82%,72% 8%,39% 62%;
-  transform:translate3d(0,0,0) rotate(0deg);
-  animation:autumnLeavesFloat 58s ease-in-out infinite alternate;
-}
-
-:root[data-theme="autumn"] body.app-page::after,
-:root[data-theme="autumn"] body.index-page::after{
-  content:"";
-  position:fixed;
-  top:-10%;
-  right:-10%;
-  bottom:calc((var(--safe-bottom) + 160px) * -1);
-  left:-10%;
-  z-index:1;
-  pointer-events:none;
-  opacity:.10;
-  filter:blur(2px);
-  background:
-    radial-gradient(ellipse at 50% 76%,rgba(255,235,197,.20),transparent 34%),
-    linear-gradient(180deg,transparent 0 42%,rgba(255,223,178,.12) 58%,transparent 76%),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 90 90'%3E%3Cpath fill='%23b44717' fill-opacity='.82' d='M44 82c-6-17-19-28-38-31 15-8 28-7 40 3-9-16-12-31-5-49 12 17 15 35 4 52 12-11 26-14 42-8-19 6-32 17-39 33h-4Z'/%3E%3C/svg%3E"),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 90 90'%3E%3Cpath fill='%23ec7e22' fill-opacity='.70' d='M45 83c-7-18-20-29-39-30 16-8 29-7 40 3-10-16-12-33-4-51 12 18 14 36 3 53 12-10 26-13 42-6-19 5-33 16-39 31h-3Z'/%3E%3C/svg%3E"),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 90 90'%3E%3Cpath fill='%237f3215' fill-opacity='.66' d='M46 82c-8-17-22-27-40-27 15-9 29-10 41 1-11-16-14-33-7-52 13 17 16 36 5 54 12-12 27-15 42-9-19 7-32 18-38 33h-3Z'/%3E%3C/svg%3E");
-  background-repeat:no-repeat;
-  background-size:112px 112px,92px 92px,132px 132px;
-  background-position:-6% 71%,106% 33%,92% 90%;
-  transform:translate3d(0,0,0);
-  animation:autumnForegroundDrift 76s ease-in-out infinite alternate;
+  background-size:44px 44px,62px 62px,82px 82px;
+  background-position:12% 18%,84% 22%,92% 76%;
+  animation:autumnLeavesFloat 72s ease-in-out infinite alternate;
 }
 
 @keyframes autumnLeavesFloat{
-  0%{
-    opacity:.08;
-    transform:translate3d(-1.5%,0,0) rotate(-1.5deg);
-    background-position:7% 9%,17% 27%,87% 16%,92% 50%,66% 72%,12% 58%,78% 69%,48% 21%,28% 82%,72% 8%,39% 62%;
-  }
-  48%{
-    opacity:.14;
-  }
-  100%{
-    opacity:.10;
-    transform:translate3d(1.5%,1.2%,0) rotate(1.5deg);
-    background-position:8% 10%,16% 29%,86% 17%,91% 52%,67% 73%,11% 60%,79% 70%,47% 22%,29% 83%,71% 9%,40% 63%;
-  }
-}
-
-@keyframes autumnForegroundDrift{
-  0%{
-    opacity:.05;
-    transform:translate3d(-1%,0,0) scale(1);
-    background-position:-6% 71%,106% 33%,92% 90%;
-  }
-  52%{
-    opacity:.10;
-  }
-  100%{
-    opacity:.07;
-    transform:translate3d(1.2%,1%,0) scale(1.015);
-    background-position:-4% 72%,104% 35%,90% 88%;
-  }
-}
-
-:root[data-theme="autumn"] body.index-page .app{
-  z-index:2;
-}
-
-@media (prefers-reduced-motion:reduce){
-  :root[data-theme="autumn"] body.app-page::before,
-  :root[data-theme="autumn"] body.index-page::before{
-    animation:none;
-    opacity:.08;
-  }
-
-  :root[data-theme="autumn"] body.app-page::after,
-  :root[data-theme="autumn"] body.index-page::after{
-    animation:none;
-    opacity:.06;
-  }
+  0%{transform:translate3d(-1%,0,0) rotate(-1deg);opacity:.06;}
+  100%{transform:translate3d(1%,1%,0) rotate(1deg);opacity:.10;}
 }

@@ -4,6 +4,7 @@ window.APP_CONFIG=Object.freeze({
     "summer",
     "autumn",
     "christmas",
+    "winter",
     "spring"
   ])
 });

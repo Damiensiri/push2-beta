@@ -85,6 +85,7 @@ assets/
       summer.css
       autumn.css
       christmas.css
+      winter.css
       spring.css
   js/
     app-config.js
@@ -102,14 +103,20 @@ assets/
   images/
     themes/
       autumn/
-        autumn-bg.webp
-        autumn-bg@2x.webp
+        autumn-sunrise.webp
+        autumn-day.webp
+        autumn-sunset.webp
+        autumn-night.webp
       christmas/
-        christmas-bg.webp
-        christmas-bg@2x.webp
+        christmas-sunrise.webp
+        christmas-day.webp
+        christmas-sunset.webp
+        christmas-night.webp
       spring/
-        spring-bg.webp
-        spring-bg@2x.webp
+        spring-sunrise.webp
+        spring-day.webp
+        spring-sunset.webp
+        spring-night.webp
       summer/
         summer-sunrise.webp
         summer-sunrise@2x.webp
@@ -119,30 +126,39 @@ assets/
         summer-sunset@2x.webp
         summer-night.webp
         summer-night@2x.webp
+      winter/
+        winter-sunrise.webp
+        winter-day.webp
+        winter-sunset.webp
+        winter-night.webp
 ```
 
 Le thème actif est défini uniquement dans `assets/js/app-config.js`.
 
-`summer` est le thème de référence. Les thèmes `autumn`, `christmas` et
-`spring` sont enregistrés ; `christmas` et `spring` restent volontairement non
-finalisés.
+`summer` reste le thème actif. Les thèmes `autumn`, `christmas`, `winter` et
+`spring` sont enregistrés et préparés, mais ne sont pas activés tant que la
+valeur centrale `theme:"summer"` n’est pas changée dans `assets/js/app-config.js`.
 
-Le 8 juillet 2026, Autumn et Summer disposent chacun d’une illustration WebP
-1x/2x branchée dans le même moteur hybride, tout en conservant leur fallback CSS
-complet. Autumn ajoute des décorations CSS saisonnières discrètes. Summer
-utilise désormais quatre illustrations distinctes selon l’heure de la journée,
-sans overlay horaire.
+Le 9 juillet 2026, les thèmes Summer, Autumn, Christmas, Winter et Spring
+disposent d’illustrations WebP classées par moment de journée. Summer est le
+seul thème actif. Autumn, Christmas, Winter et Spring restent prêts pour les
+prochains changements saisonniers, sans être préchargés inutilement.
 
 L’architecture des thèmes devient hybride :
 
 1. palette CSS : couleurs, glassmorphism, ombres, halo, Safe Areas et boutons ;
-2. illustration de fond : image WebP optionnelle, propre à chaque saison ;
+2. illustration de fond : image WebP propre à chaque saison et moment de
+   journée ;
 3. animations CSS : feuilles, neige, pétales ou particules selon la saison.
 
 Les pages ne doivent jamais référencer directement les illustrations. Le fond
 saisonnier se branche uniquement dans le fichier CSS du thème concerné avec
 `--theme-background-image`. Le fallback `--app-background` doit toujours rester
 présent pour garantir un rendu lisible si l’image n’est pas disponible.
+
+Les images des saisons non actives restent dans le dépôt mais ne doivent pas
+être préchargées. Pour changer de saison aujourd’hui, il faut modifier
+uniquement `assets/js/app-config.js`, tester en bêta, puis publier.
 
 La page `meteo.html` est une exception permanente et contrôlée : son fond et
 ses animations météo ne doivent pas être remplacés par le thème global.
@@ -430,18 +446,8 @@ placée dans `assets/images/themes/<saison>/` puis activée uniquement dans le C
 du thème concerné, par exemple :
 
 ```css
-:root[data-theme="autumn"]{
-  --theme-background-image:url("../../images/themes/autumn/autumn-bg.webp");
-}
-
-@supports (background-image:image-set(url("../../images/themes/autumn/autumn-bg.webp") 1x)){
-  :root[data-theme="autumn"]{
-    --theme-background-image:
-      image-set(
-        url("../../images/themes/autumn/autumn-bg.webp") 1x,
-        url("../../images/themes/autumn/autumn-bg@2x.webp") 2x
-      );
-  }
+:root[data-theme="autumn"][data-daypart="day"]{
+  --theme-background-image:url("../../images/themes/autumn/autumn-day.webp");
 }
 ```
 
@@ -459,7 +465,8 @@ que le thème respecte les variables communes :
 Les animations saisonnières doivent rester dans le fichier CSS du thème,
 derrière le contenu, avec `pointer-events:none`.
 
-Summer dispose également d’un choix d’illustration horaire, piloté par
+Les thèmes saisonniers peuvent disposer d’un choix d’illustration horaire,
+piloté par
 `assets/js/app-layout.js` avec `data-daypart` :
 
 - `sunrise` de 06h00 à 10h00 : lever de soleil ;

@@ -1,8 +1,60 @@
 /*
  * Thème Spring préparé.
- * Ses choix visuels seront définis et validés dans un chantier séparé.
+ * Palette + illustration horaire + pétales discrets.
+ * Non actif tant que APP_CONFIG.theme reste "summer".
  */
 :root[data-theme="spring"]{
-  --theme-background-image:none;
-  --theme-background-overlay:none;
+  color-scheme:light dark;
+  --text:rgba(255,255,255,.92);
+  --text-strong:rgba(255,255,255,.98);
+  --text-main:rgba(255,255,255,.92);
+  --text-soft:rgba(242,255,246,.76);
+  --glass:rgba(226,255,238,.18);
+  --glass-strong:rgba(236,255,244,.27);
+  --glass-line:rgba(255,255,255,.32);
+  --shadow-card:0 24px 68px rgba(22,70,36,.24);
+  --shadow-soft:0 14px 38px rgba(22,70,36,.18);
+  --info:#ffb64f;
+  --sky-top:#2c8fd1;
+  --sky-mid:#70c5e3;
+  --sky-bottom:#b8e6c6;
+  --app-safearea-bottom-background:var(--sky-bottom);
+  --solar-opacity:.36;
+  --celestial-glow:rgba(255,242,186,.38);
+  --browser-theme-color:#2c8fd1;
+  --theme-background-image:url("../../images/themes/spring/spring-day.webp");
+  --theme-background-overlay:linear-gradient(180deg,rgba(20,70,42,.10),rgba(255,255,255,.02) 46%,rgba(57,118,52,.12));
+  --theme-background-position:center top,center top,center top;
+  --theme-background-size:cover,cover,100% var(--app-canvas-height);
+  --theme-stage-background-size:cover,cover,100% 100%;
+  --app-background:linear-gradient(180deg,var(--sky-top),var(--sky-mid) 54%,var(--sky-bottom));
+}
+
+:root[data-theme="spring"]::after{display:none;}
+:root[data-theme="spring"] body.app-page{min-height:calc(var(--app-canvas-height) + var(--safe-bottom));}
+:root[data-theme="spring"] body.app-page > .ambient-stage{position:absolute;inset:0;min-height:calc(100% + var(--safe-bottom) + 160px);height:auto;}
+
+:root[data-theme="spring"][data-daypart="sunrise"]{--theme-background-image:url("../../images/themes/spring/spring-sunrise.webp");--sky-top:#88a7ce;--sky-mid:#f0ba72;--sky-bottom:#b7dda0;--browser-theme-color:#88a7ce;}
+:root[data-theme="spring"][data-daypart="day"]{--theme-background-image:url("../../images/themes/spring/spring-day.webp");--browser-theme-color:#2c8fd1;}
+:root[data-theme="spring"][data-daypart="sunset"]{--theme-background-image:url("../../images/themes/spring/spring-sunset.webp");--sky-top:#6f4f78;--sky-mid:#e5824c;--sky-bottom:#86b76e;--browser-theme-color:#6f4f78;}
+:root[data-theme="spring"][data-daypart="night"]{--theme-background-image:url("../../images/themes/spring/spring-night.webp");--sky-top:#06182d;--sky-mid:#12365a;--sky-bottom:#143b30;--glass:rgba(20,48,58,.42);--glass-strong:rgba(26,58,68,.52);--glass-line:rgba(210,255,224,.18);--browser-theme-color:#06182d;}
+
+:root[data-theme="spring"] body.app-page::before,
+:root[data-theme="spring"] body.index-page::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  z-index:1;
+  pointer-events:none;
+  opacity:.10;
+  background-image:
+    radial-gradient(ellipse at center,rgba(255,202,220,.9) 0 2px,transparent 3px),
+    radial-gradient(ellipse at center,rgba(255,255,255,.75) 0 1px,transparent 2px);
+  background-size:120px 160px,180px 220px;
+  animation:springPetals 54s ease-in-out infinite alternate;
+}
+
+@keyframes springPetals{
+  from{background-position:0 0,70px 30px;transform:translate3d(-1%,0,0);}
+  to{background-position:20px 90px,40px 140px;transform:translate3d(1%,1%,0);}
 }

@@ -1,0 +1,60 @@
+/*
+ * Thème Winter préparé.
+ * Palette + illustration horaire + neige très légère.
+ * Non actif tant que APP_CONFIG.theme reste "summer".
+ */
+:root[data-theme="winter"]{
+  color-scheme:light dark;
+  --text:rgba(255,255,255,.94);
+  --text-strong:rgba(255,255,255,.98);
+  --text-main:rgba(255,255,255,.94);
+  --text-soft:rgba(230,245,255,.76);
+  --glass:rgba(222,242,255,.18);
+  --glass-strong:rgba(232,248,255,.27);
+  --glass-line:rgba(255,255,255,.34);
+  --shadow-card:0 24px 72px rgba(6,22,48,.30);
+  --shadow-soft:0 14px 40px rgba(6,22,48,.24);
+  --info:#ffcf67;
+  --sky-top:#2b7bb8;
+  --sky-mid:#95c5e6;
+  --sky-bottom:#e3f3ff;
+  --app-safearea-bottom-background:var(--sky-bottom);
+  --solar-opacity:.30;
+  --celestial-glow:rgba(220,238,255,.42);
+  --browser-theme-color:#2b7bb8;
+  --theme-background-image:url("../../images/themes/winter/winter-day.webp");
+  --theme-background-overlay:linear-gradient(180deg,rgba(10,32,58,.10),rgba(255,255,255,.02) 48%,rgba(14,44,72,.12));
+  --theme-background-position:center top,center top,center top;
+  --theme-background-size:cover,cover,100% var(--app-canvas-height);
+  --theme-stage-background-size:cover,cover,100% 100%;
+  --app-background:linear-gradient(180deg,var(--sky-top),var(--sky-mid) 54%,var(--sky-bottom));
+}
+
+:root[data-theme="winter"]::after{display:none;}
+:root[data-theme="winter"] body.app-page{min-height:calc(var(--app-canvas-height) + var(--safe-bottom));}
+:root[data-theme="winter"] body.app-page > .ambient-stage{position:absolute;inset:0;min-height:calc(100% + var(--safe-bottom) + 160px);height:auto;}
+
+:root[data-theme="winter"][data-daypart="sunrise"]{--theme-background-image:url("../../images/themes/winter/winter-sunrise.webp");--sky-top:#3b69a8;--sky-mid:#c1a0ce;--sky-bottom:#d7edf8;--browser-theme-color:#3b69a8;}
+:root[data-theme="winter"][data-daypart="day"]{--theme-background-image:url("../../images/themes/winter/winter-day.webp");--browser-theme-color:#2b7bb8;}
+:root[data-theme="winter"][data-daypart="sunset"]{--theme-background-image:url("../../images/themes/winter/winter-sunset.webp");--sky-top:#53618f;--sky-mid:#df8c54;--sky-bottom:#d7ddea;--browser-theme-color:#53618f;}
+:root[data-theme="winter"][data-daypart="night"]{--theme-background-image:url("../../images/themes/winter/winter-night.webp");--sky-top:#06152f;--sky-mid:#102a50;--sky-bottom:#17345d;--glass:rgba(18,36,64,.42);--glass-strong:rgba(24,48,78,.52);--glass-line:rgba(255,255,255,.20);--browser-theme-color:#06152f;}
+
+:root[data-theme="winter"] body.app-page::before,
+:root[data-theme="winter"] body.index-page::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  z-index:1;
+  pointer-events:none;
+  opacity:.14;
+  background-image:
+    radial-gradient(circle,rgba(255,255,255,.95) 0 1px,transparent 1.5px),
+    radial-gradient(circle,rgba(255,255,255,.78) 0 1px,transparent 1.5px);
+  background-size:100px 140px,150px 210px;
+  animation:winterSnow 40s linear infinite;
+}
+
+@keyframes winterSnow{
+  from{background-position:0 -140px,50px -210px;}
+  to{background-position:0 140px,50px 210px;}
+}
