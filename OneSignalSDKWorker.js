@@ -1,8 +1,9 @@
 importScripts("https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js");
 
-const APP_VERSION="20260709-165329";
+const APP_VERSION="20260709-173608";
 const APP_SCOPE_URL=new URL(self.registration.scope);
 const APP_ENTRY=new URL(`index.html?v=${APP_VERSION}`,APP_SCOPE_URL).href;
+const APP_UPDATE_ENTRY=new URL(`update.html?v=${APP_VERSION}`,APP_SCOPE_URL).href;
 const APP_INDEX=new URL("index.html",APP_SCOPE_URL).href;
 const IS_SHARED_BETA_ORIGIN=APP_SCOPE_URL.hostname==="damiensiri.github.io" &&
                             APP_SCOPE_URL.pathname!=="/";
@@ -29,7 +30,7 @@ self.addEventListener("activate",event=>{
       if(url.origin!==self.location.origin) return null;
       if(!url.href.startsWith(self.registration.scope)) return null;
       if(url.searchParams.get("v")===APP_VERSION) return null;
-      return client.navigate(APP_ENTRY);
+      return client.navigate(APP_UPDATE_ENTRY);
     }));
   })());
 });
