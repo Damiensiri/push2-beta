@@ -34,7 +34,7 @@
 :root[data-theme="spring"] body.app-page{min-height:calc(var(--app-canvas-height) + var(--safe-bottom));}
 :root[data-theme="spring"] body.app-page > .ambient-stage{position:absolute;inset:0;min-height:calc(100% + var(--safe-bottom) + 160px);height:auto;}
 
-:root[data-theme="spring"][data-daypart="sunrise"]{--theme-background-image:url("../../images/themes/spring/spring-sunrise.webp");--sky-top:#88a7ce;--sky-mid:#f0ba72;--sky-bottom:#b7dda0;--browser-theme-color:#88a7ce;}
+:root[data-theme="spring"][data-daypart="dawn"]{--theme-background-image:url("../../images/themes/spring/spring-dawn.webp");--sky-top:#88a7ce;--sky-mid:#f0ba72;--sky-bottom:#b7dda0;--browser-theme-color:#88a7ce;}
 :root[data-theme="spring"][data-daypart="day"]{--theme-background-image:url("../../images/themes/spring/spring-day.webp");--browser-theme-color:#2c8fd1;}
 :root[data-theme="spring"][data-daypart="sunset"]{--theme-background-image:url("../../images/themes/spring/spring-sunset.webp");--sky-top:#6f4f78;--sky-mid:#e5824c;--sky-bottom:#86b76e;--browser-theme-color:#6f4f78;}
 :root[data-theme="spring"][data-daypart="night"]{--theme-background-image:url("../../images/themes/spring/spring-night.webp");--sky-top:#06182d;--sky-mid:#12365a;--sky-bottom:#143b30;--glass:rgba(20,48,58,.42);--glass-strong:rgba(26,58,68,.52);--glass-line:rgba(210,255,224,.18);--browser-theme-color:#06182d;}

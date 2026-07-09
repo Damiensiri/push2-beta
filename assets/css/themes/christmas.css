@@ -34,7 +34,7 @@
 :root[data-theme="christmas"] body.app-page{min-height:calc(var(--app-canvas-height) + var(--safe-bottom));}
 :root[data-theme="christmas"] body.app-page > .ambient-stage{position:absolute;inset:0;min-height:calc(100% + var(--safe-bottom) + 160px);height:auto;}
 
-:root[data-theme="christmas"][data-daypart="sunrise"]{--theme-background-image:url("../../images/themes/christmas/christmas-sunrise.webp");--sky-top:#c4a7ce;--sky-mid:#f1c7cf;--sky-bottom:#dcecf8;--browser-theme-color:#7e91b8;}
+:root[data-theme="christmas"][data-daypart="dawn"]{--theme-background-image:url("../../images/themes/christmas/christmas-dawn.webp");--sky-top:#c4a7ce;--sky-mid:#f1c7cf;--sky-bottom:#dcecf8;--browser-theme-color:#7e91b8;}
 :root[data-theme="christmas"][data-daypart="day"]{--theme-background-image:url("../../images/themes/christmas/christmas-day.webp");--browser-theme-color:#1c6eae;}
 :root[data-theme="christmas"][data-daypart="sunset"]{--theme-background-image:url("../../images/themes/christmas/christmas-sunset.webp");--sky-top:#5a3b52;--sky-mid:#ce7040;--sky-bottom:#d7c2bb;--browser-theme-color:#5a3b52;}
 :root[data-theme="christmas"][data-daypart="night"]{--theme-background-image:url("../../images/themes/christmas/christmas-night.webp");--sky-top:#07152d;--sky-mid:#0d2346;--sky-bottom:#132b4d;--glass:rgba(18,35,64,.42);--glass-strong:rgba(24,44,78,.52);--glass-line:rgba(255,255,255,.20);--browser-theme-color:#07152d;}

@@ -146,7 +146,7 @@ body.index-page > .ambient-stage > .daypart-fade{
   z-index:1;
   pointer-events:none;
   opacity:1;
-  transition:opacity 60s ease;
+  transition:opacity var(--daypart-transition-duration,60s) ease;
 }
 
 body.app-page > .ambient-stage > .daypart-fade.is-fading,

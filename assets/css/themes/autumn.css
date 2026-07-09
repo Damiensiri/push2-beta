@@ -51,8 +51,8 @@
   height:auto;
 }
 
-:root[data-theme="autumn"][data-daypart="sunrise"]{
-  --theme-background-image:url("../../images/themes/autumn/autumn-sunrise.webp");
+:root[data-theme="autumn"][data-daypart="dawn"]{
+  --theme-background-image:url("../../images/themes/autumn/autumn-dawn.webp");
   --sky-top:#7b5f55;
   --sky-mid:#d19664;
   --sky-bottom:#e4b071;

@@ -7,23 +7,23 @@ Architecture prévue :
 ```text
 assets/images/themes/
   autumn/
-    autumn-sunrise.webp
+    autumn-dawn.webp
     autumn-day.webp
     autumn-sunset.webp
     autumn-night.webp
   christmas/
-    christmas-sunrise.webp
+    christmas-dawn.webp
     christmas-day.webp
     christmas-sunset.webp
     christmas-night.webp
   spring/
-    spring-sunrise.webp
+    spring-dawn.webp
     spring-day.webp
     spring-sunset.webp
     spring-night.webp
   summer/
-    summer-sunrise.webp
-    summer-sunrise@2x.webp
+    summer-dawn.webp
+    summer-dawn@2x.webp
     summer-day.webp
     summer-day@2x.webp
     summer-sunset.webp
@@ -31,7 +31,7 @@ assets/images/themes/
     summer-night.webp
     summer-night@2x.webp
   winter/
-    winter-sunrise.webp
+    winter-dawn.webp
     winter-day.webp
     winter-sunset.webp
     winter-night.webp
@@ -51,15 +51,19 @@ L’activation se fait uniquement dans le fichier CSS du thème concerné, via :
 Le fallback CSS `--app-background` doit rester présent afin que l’application
 reste lisible si l’image n’est pas disponible.
 
-Chaque thème peut utiliser quatre illustrations selon l’heure :
+Chaque thème peut utiliser quatre illustrations selon la vraie lumière du jour
+à Brienne-le-Château :
 
-- `sunrise` : 06h00 → 10h00 ;
-- `day` : 10h00 → 17h00 ;
-- `sunset` : 17h00 → 21h00 ;
-- `night` : 21h00 → 06h00.
+- `dawn` : lever du soleil - 45 min → lever du soleil + 45 min ;
+- `day` : fin de `dawn` → coucher du soleil - 1h ;
+- `sunset` : coucher du soleil - 1h → coucher du soleil + 30 min ;
+- `night` : tout le reste.
 
 Le changement est piloté par `assets/js/app-layout.js` via `data-daypart`.
 Les transitions entre deux ambiances se font par fondu, sans overlay horaire.
+Les horaires `sunrise/sunset` viennent d’Open-Meteo et sont mis en cache une
+fois par jour. Si l’API ne répond pas, un fallback mensuel local garde un rendu
+cohérent.
 
 Important : seules les images du thème actif sont réellement utilisées par le
 navigateur. Les images des autres saisons peuvent donc rester présentes dans le

@@ -103,23 +103,23 @@ assets/
   images/
     themes/
       autumn/
-        autumn-sunrise.webp
+        autumn-dawn.webp
         autumn-day.webp
         autumn-sunset.webp
         autumn-night.webp
       christmas/
-        christmas-sunrise.webp
+        christmas-dawn.webp
         christmas-day.webp
         christmas-sunset.webp
         christmas-night.webp
       spring/
-        spring-sunrise.webp
+        spring-dawn.webp
         spring-day.webp
         spring-sunset.webp
         spring-night.webp
       summer/
-        summer-sunrise.webp
-        summer-sunrise@2x.webp
+        summer-dawn.webp
+        summer-dawn@2x.webp
         summer-day.webp
         summer-day@2x.webp
         summer-sunset.webp
@@ -127,7 +127,7 @@ assets/
         summer-night.webp
         summer-night@2x.webp
       winter/
-        winter-sunrise.webp
+        winter-dawn.webp
         winter-day.webp
         winter-sunset.webp
         winter-night.webp
@@ -465,19 +465,21 @@ que le thème respecte les variables communes :
 Les animations saisonnières doivent rester dans le fichier CSS du thème,
 derrière le contenu, avec `pointer-events:none`.
 
-Les thèmes saisonniers peuvent disposer d’un choix d’illustration horaire,
-piloté par
-`assets/js/app-layout.js` avec `data-daypart` :
+Les thèmes saisonniers peuvent disposer d’un choix d’illustration piloté par la
+vraie lumière du jour à Brienne-le-Château. `assets/js/app-layout.js` récupère
+les horaires `sunrise/sunset` via Open-Meteo, les met en cache une fois par jour
+et applique `data-daypart` :
 
-- `sunrise` de 06h00 à 10h00 : lever de soleil ;
-- `day` de 10h00 à 17h00 : journée ;
-- `sunset` de 17h00 à 21h00 : coucher de soleil ;
-- `night` de 21h00 à 06h00 : nuit.
+- `dawn` : lever du soleil - 45 min → lever du soleil + 45 min ;
+- `day` : fin de `dawn` → coucher du soleil - 1h ;
+- `sunset` : coucher du soleil - 1h → coucher du soleil + 30 min ;
+- `night` : tout le reste.
 
 Le changement ne repose plus sur un overlay : l’image de fond change réellement.
-Si l’utilisateur reste dans l’application pendant un changement de période, une
-copie temporaire de l’ancien fond est fondue pendant environ 60 secondes afin
-d’éviter une coupure brutale.
+Si Open-Meteo ne répond pas, un fallback mensuel local garde un rendu cohérent.
+Si l’utilisateur revient dans la PWA et que l’ambiance a changé, le fondu est
+court. Pendant une utilisation continue, les transitions programmées sont plus
+longues et presque imperceptibles.
 
 ### Règles à ne pas casser
 

@@ -34,7 +34,7 @@
 :root[data-theme="winter"] body.app-page{min-height:calc(var(--app-canvas-height) + var(--safe-bottom));}
 :root[data-theme="winter"] body.app-page > .ambient-stage{position:absolute;inset:0;min-height:calc(100% + var(--safe-bottom) + 160px);height:auto;}
 
-:root[data-theme="winter"][data-daypart="sunrise"]{--theme-background-image:url("../../images/themes/winter/winter-sunrise.webp");--sky-top:#3b69a8;--sky-mid:#c1a0ce;--sky-bottom:#d7edf8;--browser-theme-color:#3b69a8;}
+:root[data-theme="winter"][data-daypart="dawn"]{--theme-background-image:url("../../images/themes/winter/winter-dawn.webp");--sky-top:#3b69a8;--sky-mid:#c1a0ce;--sky-bottom:#d7edf8;--browser-theme-color:#3b69a8;}
 :root[data-theme="winter"][data-daypart="day"]{--theme-background-image:url("../../images/themes/winter/winter-day.webp");--browser-theme-color:#2b7bb8;}
 :root[data-theme="winter"][data-daypart="sunset"]{--theme-background-image:url("../../images/themes/winter/winter-sunset.webp");--sky-top:#53618f;--sky-mid:#df8c54;--sky-bottom:#d7ddea;--browser-theme-color:#53618f;}
 :root[data-theme="winter"][data-daypart="night"]{--theme-background-image:url("../../images/themes/winter/winter-night.webp");--sky-top:#06152f;--sky-mid:#102a50;--sky-bottom:#17345d;--glass:rgba(18,36,64,.42);--glass-strong:rgba(24,48,78,.52);--glass-line:rgba(255,255,255,.20);--browser-theme-color:#06152f;}
