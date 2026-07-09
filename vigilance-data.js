@@ -3,8 +3,8 @@ window.METEOALARM_VIGILANCE = {
   "level": "orange",
   "label": "Orange",
   "phenomenon": "Canicule",
-  "period": "Du 9 juillet à 16:02 au 11 juillet à 00:00",
-  "updatedAt": "9 juillet à 16:03",
+  "period": "Du 9 juillet à 22:00 au 11 juillet à 00:00",
+  "updatedAt": "9 juillet à 22:00",
   "source": "MeteoAlarm / EUMETNET",
   "sourceUrl": "https://meteoalarm.org"
 };
