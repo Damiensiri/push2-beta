@@ -74,14 +74,13 @@ to{transform:rotate(360deg);}
 <p>Préparation de la nouvelle version de l’application…</p>
 </main>
 <script>
-const APP_VERSION="20260709-173608";
+const APP_VERSION="20260709-165329";
 const APP_BASE_URL=new URL("./",window.location.href);
 const APP_URL=new URL(`index.html?v=${APP_VERSION}`,APP_BASE_URL).href;
 const IS_SHARED_BETA_ORIGIN=window.location.hostname==="damiensiri.github.io" &&
                             APP_BASE_URL.pathname!=="/";
 
 (async()=>{
-const startedAt=Date.now();
 try{
 if("caches" in window && !IS_SHARED_BETA_ORIGIN){
 const names=await caches.keys();
@@ -98,15 +97,6 @@ appRegistrations.map(registration=>registration.unregister())
 );
 }
 }catch(e){}
-
-try{
-await fetch(APP_URL,{cache:"reload"});
-}catch(e){}
-
-const remainingDelay=Math.max(0,1200-(Date.now()-startedAt));
-if(remainingDelay){
-await new Promise(resolve=>setTimeout(resolve,remainingDelay));
-}
 
 window.location.replace(APP_URL);
 })();
