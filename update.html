@@ -5,10 +5,76 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="robots" content="noindex">
 <title>Mise à jour</title>
+<style>
+html,
+body{
+margin:0;
+min-height:100%;
+background:#287fbd;
+}
+body{
+min-height:100dvh;
+display:flex;
+align-items:center;
+justify-content:center;
+padding:calc(env(safe-area-inset-top) + 24px) 24px calc(env(safe-area-inset-bottom) + 24px);
+box-sizing:border-box;
+font-family:Montserrat,Arial,sans-serif;
+color:#fff;
+text-align:center;
+background:
+radial-gradient(circle at 50% 18%,rgba(255,255,255,.28),transparent 30%),
+linear-gradient(180deg,#48b7ec 0%,#287fbd 50%,#0f4f79 100%);
+}
+.update-card{
+width:min(82vw,390px);
+padding:30px 26px;
+border-radius:34px;
+background:rgba(21,87,128,.42);
+border:1px solid rgba(255,255,255,.32);
+box-shadow:0 22px 60px rgba(0,45,80,.28);
+backdrop-filter:blur(18px);
+-webkit-backdrop-filter:blur(18px);
+}
+.spinner{
+width:52px;
+height:52px;
+margin:0 auto 20px;
+border-radius:50%;
+border:5px solid rgba(255,255,255,.24);
+border-top-color:#fff;
+animation:spin 1s linear infinite;
+}
+h1{
+margin:0 0 10px;
+font-size:22px;
+font-weight:700;
+letter-spacing:.08em;
+text-transform:uppercase;
+}
+p{
+margin:0;
+font-size:16px;
+line-height:1.45;
+font-weight:500;
+opacity:.86;
+}
+@keyframes spin{
+to{transform:rotate(360deg);}
+}
+@media (prefers-reduced-motion:reduce){
+.spinner{animation:none;}
+}
+</style>
 </head>
 <body>
+<main class="update-card" role="status" aria-live="polite">
+<div class="spinner" aria-hidden="true"></div>
+<h1>Mise à jour</h1>
+<p>Préparation de la nouvelle version de l’application…</p>
+</main>
 <script>
-const APP_VERSION="20260709-155519";
+const APP_VERSION="20260709-165329";
 const APP_BASE_URL=new URL("./",window.location.href);
 const APP_URL=new URL(`index.html?v=${APP_VERSION}`,APP_BASE_URL).href;
 const IS_SHARED_BETA_ORIGIN=window.location.hostname==="damiensiri.github.io" &&

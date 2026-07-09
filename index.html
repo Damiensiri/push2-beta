@@ -7,11 +7,111 @@
 
 <title>Ecurie Damien Siri</title>
 
+<style>
+#appUpdateLoader{
+position:fixed;
+inset:0;
+z-index:999999;
+display:none;
+align-items:center;
+justify-content:center;
+padding:calc(env(safe-area-inset-top) + 24px) 24px calc(env(safe-area-inset-bottom) + 24px);
+background:
+radial-gradient(circle at 50% 18%,rgba(255,255,255,.28),transparent 30%),
+linear-gradient(180deg,#48b7ec 0%,#287fbd 50%,#0f4f79 100%);
+color:#fff;
+font-family:Montserrat,Arial,sans-serif;
+text-align:center;
+box-sizing:border-box;
+opacity:0;
+pointer-events:none;
+transition:opacity .45s ease;
+}
+html.app-version-pending #appUpdateLoader{
+display:flex;
+opacity:1;
+pointer-events:auto;
+}
+html.app-version-ready #appUpdateLoader{
+opacity:0;
+pointer-events:none;
+}
+.app-update-loader__panel{
+width:min(82vw,390px);
+padding:30px 26px;
+border-radius:34px;
+background:rgba(21,87,128,.42);
+border:1px solid rgba(255,255,255,.32);
+box-shadow:0 22px 60px rgba(0,45,80,.28);
+backdrop-filter:blur(18px);
+-webkit-backdrop-filter:blur(18px);
+}
+.app-update-loader__spinner{
+width:52px;
+height:52px;
+margin:0 auto 20px;
+border-radius:50%;
+border:5px solid rgba(255,255,255,.24);
+border-top-color:#fff;
+animation:appUpdateSpin 1s linear infinite;
+}
+.app-update-loader__title{
+margin:0 0 10px;
+font-size:22px;
+font-weight:700;
+letter-spacing:.08em;
+text-transform:uppercase;
+}
+.app-update-loader__text{
+margin:0;
+font-size:16px;
+line-height:1.45;
+font-weight:500;
+opacity:.86;
+}
+@keyframes appUpdateSpin{
+to{transform:rotate(360deg);}
+}
+@media (prefers-reduced-motion:reduce){
+#appUpdateLoader{transition:none;}
+.app-update-loader__spinner{animation:none;}
+}
+</style>
+
 <script>
-const APP_VERSION="20260709-155519";
+const APP_VERSION="20260709-165329";
 const APP_BASE_URL=new URL("./",window.location.href);
 const IS_BETA=window.location.hostname==="damiensiri.github.io" &&
               APP_BASE_URL.pathname==="/push2-beta/";
+const APP_VERSION_STORAGE_KEY="ecurie-damien-siri-app-version";
+let APP_VERSION_IS_PENDING=false;
+
+try{
+APP_VERSION_IS_PENDING=localStorage.getItem(APP_VERSION_STORAGE_KEY)!==APP_VERSION;
+if(APP_VERSION_IS_PENDING){
+document.documentElement.classList.add("app-version-pending");
+}
+}catch(e){}
+
+function markAppVersionReady(){
+try{
+localStorage.setItem(APP_VERSION_STORAGE_KEY,APP_VERSION);
+}catch(e){}
+document.documentElement.classList.add("app-version-ready");
+document.documentElement.classList.remove("app-version-pending");
+setTimeout(()=>{
+const loader=document.getElementById("appUpdateLoader");
+if(loader) loader.remove();
+},650);
+}
+
+window.addEventListener("load",()=>{
+if(APP_VERSION_IS_PENDING){
+setTimeout(markAppVersionReady,900);
+}else{
+markAppVersionReady();
+}
+});
 </script>
 <link rel="manifest" id="app-manifest">
 <script>
@@ -71,23 +171,31 @@ cancelButton:"Plus tard"
 }
 </script>
 
-<script src="assets/js/app-config.js?v=20260709-155519"></script>
-<script src="assets/js/app-layout.js?v=20260709-155519"></script>
-<script src="assets/js/profile-store.js?v=20260709-155519" defer></script>
-<script src="assets/js/pages/index-profile.js?v=20260709-155519" defer></script>
+<script src="assets/js/app-config.js?v=20260709-165329"></script>
+<script src="assets/js/app-layout.js?v=20260709-165329"></script>
+<script src="assets/js/profile-store.js?v=20260709-165329" defer></script>
+<script src="assets/js/pages/index-profile.js?v=20260709-165329" defer></script>
 
-<link rel="stylesheet" href="assets/css/app.css?v=20260709-155519">
-<link rel="stylesheet" href="assets/css/themes/summer.css?v=20260709-155519">
-<link rel="stylesheet" href="assets/css/themes/autumn.css?v=20260709-155519">
-<link rel="stylesheet" href="assets/css/themes/christmas.css?v=20260709-155519">
-<link rel="stylesheet" href="assets/css/themes/winter.css?v=20260709-155519">
-<link rel="stylesheet" href="assets/css/themes/spring.css?v=20260709-155519">
-<link rel="stylesheet" href="assets/css/pages/index.css?v=20260709-155519">
+<link rel="stylesheet" href="assets/css/app.css?v=20260709-165329">
+<link rel="stylesheet" href="assets/css/themes/summer.css?v=20260709-165329">
+<link rel="stylesheet" href="assets/css/themes/autumn.css?v=20260709-165329">
+<link rel="stylesheet" href="assets/css/themes/christmas.css?v=20260709-165329">
+<link rel="stylesheet" href="assets/css/themes/winter.css?v=20260709-165329">
+<link rel="stylesheet" href="assets/css/themes/spring.css?v=20260709-165329">
+<link rel="stylesheet" href="assets/css/pages/index.css?v=20260709-165329">
 </head>
 
 <!-- REMPLACE UNIQUEMENT ÇA -->
 
 <body class="index-page">
+
+<div id="appUpdateLoader" role="status" aria-live="polite" aria-label="Mise à jour de l'application">
+<div class="app-update-loader__panel">
+<div class="app-update-loader__spinner" aria-hidden="true"></div>
+<p class="app-update-loader__title">Mise à jour</p>
+<p class="app-update-loader__text">Préparation de la nouvelle version de l’application…</p>
+</div>
+</div>
 
 <div class="ambient-stage" aria-hidden="true"></div>
 
