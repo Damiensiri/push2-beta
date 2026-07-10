@@ -245,6 +245,89 @@ body.planningpaddock-page textarea:focus{
   box-shadow:0 12px 26px rgba(16,56,98,.20),inset 0 1px 0 rgba(255,255,255,.22);
 }
 
+body.planningpaddock-page input.profileLockedField{
+  color:rgba(255,255,255,.86);
+  background-color:rgba(255,255,255,.10);
+}
+
+body.planningpaddock-page input.profileLockedField:focus{
+  outline-color:transparent;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.18);
+}
+
+.profileRequiredNotice,
+.emailProfileNotice{
+  margin:0 0 16px;
+  padding:12px 13px;
+  border:1px solid rgba(255,195,91,.36);
+  border-radius:16px;
+  color:rgba(255,255,255,.88);
+  background:rgba(255,159,40,.16);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.16);
+  font-size:13px;
+  font-weight:600;
+}
+
+.profileRequiredNotice strong{
+  display:block;
+  margin-bottom:3px;
+  color:#ffd28b;
+  font-size:12px;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+
+.profileRequiredNotice span{
+  display:block;
+}
+
+.profileRequiredNotice a{
+  display:inline-flex;
+  margin-top:8px;
+  color:white;
+  font-weight:800;
+  text-decoration:underline;
+  text-underline-offset:3px;
+}
+
+.emailConfirmationChoice{
+  min-height:48px;
+  margin:2px 0 17px !important;
+  padding:12px 14px;
+  display:flex !important;
+  align-items:center;
+  gap:11px;
+  border:1px solid rgba(255,255,255,.20);
+  border-radius:16px;
+  color:rgba(255,255,255,.88) !important;
+  background:rgba(255,255,255,.10);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.14);
+  font-size:14px !important;
+  font-weight:700 !important;
+  letter-spacing:0 !important;
+  text-transform:none !important;
+}
+
+.emailConfirmationChoice[hidden],
+.emailProfileNotice[hidden],
+.profileRequiredNotice[hidden]{
+  display:none !important;
+}
+
+body.planningpaddock-page .emailConfirmationChoice input[type="checkbox"]{
+  width:21px;
+  min-height:0;
+  height:21px;
+  margin:0;
+  padding:0;
+  accent-color:#ff9f1f;
+  flex:0 0 auto;
+}
+
+.emailConfirmationChoice input:disabled + span{
+  opacity:.56;
+}
+
 body.planningpaddock-page select{
   padding-right:42px;
   appearance:none;

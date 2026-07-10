@@ -1,57 +1,146 @@
 (function initializePlanningPaddockProfile(){
-async function applyLocalProfile(){
-if(!window.ProfileStore)return;
+let profile={
+firstName:"",
+email:""
+};
 
-let profile;
+function isAdminMode(){
 try{
-profile=await ProfileStore.get();
+return typeof adminMode!=="undefined" && adminMode;
 }catch(e){
+return false;
+}
+}
+
+function getElements(){
+return {
+type:document.getElementById("type"),
+firstName:document.getElementById("name"),
+email:document.getElementById("email"),
+emailLabel:document.getElementById("emailLabel"),
+emailChoice:document.getElementById("emailConfirmationChoice"),
+emailCheckbox:document.getElementById("emailConfirmation"),
+emailNotice:document.getElementById("emailProfileNotice"),
+profileNotice:document.getElementById("profileRequiredNotice")
+};
+}
+
+function syncProfileFields(){
+const {
+type,
+firstName,
+email,
+emailLabel,
+emailChoice,
+emailCheckbox,
+emailNotice,
+profileNotice
+}=getElements();
+
+if(!type || !firstName || !email || !emailLabel || !emailChoice || !emailCheckbox || !emailNotice || !profileNotice)return;
+
+const admin=isAdminMode();
+const mise=type.value==="mise";
+const hasFirstName=Boolean(profile.firstName);
+const hasEmail=Boolean(profile.email && profile.email.includes("@"));
+
+if(admin){
+firstName.readOnly=false;
+firstName.classList.remove("profileLockedField");
+email.readOnly=false;
+email.classList.remove("profileLockedField");
+email.hidden=false;
+emailLabel.hidden=false;
+emailChoice.hidden=true;
+emailNotice.hidden=true;
+profileNotice.hidden=true;
+email.required=mise;
+emailLabel.innerText=mise?"Email (obligatoire)":"Email (optionnel)";
 return;
 }
 
-const type=document.getElementById("type");
-const firstName=document.getElementById("name");
-const email=document.getElementById("email");
+firstName.value=profile.firstName || "";
+firstName.readOnly=true;
+firstName.classList.add("profileLockedField");
+profileNotice.hidden=hasFirstName;
 
-if(!type || !firstName || !email)return;
-
-if(!firstName.value.trim() && profile.firstName){
-firstName.value=profile.firstName;
+if(mise){
+email.value=profile.email || "";
+email.readOnly=true;
+email.hidden=false;
+email.required=true;
+email.classList.add("profileLockedField");
+emailLabel.hidden=false;
+emailLabel.innerText="Email (obligatoire)";
+emailChoice.hidden=true;
+emailNotice.hidden=hasEmail;
+return;
 }
 
-let automaticEmail="";
+email.required=false;
+email.readOnly=true;
+email.classList.add("profileLockedField");
+emailLabel.hidden=true;
+email.hidden=true;
+emailChoice.hidden=false;
+emailCheckbox.disabled=!hasEmail;
+emailNotice.hidden=hasEmail;
 
-function syncRequiredEmail(){
-if(email.required){
-if(!email.value.trim() && profile.email){
+if(hasEmail && emailCheckbox.checked){
 email.value=profile.email;
-automaticEmail=profile.email;
+}else{
+email.value="";
 }
+}
+
+async function loadProfile(){
+if(!window.ProfileStore){
+syncProfileFields();
 return;
 }
 
-if(automaticEmail && email.value===automaticEmail){
-email.value="";
-automaticEmail="";
-}
+try{
+const storedProfile=await ProfileStore.get();
+profile={
+firstName:String(storedProfile.firstName||"").trim(),
+email:String(storedProfile.email||"").trim()
+};
+}catch(e){
+profile={firstName:"",email:""};
 }
 
-email.addEventListener("input",()=>{
-if(automaticEmail && email.value!==automaticEmail){
-automaticEmail="";
+syncProfileFields();
 }
-});
 
+function bindEvents(){
+const {type,emailCheckbox}=getElements();
+
+if(type){
 type.addEventListener("change",()=>{
-queueMicrotask(syncRequiredEmail);
+queueMicrotask(syncProfileFields);
 });
+}
 
-syncRequiredEmail();
+if(emailCheckbox){
+emailCheckbox.addEventListener("change",syncProfileFields);
+}
+}
+
+window.PlanningPaddockProfile={
+sync:syncProfileFields,
+reload:loadProfile
+};
+
+function start(){
+bindEvents();
+loadProfile();
 }
 
 if(document.readyState==="loading"){
-document.addEventListener("DOMContentLoaded",applyLocalProfile);
+document.addEventListener("DOMContentLoaded",start);
 }else{
-applyLocalProfile();
+start();
 }
+
+window.addEventListener("pageshow",loadProfile);
 })();

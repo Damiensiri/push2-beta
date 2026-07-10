@@ -10,16 +10,16 @@
 
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
 
-<script src="assets/js/app-config.js?v=20260710-175511"></script>
-<script src="assets/js/app-layout.js?v=20260710-175511"></script>
+<script src="assets/js/app-config.js?v=20260710-195829"></script>
+<script src="assets/js/app-layout.js?v=20260710-195829"></script>
 
-<link rel="stylesheet" href="assets/css/app.css?v=20260710-175511">
-<link rel="stylesheet" href="assets/css/themes/summer.css?v=20260710-175511">
-<link rel="stylesheet" href="assets/css/themes/autumn.css?v=20260710-175511">
-<link rel="stylesheet" href="assets/css/themes/christmas.css?v=20260710-175511">
-<link rel="stylesheet" href="assets/css/themes/winter.css?v=20260710-175511">
-<link rel="stylesheet" href="assets/css/themes/spring.css?v=20260710-175511">
-<link rel="stylesheet" href="assets/css/pages/planningpaddock.css?v=20260710-175511">
+<link rel="stylesheet" href="assets/css/app.css?v=20260710-195829">
+<link rel="stylesheet" href="assets/css/themes/summer.css?v=20260710-195829">
+<link rel="stylesheet" href="assets/css/themes/autumn.css?v=20260710-195829">
+<link rel="stylesheet" href="assets/css/themes/christmas.css?v=20260710-195829">
+<link rel="stylesheet" href="assets/css/themes/winter.css?v=20260710-195829">
+<link rel="stylesheet" href="assets/css/themes/spring.css?v=20260710-195829">
+<link rel="stylesheet" href="assets/css/pages/planningpaddock.css?v=20260710-195829">
 </head>
 
 <body class="app-page planningpaddock-page">
@@ -112,11 +112,26 @@
 <div class="stepTitle"><span class="stepNumber">4</span><span>Coordonnées</span></div>
 </div>
 <div class="stepBody">
+<div id="profileRequiredNotice" class="profileRequiredNotice" hidden>
+<strong>Profil requis</strong>
+<span>Complétez votre profil pour réserver un paddock.</span>
+<a href="profil.html">Ouvrir le profil</a>
+</div>
+
 <label>Prénom</label>
 <input id="name" autocomplete="given-name">
 
 <label id="emailLabel">Email (optionnel)</label>
 <input id="email" type="email" autocomplete="email">
+
+<label id="emailConfirmationChoice" class="emailConfirmationChoice" hidden>
+<input id="emailConfirmation" type="checkbox">
+<span>Recevoir une confirmation par mail</span>
+</label>
+
+<div id="emailProfileNotice" class="emailProfileNotice" hidden>
+Ajoutez un email dans votre profil pour recevoir une confirmation.
+</div>
 </div>
 </div>
 
@@ -129,7 +144,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-<script src="assets/js/app-mailer.js?v=20260710-175511"></script>
+<script src="assets/js/app-mailer.js?v=20260710-195829"></script>
 
 <script>
 
@@ -184,6 +199,9 @@ const pass=prompt("Mot de passe admin")
 if(pass==="0359140"){
 adminMode=true
 title.innerHTML="RÉSERVATION 🔧"
+if(window.PlanningPaddockProfile){
+window.PlanningPaddockProfile.sync()
+}
 generate()
 }
 
@@ -191,6 +209,9 @@ generate()
 
 adminMode=false
 title.innerHTML="RÉSERVATION"
+if(window.PlanningPaddockProfile){
+window.PlanningPaddockProfile.sync()
+}
 generate()
 
 }
@@ -214,6 +235,9 @@ function updateEmailRequirement(){
 const mise=document.getElementById("type").value==="mise"
 emailInput.required=mise
 emailLabel.innerText=mise?"Email (obligatoire)":"Email (optionnel)"
+if(window.PlanningPaddockProfile){
+window.PlanningPaddockProfile.sync()
+}
 }
 
 function showStep(id){
@@ -966,12 +990,12 @@ let name=document.getElementById("name").value.trim()
 let email=document.getElementById("email").value.trim()
 
 if(!name){
-alert("Prénom obligatoire")
+alert(adminMode ? "Prénom obligatoire" : "Complétez votre profil avant de réserver")
 return
 }
 
 if(!email || !email.includes("@")){
-alert("Email obligatoire pour une demande de mise au paddock")
+alert(adminMode ? "Email obligatoire pour une demande de mise au paddock" : "Ajoutez un email dans votre profil avant de demander une mise au paddock")
 return
 }
 
@@ -1018,7 +1042,7 @@ return
 let name=document.getElementById("name").value.trim()
 
 if(!name){
-alert("Prénom obligatoire")
+alert(adminMode ? "Prénom obligatoire" : "Complétez votre profil avant de réserver")
 return
 }
 
@@ -1175,8 +1199,8 @@ resetAfterPaddockChange()
 }
   
 </script>
-<script src="assets/js/profile-store.js?v=20260710-175511"></script>
-<script src="assets/js/pages/planningpaddock-profile.js?v=20260710-175511"></script>
+<script src="assets/js/profile-store.js?v=20260710-195829"></script>
+<script src="assets/js/pages/planningpaddock-profile.js?v=20260710-195829"></script>
 <div id="confirmSheet">
 
 <div class="sheetContent">
