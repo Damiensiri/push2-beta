@@ -1,13 +1,36 @@
 (function initializeAppLayout(){
   const config=window.APP_CONFIG || {};
   const themes=Array.isArray(config.themes)?config.themes:["summer"];
-  const theme=themes.includes(config.theme)?config.theme:"summer";
+  const adminStorageKey="ecurie-theme-admin-v1";
+  const dayparts=["dawn","day","sunset","night"];
   const sunCachePrefix="ecurie-theme-sun-v2:";
   const latitude=48.391;
   const longitude=4.527;
   const timeZone="Europe/Paris";
+  const adminSettings=readAdminSettings();
+  const configuredTheme=themes.includes(config.theme)?config.theme:"summer";
+  const theme=adminSettings.themeMode==="force" && themes.includes(adminSettings.theme)
+    ? adminSettings.theme
+    : configuredTheme;
 
   document.documentElement.dataset.theme=theme;
+
+  function readAdminSettings(){
+    try{
+      const raw=localStorage.getItem(adminStorageKey);
+      if(!raw)return {};
+      const value=JSON.parse(raw);
+      return value && typeof value==="object" ? value : {};
+    }catch(error){
+      return {};
+    }
+  }
+
+  function forcedDaypart(){
+    return adminSettings.daypartMode==="force" && dayparts.includes(adminSettings.daypart)
+      ? adminSettings.daypart
+      : "";
+  }
 
   function localClock(date){
     const parts={};
@@ -74,6 +97,12 @@
   }
 
   function applyInitialDaypartHint(){
+    const forced=forcedDaypart();
+    if(forced){
+      document.documentElement.dataset.daypart=forced;
+      return;
+    }
+
     const clock=localClock(new Date());
     const times=readCachedSunTimes(clock.dateKey)||fallbackSunTimes(clock.month,clock.dateKey);
     document.documentElement.dataset.daypart=daypartFor(clock.minutes,times);
@@ -227,6 +256,15 @@
     }
 
     async function syncThemeBackground(transitionDuration){
+      const forced=forcedDaypart();
+      if(forced){
+        if(scheduleTimer)clearTimeout(scheduleTimer);
+        applyDaypart(forced,transitionDuration);
+        document.body.dataset.sunSource="admin";
+        applyThemeMeta();
+        return;
+      }
+
       const clock=localClock(new Date());
       const cached=readCachedSunTimes(clock.dateKey);
       const fallback=fallbackSunTimes(clock.month,clock.dateKey);
@@ -257,6 +295,7 @@
   }
 
   window.AppLayout=Object.freeze({
+    adminStorageKey,
     theme,
     goBack
   });

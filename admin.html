@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>Administration thème</title>
+
+<meta name="theme-color" content="#287fbd">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+
+<script src="assets/js/app-config.js?v=20260710-175511"></script>
+<script src="assets/js/app-layout.js?v=20260710-175511"></script>
+
+<link rel="stylesheet" href="assets/css/app.css?v=20260710-175511">
+<link rel="stylesheet" href="assets/css/themes/summer.css?v=20260710-175511">
+<link rel="stylesheet" href="assets/css/themes/autumn.css?v=20260710-175511">
+<link rel="stylesheet" href="assets/css/themes/christmas.css?v=20260710-175511">
+<link rel="stylesheet" href="assets/css/themes/winter.css?v=20260710-175511">
+<link rel="stylesheet" href="assets/css/themes/spring.css?v=20260710-175511">
+<link rel="stylesheet" href="assets/css/pages/admin.css?v=20260710-175511">
+</head>
+
+<body class="app-page admin-page">
+
+<div class="ambient-stage" aria-hidden="true"></div>
+
+<div class="page" id="page">
+
+<header class="plan-header">
+<div id="backBtn" onclick="goBack()">
+<img src="image/back.svg" alt="">
+</div>
+<h1>ADMIN</h1>
+</header>
+
+<main class="admin-shell" aria-labelledby="adminTitle">
+<section class="admin-card admin-intro">
+<p class="admin-kicker">Thèmes saisonniers</p>
+<h2 id="adminTitle">Atelier de test local</h2>
+<p>Cette page pilote uniquement cet appareil. Elle ne modifie pas Firebase, OneSignal, ni les clients.</p>
+</section>
+
+<form class="admin-card admin-form" id="themeAdminForm">
+<div class="admin-field">
+<label for="themeMode">Thème</label>
+<select id="themeMode">
+<option value="auto">Automatique depuis le code</option>
+<option value="force">Forcer un thème sur cet appareil</option>
+</select>
+</div>
+
+<div class="admin-field">
+<label for="themeSelect">Choix du thème</label>
+<select id="themeSelect">
+<option value="summer">Summer</option>
+<option value="autumn">Autumn</option>
+<option value="christmas">Christmas</option>
+<option value="winter">Winter</option>
+<option value="spring">Spring</option>
+</select>
+</div>
+
+<div class="admin-field">
+<label for="daypartMode">Moment de journée</label>
+<select id="daypartMode">
+<option value="auto">Automatique selon le soleil</option>
+<option value="force">Forcer une ambiance sur cet appareil</option>
+</select>
+</div>
+
+<div class="admin-field">
+<label for="daypartSelect">Choix de l’ambiance</label>
+<select id="daypartSelect">
+<option value="dawn">Dawn</option>
+<option value="day">Day</option>
+<option value="sunset">Sunset</option>
+<option value="night">Night</option>
+</select>
+</div>
+
+<button class="admin-primary" type="submit">Appliquer sur cet appareil</button>
+<button class="admin-secondary" id="resetThemeAdmin" type="button">Revenir en automatique</button>
+<p class="admin-status" id="adminStatus" aria-live="polite"></p>
+</form>
+
+<section class="admin-card">
+<p class="admin-kicker">Aperçu rapide</p>
+<div class="admin-links">
+<a href="index.html">Index</a>
+<a href="travail.html">Travail</a>
+<a href="paddocks.html">Paddocks</a>
+<a href="plan.html">Plan</a>
+<a href="horaires.html">Horaires</a>
+<a href="planningpaddock.html">Planning paddock</a>
+</div>
+</section>
+</main>
+
+</div>
+
+<script src="assets/js/pages/admin.js?v=20260710-175511"></script>
+</body>
+</html>
