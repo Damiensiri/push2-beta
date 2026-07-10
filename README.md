@@ -133,13 +133,38 @@ assets/
         winter-night.webp
 ```
 
-Le thème actif est défini uniquement dans `assets/js/app-config.js`.
+Le thème par défaut reste défini dans `assets/js/app-config.js`. Le thème
+actif peut désormais être piloté par une configuration distante optionnelle,
+via `themeConfigUrl`.
+
+Principe retenu :
+
+- l’application démarre immédiatement avec le dernier thème connu enregistré
+  sur l’appareil ;
+- si aucun thème n’a encore été mémorisé, elle utilise le thème par défaut du
+  code ;
+- elle interroge ensuite discrètement la configuration distante ;
+- si la configuration répond, le thème publié est appliqué et mémorisé ;
+- si la configuration ne répond pas ou si l’appareil est hors réseau, le
+  dernier thème connu reste actif afin d’éviter un retour incohérent en plein
+  hiver ou en pleine saison.
+
+La page `admin.html` permet de publier uniquement le thème actif. Elle ne
+modifie pas les horaires de journée (`dawn`, `day`, `sunset`, `night`), qui
+restent calculés automatiquement selon le lever et le coucher du soleil à
+Brienne-le-Château. Elle ne modifie ni Firebase, ni OneSignal, ni les données
+métier.
+
+Le script Apps Script de référence pour cette configuration distante se trouve
+dans `scripts/theme-admin-appscript.gs`. Après déploiement, son URL doit être
+renseignée dans `assets/js/app-config.js` avec `themeConfigUrl`.
 
 Le 10 juillet 2026, la bêta est passée en thème `autumn` afin de tester la
 mécanique réelle de changement saisonnier. Les thèmes `summer`, `christmas`,
-`winter` et `spring` restent enregistrés et préparés, mais ne sont pas actifs
-tant que la valeur centrale `theme:"autumn"` n’est pas changée dans
-`assets/js/app-config.js`.
+`winter` et `spring` restent enregistrés et préparés. Une fois
+`themeConfigUrl` branché, le changement de saison pourra se faire depuis
+`admin.html`, sans publication de code, tout en conservant le dernier thème
+connu en cas d’absence de réseau.
 
 Le 9 juillet 2026, les thèmes Summer, Autumn, Christmas, Winter et Spring
 disposent d’illustrations WebP classées par moment de journée. Seul le thème

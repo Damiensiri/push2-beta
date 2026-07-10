@@ -1,35 +1,156 @@
 (function initializeAppLayout(){
   const config=window.APP_CONFIG || {};
   const themes=Array.isArray(config.themes)?config.themes:["summer"];
-  const adminStorageKey="ecurie-theme-admin-v1";
+  const themeStorageKey="ecurie-active-theme-v1";
   const dayparts=["dawn","day","sunset","night"];
   const sunCachePrefix="ecurie-theme-sun-v2:";
   const latitude=48.391;
   const longitude=4.527;
   const timeZone="Europe/Paris";
-  const adminSettings=readAdminSettings();
+  const themeConfigUrl=String(config.themeConfigUrl||"").trim();
+  const themeConfigTimeoutMs=Number(config.themeConfigTimeoutMs)||1200;
+  const themeConfigRefreshMs=Number(config.themeConfigRefreshMs)||60000;
   const configuredTheme=themes.includes(config.theme)?config.theme:"summer";
-  const theme=adminSettings.themeMode==="force" && themes.includes(adminSettings.theme)
-    ? adminSettings.theme
-    : configuredTheme;
+  let activeTheme=readStoredTheme()||configuredTheme;
+  let lastThemeConfigCheck=0;
 
-  document.documentElement.dataset.theme=theme;
+  document.documentElement.dataset.theme=activeTheme;
 
-  function readAdminSettings(){
+  function readStoredTheme(){
     try{
-      const raw=localStorage.getItem(adminStorageKey);
-      if(!raw)return {};
+      const raw=localStorage.getItem(themeStorageKey);
+      if(!raw)return "";
       const value=JSON.parse(raw);
-      return value && typeof value==="object" ? value : {};
+      const themeName=typeof value==="string" ? value : value?.theme;
+      return themes.includes(themeName) ? themeName : "";
     }catch(error){
-      return {};
+      return "";
+    }
+  }
+
+  function writeStoredTheme(themeName){
+    if(!themes.includes(themeName))return;
+    try{
+      localStorage.setItem(themeStorageKey,JSON.stringify({
+        theme:themeName,
+        updatedAt:new Date().toISOString()
+      }));
+    }catch(error){}
+  }
+
+  function fadeCurrentStage(transitionDuration){
+    const stage=document.querySelector(".ambient-stage");
+    if(!stage||!transitionDuration)return;
+
+    const style=getComputedStyle(stage);
+    const fade=document.createElement("div");
+    const existing=stage.querySelector(".daypart-fade");
+
+    if(existing)existing.remove();
+
+    fade.className="daypart-fade";
+    fade.setAttribute("aria-hidden","true");
+    fade.style.setProperty("--daypart-transition-duration",transitionDuration+"ms");
+    fade.style.backgroundColor=style.backgroundColor;
+    fade.style.backgroundImage=style.backgroundImage;
+    fade.style.backgroundRepeat=style.backgroundRepeat;
+    fade.style.backgroundPosition=style.backgroundPosition;
+    fade.style.backgroundSize=style.backgroundSize;
+    stage.appendChild(fade);
+
+    requestAnimationFrame(()=>{
+      fade.classList.add("is-fading");
+    });
+
+    setTimeout(()=>{
+      fade.remove();
+    },transitionDuration+1200);
+  }
+
+  function applyThemeMeta(){
+    const themeMeta=document.querySelector('meta[name="theme-color"]');
+    if(!themeMeta||!document.body)return;
+
+    const themeColor=getComputedStyle(document.body)
+      .getPropertyValue("--browser-theme-color")
+      .trim();
+
+    if(themeColor)themeMeta.setAttribute("content",themeColor);
+  }
+
+  function setActiveTheme(themeName,options){
+    const settings=options||{};
+    if(!themes.includes(themeName))return false;
+
+    if(activeTheme!==themeName){
+      fadeCurrentStage(Number(settings.transitionDuration)||0);
+      activeTheme=themeName;
+    }
+
+    document.documentElement.dataset.theme=activeTheme;
+    if(document.body)document.body.dataset.theme=activeTheme;
+    if(settings.persist)writeStoredTheme(activeTheme);
+    applyThemeMeta();
+    return true;
+  }
+
+  function withCacheBust(url){
+    try{
+      const parsed=new URL(url,location.href);
+      parsed.searchParams.set("_",String(Date.now()));
+      return parsed.toString();
+    }catch(error){
+      return url+(url.includes("?")?"&":"?")+"_="+Date.now();
+    }
+  }
+
+  function pickThemeFromConfig(value){
+    const themeName=value?.theme||value?.activeTheme||value?.currentTheme;
+    return themes.includes(themeName) ? themeName : "";
+  }
+
+  async function fetchThemeConfig(){
+    if(!themeConfigUrl)return null;
+
+    const controller=typeof AbortController==="function" ? new AbortController() : null;
+    const timer=controller ? setTimeout(()=>controller.abort(),themeConfigTimeoutMs) : null;
+
+    try{
+      const response=await fetch(withCacheBust(themeConfigUrl),{
+        cache:"no-store",
+        signal:controller?.signal
+      });
+      if(!response.ok)throw new Error("Configuration thème "+response.status);
+      return await response.json();
+    }finally{
+      if(timer)clearTimeout(timer);
+    }
+  }
+
+  async function syncRemoteTheme(options){
+    const settings=options||{};
+    if(!themeConfigUrl)return;
+    const now=Date.now();
+
+    if(!settings.force && now-lastThemeConfigCheck<themeConfigRefreshMs)return;
+    lastThemeConfigCheck=now;
+
+    try{
+      const remoteConfig=await fetchThemeConfig();
+      const remoteTheme=pickThemeFromConfig(remoteConfig);
+      if(remoteTheme){
+        setActiveTheme(remoteTheme,{
+          transitionDuration:Number(settings.transitionDuration)||1000,
+          persist:true
+        });
+      }
+    }catch(error){
+      /* Hors réseau ou admin indisponible : on conserve le dernier thème connu. */
     }
   }
 
   function forcedDaypart(){
-    return adminSettings.daypartMode==="force" && dayparts.includes(adminSettings.daypart)
-      ? adminSettings.daypart
-      : "";
+    return "";
   }
 
   function localClock(date){
@@ -193,42 +314,11 @@
       const stage=document.querySelector(".ambient-stage");
 
       if(previous && previous!==daypart && stage){
-        const style=getComputedStyle(stage);
-        const fade=document.createElement("div");
-        const existing=stage.querySelector(".daypart-fade");
-
-        if(existing)existing.remove();
-
-        fade.className="daypart-fade";
-        fade.setAttribute("aria-hidden","true");
-        fade.style.setProperty("--daypart-transition-duration",(transitionDuration||defaultTransition)+"ms");
-        fade.style.backgroundColor=style.backgroundColor;
-        fade.style.backgroundImage=style.backgroundImage;
-        fade.style.backgroundRepeat=style.backgroundRepeat;
-        fade.style.backgroundPosition=style.backgroundPosition;
-        fade.style.backgroundSize=style.backgroundSize;
-        stage.appendChild(fade);
-
-        requestAnimationFrame(()=>{
-          fade.classList.add("is-fading");
-        });
-
-        setTimeout(()=>{
-          fade.remove();
-        },(transitionDuration||defaultTransition)+1200);
+        fadeCurrentStage(transitionDuration||defaultTransition);
       }
 
       document.documentElement.dataset.daypart=daypart;
       document.body.dataset.daypart=daypart;
-    }
-
-    function applyThemeMeta(){
-      const themeMeta=document.querySelector('meta[name="theme-color"]');
-      const themeColor=getComputedStyle(document.body)
-        .getPropertyValue("--browser-theme-color")
-        .trim();
-
-      if(themeMeta && themeColor)themeMeta.setAttribute("content",themeColor);
     }
 
     function applySunTimes(times,transitionDuration){
@@ -286,23 +376,35 @@
     syncThemeBackground(resumeTransition);
 
     document.addEventListener("visibilitychange",()=>{
-      if(!document.hidden)syncThemeBackground(resumeTransition);
+      if(!document.hidden){
+        syncRemoteTheme({transitionDuration:resumeTransition});
+        syncThemeBackground(resumeTransition);
+      }
     });
 
     window.addEventListener("pageshow",()=>{
+      syncRemoteTheme({transitionDuration:resumeTransition,force:true});
       syncThemeBackground(resumeTransition);
     });
   }
 
   window.AppLayout=Object.freeze({
-    adminStorageKey,
-    theme,
+    themeStorageKey,
+    themeConfigUrl,
+    get theme(){
+      return activeTheme;
+    },
+    setLocalTheme(themeName){
+      return setActiveTheme(themeName,{transitionDuration:1000,persist:true});
+    },
+    syncRemoteTheme,
     goBack
   });
   window.goBack=goBack;
 
   window.addEventListener("DOMContentLoaded",()=>{
-    document.body.dataset.theme=theme;
+    document.body.dataset.theme=activeTheme;
     initializeThemeBackground();
+    syncRemoteTheme({transitionDuration:1000,force:true});
   });
 })();
