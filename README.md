@@ -133,9 +133,9 @@ assets/
         winter-night.webp
 ```
 
-Le thème par défaut reste défini dans `assets/js/app-config.js`. Le thème
-actif peut désormais être piloté par une configuration distante optionnelle,
-via `themeConfigUrl`.
+Le thème par défaut reste défini dans `assets/js/app-config.js`, mais il sert
+désormais principalement de secours. Le thème actif peut être piloté à distance
+via `themeConfigUrl` et la page `admin.html`.
 
 Principe retenu :
 
@@ -159,12 +159,38 @@ Le script Apps Script de référence pour cette configuration distante se trouve
 dans `scripts/theme-admin-appscript.gs`. Après déploiement, son URL doit être
 renseignée dans `assets/js/app-config.js` avec `themeConfigUrl`.
 
-Le 10 juillet 2026, la bêta est passée en thème `autumn` afin de tester la
-mécanique réelle de changement saisonnier. Les thèmes `summer`, `christmas`,
-`winter` et `spring` restent enregistrés et préparés. Une fois
-`themeConfigUrl` branché, le changement de saison pourra se faire depuis
-`admin.html`, sans publication de code, tout en conservant le dernier thème
-connu en cas d’absence de réseau.
+Le 10 juillet 2026, la mécanique distante a été validée en bêta. Le changement
+de saison se fait depuis `admin.html`, sans publication de code et sans bump de
+version. La PWA conserve le dernier thème connu en cas d’absence de réseau ou
+si Apps Script ne répond pas.
+
+#### Administration distante du thème
+
+Source normale du thème actif :
+
+1. `admin.html` envoie le thème choisi à l’Apps Script configuré dans
+   `themeConfigUrl`.
+2. L’Apps Script stocke le thème dans la propriété `PWA_ACTIVE_THEME`.
+3. À l’ouverture, au retour au premier plan et périodiquement, la PWA relit
+   cette configuration distante.
+4. Si le thème reçu est valide, il est appliqué et mémorisé localement.
+5. Si la configuration distante échoue, la PWA garde le dernier thème connu sur
+   l’appareil.
+
+Le code admin est stocké côté Apps Script dans la propriété
+`PWA_THEME_ADMIN_TOKEN`. Il ne doit pas être utilisé pour protéger une logique
+métier sensible ; il sert uniquement à éviter un changement accidentel de thème
+depuis l’URL d’administration.
+
+Important :
+
+- ne pas utiliser `admin.html` pour modifier les plages `dawn`, `day`,
+  `sunset`, `night` ;
+- ne pas ajouter de logique Firebase ou OneSignal dans l’administration du
+  thème ;
+- ne pas faire revenir l’app sur `summer` en cas d’échec réseau ;
+- ne pas précharger toutes les images de toutes les saisons ;
+- `meteo.html` reste exclue du moteur de thème global.
 
 Le 9 juillet 2026, les thèmes Summer, Autumn, Christmas, Winter et Spring
 disposent d’illustrations WebP classées par moment de journée. Seul le thème
@@ -184,8 +210,9 @@ saisonnier se branche uniquement dans le fichier CSS du thème concerné avec
 présent pour garantir un rendu lisible si l’image n’est pas disponible.
 
 Les images des saisons non actives restent dans le dépôt mais ne doivent pas
-être préchargées. Pour changer de saison aujourd’hui, il faut modifier
-uniquement `assets/js/app-config.js`, tester en bêta, puis publier.
+être préchargées. Pour changer de saison aujourd’hui, utiliser `admin.html`.
+Modifier `assets/js/app-config.js` uniquement en secours technique ou lors d’un
+changement d’architecture.
 
 La page `meteo.html` est une exception permanente et contrôlée : son fond et
 ses animations météo ne doivent pas être remplacés par le thème global.
