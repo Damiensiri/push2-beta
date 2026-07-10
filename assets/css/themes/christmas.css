@@ -1,20 +1,20 @@
 /*
  * Thème Christmas préparé.
- * Palette + illustration horaire + neige très discrète.
- * Non actif tant que APP_CONFIG.theme reste "summer".
+ * Summer reste le socle visuel.
+ * Christmas ne remplace que le décor de fond et garde sa neige discrète.
  */
 :root[data-theme="christmas"]{
   color-scheme:light dark;
-  --text:rgba(255,255,255,.94);
+  --text:rgba(255,255,255,.90);
   --text-strong:rgba(255,255,255,.98);
-  --text-main:rgba(255,255,255,.94);
-  --text-soft:rgba(232,244,255,.78);
-  --glass:rgba(232,244,255,.18);
-  --glass-strong:rgba(232,244,255,.27);
-  --glass-line:rgba(255,255,255,.34);
-  --shadow-card:0 24px 72px rgba(6,22,48,.30);
-  --shadow-soft:0 14px 40px rgba(6,22,48,.24);
-  --info:#ffcf5f;
+  --text-main:rgba(255,255,255,.90);
+  --text-soft:rgba(255,255,255,.70);
+  --glass:rgba(255,255,255,.16);
+  --glass-strong:rgba(255,255,255,.23);
+  --glass-line:rgba(255,255,255,.25);
+  --shadow-card:0 22px 60px rgba(10,35,70,.22);
+  --shadow-soft:0 12px 32px rgba(10,35,70,.16);
+  --info:#ffb23f;
   --sky-top:#1c6eae;
   --sky-mid:#7eb7dc;
   --sky-bottom:#d8edf8;
@@ -23,21 +23,33 @@
   --celestial-glow:rgba(220,238,255,.42);
   --browser-theme-color:#1c6eae;
   --theme-background-image:url("../../images/themes/christmas/christmas-day.webp");
-  --theme-background-overlay:linear-gradient(180deg,rgba(10,32,58,.12),rgba(255,255,255,.02) 46%,rgba(18,54,88,.14));
-  --theme-background-position:center top,center top,center top;
-  --theme-background-size:cover,cover,100% var(--app-canvas-height);
+  --theme-background-overlay:none;
+  --theme-background-position:center center,center center,center top;
+  --theme-background-size:cover,cover,100% 100%;
   --theme-stage-background-size:cover,cover,100% 100%;
   --app-background:linear-gradient(180deg,var(--sky-top),var(--sky-mid) 54%,var(--sky-bottom));
 }
 
 :root[data-theme="christmas"]::after{display:none;}
 :root[data-theme="christmas"] body.app-page{min-height:calc(var(--app-canvas-height) + var(--safe-bottom));}
-:root[data-theme="christmas"] body.app-page > .ambient-stage{position:absolute;inset:0;min-height:calc(100% + var(--safe-bottom) + 160px);height:auto;}
+:root[data-theme="christmas"] body.app-page > .ambient-stage{
+  position:absolute;
+  inset:0;
+  min-height:calc(100% + var(--safe-bottom) + 160px);
+  height:auto;
+  background-image:
+    var(--theme-background-overlay),
+    var(--theme-background-image),
+    var(--app-background);
+  background-repeat:no-repeat,no-repeat,no-repeat;
+  background-position:center center,center center,center top;
+  background-size:cover,cover,100% 100%;
+}
 
 :root[data-theme="christmas"][data-daypart="dawn"]{--theme-background-image:url("../../images/themes/christmas/christmas-dawn.webp");--sky-top:#c4a7ce;--sky-mid:#f1c7cf;--sky-bottom:#dcecf8;--browser-theme-color:#7e91b8;}
 :root[data-theme="christmas"][data-daypart="day"]{--theme-background-image:url("../../images/themes/christmas/christmas-day.webp");--browser-theme-color:#1c6eae;}
 :root[data-theme="christmas"][data-daypart="sunset"]{--theme-background-image:url("../../images/themes/christmas/christmas-sunset.webp");--sky-top:#5a3b52;--sky-mid:#ce7040;--sky-bottom:#d7c2bb;--browser-theme-color:#5a3b52;}
-:root[data-theme="christmas"][data-daypart="night"]{--theme-background-image:url("../../images/themes/christmas/christmas-night.webp");--sky-top:#07152d;--sky-mid:#0d2346;--sky-bottom:#132b4d;--glass:rgba(18,35,64,.42);--glass-strong:rgba(24,44,78,.52);--glass-line:rgba(255,255,255,.20);--browser-theme-color:#07152d;}
+:root[data-theme="christmas"][data-daypart="night"]{--theme-background-image:url("../../images/themes/christmas/christmas-night.webp");--sky-top:#07152d;--sky-mid:#0d2346;--sky-bottom:#132b4d;--browser-theme-color:#07152d;}
 
 :root[data-theme="christmas"] body.app-page::before,
 :root[data-theme="christmas"] body.index-page::before{
@@ -57,4 +69,14 @@
 @keyframes christmasSnow{
   from{background-position:0 -120px,40px -180px;}
   to{background-position:0 120px,40px 180px;}
+}
+
+@media (prefers-color-scheme:dark){
+  :root[data-theme="christmas"]{
+    --glass:rgba(18,28,46,.36);
+    --glass-strong:rgba(24,36,58,.46);
+    --glass-line:rgba(255,255,255,.16);
+    --shadow-card:0 24px 70px rgba(0,0,0,.34);
+    --shadow-soft:0 14px 36px rgba(0,0,0,.26);
+  }
 }

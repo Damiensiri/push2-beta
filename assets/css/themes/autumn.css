@@ -1,20 +1,21 @@
 /*
  * Thème Autumn.
- * Palette + illustration horaire + décor discret.
+ * Summer reste le socle visuel.
+ * Autumn ne remplace que le décor de fond et garde ses feuilles discrètes.
  * Le thème n'est chargé visuellement que si APP_CONFIG.theme = "autumn".
  */
 :root[data-theme="autumn"]{
   color-scheme:light dark;
-  --text:rgba(255,255,255,.92);
+  --text:rgba(255,255,255,.90);
   --text-strong:rgba(255,255,255,.98);
-  --text-main:rgba(255,255,255,.92);
-  --text-soft:rgba(255,242,220,.74);
-  --glass:rgba(255,232,190,.20);
-  --glass-strong:rgba(255,220,165,.28);
-  --glass-line:rgba(255,216,150,.34);
-  --shadow-card:0 24px 68px rgba(58,31,18,.30);
-  --shadow-soft:0 14px 38px rgba(58,31,18,.22);
-  --info:#ffb640;
+  --text-main:rgba(255,255,255,.90);
+  --text-soft:rgba(255,255,255,.70);
+  --glass:rgba(255,255,255,.16);
+  --glass-strong:rgba(255,255,255,.23);
+  --glass-line:rgba(255,255,255,.25);
+  --shadow-card:0 22px 60px rgba(10,35,70,.22);
+  --shadow-soft:0 12px 32px rgba(10,35,70,.16);
+  --info:#ffb23f;
   --sky-top:#5b3827;
   --sky-mid:#b56f3d;
   --sky-bottom:#efad63;
@@ -25,10 +26,9 @@
   --celestial-glow:rgba(255,198,102,.55);
   --browser-theme-color:#5b3827;
   --theme-background-image:url("../../images/themes/autumn/autumn-day.webp");
-  --theme-background-overlay:
-    linear-gradient(180deg,rgba(43,22,10,.16) 0%,rgba(255,194,102,.02) 45%,rgba(70,29,9,.16) 100%);
-  --theme-background-position:center top,center top,center top;
-  --theme-background-size:cover,cover,100% var(--app-canvas-height);
+  --theme-background-overlay:none;
+  --theme-background-position:center center,center center,center top;
+  --theme-background-size:cover,cover,100% 100%;
   --theme-stage-background-size:cover,cover,100% 100%;
   --app-background:
     radial-gradient(circle at 78% 34%,rgba(255,236,180,.56) 0 3%,rgba(255,194,86,.30) 7%,transparent 31%),
@@ -49,6 +49,13 @@
   inset:0;
   min-height:calc(100% + var(--safe-bottom) + 160px);
   height:auto;
+  background-image:
+    var(--theme-background-overlay),
+    var(--theme-background-image),
+    var(--app-background);
+  background-repeat:no-repeat,no-repeat,no-repeat;
+  background-position:center center,center center,center top;
+  background-size:cover,cover,100% 100%;
 }
 
 :root[data-theme="autumn"][data-daypart="dawn"]{
@@ -80,11 +87,6 @@
   --sky-top:#071226;
   --sky-mid:#16243c;
   --sky-bottom:#271d18;
-  --glass:rgba(38,50,64,.42);
-  --glass-strong:rgba(45,58,74,.52);
-  --glass-line:rgba(255,214,150,.18);
-  --shadow-card:0 24px 72px rgba(0,0,0,.44);
-  --shadow-soft:0 14px 38px rgba(0,0,0,.32);
   --celestial-glow:rgba(255,206,142,.18);
   --solar-opacity:.18;
   --browser-theme-color:#071226;
@@ -113,4 +115,14 @@
 @keyframes autumnLeavesFloat{
   0%{transform:translate3d(-1%,0,0) rotate(-1deg);opacity:.06;}
   100%{transform:translate3d(1%,1%,0) rotate(1deg);opacity:.10;}
+}
+
+@media (prefers-color-scheme:dark){
+  :root[data-theme="autumn"]{
+    --glass:rgba(18,28,46,.36);
+    --glass-strong:rgba(24,36,58,.46);
+    --glass-line:rgba(255,255,255,.16);
+    --shadow-card:0 24px 70px rgba(0,0,0,.34);
+    --shadow-soft:0 14px 36px rgba(0,0,0,.26);
+  }
 }
