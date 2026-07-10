@@ -135,14 +135,16 @@ assets/
 
 Le thème actif est défini uniquement dans `assets/js/app-config.js`.
 
-`summer` reste le thème actif. Les thèmes `autumn`, `christmas`, `winter` et
-`spring` sont enregistrés et préparés, mais ne sont pas activés tant que la
-valeur centrale `theme:"summer"` n’est pas changée dans `assets/js/app-config.js`.
+Le 10 juillet 2026, la bêta est passée en thème `autumn` afin de tester la
+mécanique réelle de changement saisonnier. Les thèmes `summer`, `christmas`,
+`winter` et `spring` restent enregistrés et préparés, mais ne sont pas actifs
+tant que la valeur centrale `theme:"autumn"` n’est pas changée dans
+`assets/js/app-config.js`.
 
 Le 9 juillet 2026, les thèmes Summer, Autumn, Christmas, Winter et Spring
-disposent d’illustrations WebP classées par moment de journée. Summer est le
-seul thème actif. Autumn, Christmas, Winter et Spring restent prêts pour les
-prochains changements saisonniers, sans être préchargés inutilement.
+disposent d’illustrations WebP classées par moment de journée. Seul le thème
+défini dans `assets/js/app-config.js` est actif ; les autres restent prêts pour
+les prochains changements saisonniers, sans être préchargés inutilement.
 
 L’architecture des thèmes devient hybride :
 
