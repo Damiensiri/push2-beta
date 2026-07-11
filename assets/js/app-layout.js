@@ -105,7 +105,9 @@
   }
 
   function pickThemeFromConfig(value){
-    const themeName=value?.theme||value?.activeTheme||value?.currentTheme;
+    const themeName=String(value?.theme||value?.activeTheme||value?.currentTheme||"")
+      .trim()
+      .toLowerCase();
     return themes.includes(themeName) ? themeName : "";
   }
 
