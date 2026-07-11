@@ -538,6 +538,197 @@ header h1{
   -webkit-user-select:none;
 }
 
+.pwa-install-sheet[hidden]{
+  display:none;
+}
+
+.pwa-install-sheet{
+  position:fixed;
+  left:50%;
+  right:auto;
+  bottom:calc(14px + var(--safe-bottom));
+  z-index:1400;
+  width:min(354px,calc(100vw - 28px));
+  color:var(--text-strong);
+  opacity:0;
+  pointer-events:none;
+  transform:translate3d(-50%,18px,0) scale(.985);
+  transition:opacity .26s ease,transform .26s ease;
+}
+
+.pwa-install-sheet.is-visible{
+  opacity:1;
+  pointer-events:auto;
+  transform:translate3d(-50%,0,0) scale(1);
+}
+
+.pwa-install-sheet__content{
+  position:relative;
+  overflow:hidden;
+  padding:18px 18px 16px;
+  border:1px solid rgba(255,255,255,.26);
+  border-radius:26px;
+  background:
+    radial-gradient(circle at 16% 0%,rgba(255,255,255,.28),transparent 36%),
+    linear-gradient(145deg,rgba(255,255,255,.22),rgba(255,255,255,.10)),
+    rgba(23,62,101,.58);
+  box-shadow:
+    0 22px 54px rgba(5,22,45,.30),
+    inset 0 1px 0 rgba(255,255,255,.24);
+  backdrop-filter:blur(24px) saturate(1.22);
+  -webkit-backdrop-filter:blur(24px) saturate(1.22);
+}
+
+.pwa-install-sheet__content::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  background:linear-gradient(180deg,rgba(255,255,255,.12),transparent 58%);
+}
+
+.pwa-install-sheet__close{
+  position:absolute;
+  top:10px;
+  right:10px;
+  z-index:3;
+  width:30px;
+  height:30px;
+  display:grid;
+  place-items:center;
+  border:1px solid rgba(255,255,255,.24);
+  border-radius:50%;
+  color:rgba(255,255,255,.90);
+  background:rgba(255,255,255,.14);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.18);
+  font-size:21px;
+  line-height:1;
+  cursor:pointer;
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
+}
+
+.pwa-install-sheet__eyebrow,
+.pwa-install-sheet h2,
+.pwa-install-sheet p,
+.pwa-install-sheet__benefits,
+.pwa-install-sheet__ios-steps,
+.pwa-install-sheet__actions{
+  position:relative;
+  z-index:1;
+}
+
+.pwa-install-sheet__eyebrow{
+  margin-bottom:5px;
+  color:rgba(255,255,255,.62);
+  font-size:9px;
+  font-weight:700;
+  letter-spacing:.18em;
+  text-transform:uppercase;
+}
+
+.pwa-install-sheet h2{
+  max-width:260px;
+  margin:0 0 7px;
+  color:#fff;
+  font-size:19px;
+  font-weight:700;
+  line-height:1.12;
+  text-shadow:0 10px 28px rgba(4,22,45,.28);
+}
+
+.pwa-install-sheet p{
+  margin:0 0 10px;
+  color:rgba(255,255,255,.78);
+  font-size:12px;
+  font-weight:500;
+  line-height:1.45;
+}
+
+.pwa-install-sheet__benefits{
+  margin:0 0 12px;
+  padding:0;
+  display:grid;
+  gap:5px;
+  color:rgba(255,255,255,.72);
+  font-size:11px;
+  font-weight:500;
+  line-height:1.35;
+  list-style:none;
+}
+
+.pwa-install-sheet__benefits li{
+  padding-left:18px;
+  position:relative;
+}
+
+.pwa-install-sheet__benefits li::before{
+  content:"✓";
+  position:absolute;
+  left:0;
+  top:0;
+  color:#99e6ff;
+  font-weight:700;
+}
+
+.pwa-install-sheet__ios-steps{
+  display:none;
+  margin:4px 0 13px;
+  padding:10px 12px 10px 30px;
+  border:1px solid rgba(255,255,255,.18);
+  border-radius:17px;
+  color:rgba(255,255,255,.78);
+  background:rgba(255,255,255,.10);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.12);
+  font-size:11px;
+  font-weight:500;
+  line-height:1.45;
+}
+
+.pwa-install-sheet--ios .pwa-install-sheet__ios-steps{
+  display:grid;
+  gap:4px;
+}
+
+.pwa-install-sheet__actions{
+  display:flex;
+  gap:9px;
+  align-items:center;
+}
+
+.pwa-install-sheet__primary,
+.pwa-install-sheet__secondary{
+  min-height:42px;
+  border-radius:999px;
+  font-family:var(--font-main);
+  font-size:12px;
+  font-weight:700;
+  cursor:pointer;
+}
+
+.pwa-install-sheet__primary{
+  flex:1;
+  border:1px solid rgba(255,255,255,.26);
+  color:#fff;
+  background:
+    radial-gradient(circle at 20% 0%,rgba(255,255,255,.32),transparent 42%),
+    linear-gradient(145deg,rgba(44,160,225,.96),rgba(27,101,176,.88));
+  box-shadow:0 14px 26px rgba(6,53,105,.22),inset 0 1px 0 rgba(255,255,255,.26);
+}
+
+.pwa-install-sheet__secondary{
+  padding:0 15px;
+  border:1px solid rgba(255,255,255,.18);
+  color:rgba(255,255,255,.76);
+  background:rgba(255,255,255,.10);
+}
+
+.pwa-install-sheet__primary:active,
+.pwa-install-sheet__secondary:active,
+.pwa-install-sheet__close:active{
+  transform:scale(.96);
+}
+
 @keyframes ambientBreath{
   0%{filter:saturate(1);transform:scale(1);}
   100%{filter:saturate(1.08);transform:scale(1.035);}

@@ -8,7 +8,7 @@
 <title>Ecurie Damien Siri</title>
 
 <script>
-const APP_VERSION="20260710-230129";
+const APP_VERSION="20260711-192626";
 const APP_BASE_URL=new URL("./",window.location.href);
 const IS_BETA=window.location.hostname==="damiensiri.github.io" &&
               APP_BASE_URL.pathname==="/push2-beta/";
@@ -71,18 +71,19 @@ cancelButton:"Plus tard"
 }
 </script>
 
-<script src="assets/js/app-config.js?v=20260710-230129"></script>
-<script src="assets/js/app-layout.js?v=20260710-230129"></script>
-<script src="assets/js/profile-store.js?v=20260710-230129" defer></script>
-<script src="assets/js/pages/index-profile.js?v=20260710-230129" defer></script>
+<script src="assets/js/app-config.js?v=20260711-192626"></script>
+<script src="assets/js/app-layout.js?v=20260711-192626"></script>
+<script src="assets/js/profile-store.js?v=20260711-192626" defer></script>
+<script src="assets/js/pages/index-profile.js?v=20260711-192626" defer></script>
+<script src="assets/js/pages/index-install-prompt.js?v=20260711-192626" defer></script>
 
-<link rel="stylesheet" href="assets/css/app.css?v=20260710-230129">
-<link rel="stylesheet" href="assets/css/themes/summer.css?v=20260710-230129">
-<link rel="stylesheet" href="assets/css/themes/autumn.css?v=20260710-230129">
-<link rel="stylesheet" href="assets/css/themes/christmas.css?v=20260710-230129">
-<link rel="stylesheet" href="assets/css/themes/winter.css?v=20260710-230129">
-<link rel="stylesheet" href="assets/css/themes/spring.css?v=20260710-230129">
-<link rel="stylesheet" href="assets/css/pages/index.css?v=20260710-230129">
+<link rel="stylesheet" href="assets/css/app.css?v=20260711-192626">
+<link rel="stylesheet" href="assets/css/themes/summer.css?v=20260711-192626">
+<link rel="stylesheet" href="assets/css/themes/autumn.css?v=20260711-192626">
+<link rel="stylesheet" href="assets/css/themes/christmas.css?v=20260711-192626">
+<link rel="stylesheet" href="assets/css/themes/winter.css?v=20260711-192626">
+<link rel="stylesheet" href="assets/css/themes/spring.css?v=20260711-192626">
+<link rel="stylesheet" href="assets/css/pages/index.css?v=20260711-192626">
 </head>
 
 <!-- REMPLACE UNIQUEMENT ÇA -->
@@ -167,6 +168,34 @@ cancelButton:"Plus tard"
 </div>
 </div>
 </div>
+
+<aside id="pwaInstallSheet" class="pwa-install-sheet" aria-labelledby="pwaInstallTitle" hidden>
+<button class="pwa-install-sheet__close" type="button" data-install-dismiss aria-label="Fermer">×</button>
+
+<div class="pwa-install-sheet__content">
+<div class="pwa-install-sheet__eyebrow">Application</div>
+<h2 id="pwaInstallTitle">Profitez de l’expérience complète</h2>
+<p>
+Ouvrez l’écurie en plein écran, recevez les notifications en temps réel et gardez un accès rapide depuis votre écran d’accueil.
+</p>
+
+<ul class="pwa-install-sheet__benefits">
+<li>Thèmes synchronisés avec les saisons et la lumière du jour.</li>
+<li>Utilisation plus fluide même avec une connexion limitée.</li>
+</ul>
+
+<ol class="pwa-install-sheet__ios-steps" aria-label="Installation sur iPhone">
+<li>Touchez le bouton <strong>Partager</strong>.</li>
+<li>Choisissez <strong>Sur l’écran d’accueil</strong>.</li>
+<li>Validez avec <strong>Ajouter</strong>.</li>
+</ol>
+
+<div class="pwa-install-sheet__actions">
+<button id="pwaInstallAction" class="pwa-install-sheet__primary" type="button">Installer l’application</button>
+<button class="pwa-install-sheet__secondary" type="button" data-install-dismiss>Plus tard</button>
+</div>
+</div>
+</aside>
 
 <script>
 
