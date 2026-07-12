@@ -11,10 +11,44 @@
   const themeConfigTimeoutMs=Number(config.themeConfigTimeoutMs)||1200;
   const themeConfigRefreshMs=Number(config.themeConfigRefreshMs)||60000;
   const configuredTheme=themes.includes(config.theme)?config.theme:"summer";
-  let activeTheme=readStoredTheme()||configuredTheme;
+  let activeTheme=readStoredTheme()||seasonalFallbackTheme()||configuredTheme;
   let lastThemeConfigCheck=0;
 
   document.documentElement.dataset.theme=activeTheme;
+
+  function seasonalFallbackTheme(){
+    try{
+      const parts={};
+      new Intl.DateTimeFormat("en-CA",{
+        timeZone,
+        month:"2-digit",
+        day:"2-digit"
+      }).formatToParts(new Date()).forEach(part=>{
+        if(part.type!=="literal")parts[part.type]=part.value;
+      });
+
+      const month=Number(parts.month);
+      const day=Number(parts.day);
+      const dayKey=month*100+day;
+      let themeName="summer";
+
+      if(dayKey>=1201||dayKey<=102){
+        themeName="christmas";
+      }else if(dayKey>=103&&dayKey<=319){
+        themeName="winter";
+      }else if(dayKey>=320&&dayKey<=620){
+        themeName="spring";
+      }else if(dayKey>=621&&dayKey<=921){
+        themeName="summer";
+      }else if(dayKey>=922&&dayKey<=1130){
+        themeName="autumn";
+      }
+
+      return themes.includes(themeName) ? themeName : "";
+    }catch(error){
+      return "";
+    }
+  }
 
   function readStoredTheme(){
     try{
