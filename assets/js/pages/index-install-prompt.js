@@ -5,6 +5,7 @@
   if(!sheet)return;
 
   const installButton=document.getElementById("pwaInstallAction");
+  const installIntro=document.getElementById("pwaInstallIntro");
   const dismissButtons=sheet.querySelectorAll("[data-install-dismiss]");
   const DISMISS_KEY="pwa_install_dismissed_until";
   const INSTALLED_KEY="pwa_install_confirmed";
@@ -29,6 +30,10 @@
   function isIOS(){
     return /iphone|ipad|ipod/i.test(window.navigator.userAgent || "") ||
       (window.navigator.platform === "MacIntel" && window.navigator.maxTouchPoints > 1);
+  }
+
+  function isSamsungInternet(){
+    return /SamsungBrowser/i.test(window.navigator.userAgent || "");
   }
 
   function isDismissed(){
@@ -86,8 +91,16 @@
     sheet.classList.toggle("pwa-install-sheet--ios",isIOS());
     sheet.classList.toggle("pwa-install-sheet--native",Boolean(deferredInstallPrompt));
 
+    if(installIntro){
+      if(isSamsungInternet()){
+        installIntro.textContent="Pour une installation optimal, ouvrez cette page dans Google Chrome puis installez l’application. Vous pouvez aussi continuer ici si vous préférez.";
+      }else{
+        installIntro.textContent="Ouvrez l’écurie en plein écran, recevez les notifications en temps réel et gardez un accès rapide depuis votre écran d’accueil.";
+      }
+    }
+
     if(installButton){
-      if(isIOS()){
+      if(isIOS() || isSamsungInternet()){
         installButton.textContent="J’ai compris";
       }else if(deferredInstallPrompt){
         installButton.textContent="Installer l’application";
@@ -138,7 +151,7 @@
 
   if(installButton){
     installButton.addEventListener("click",async()=>{
-      if(isIOS() || !deferredInstallPrompt){
+      if(isIOS() || isSamsungInternet() || !deferredInstallPrompt){
         rememberDismissal();
         hideSheet();
         return;
