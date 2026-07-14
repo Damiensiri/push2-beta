@@ -36,15 +36,34 @@ function formatTime(val){
 
 }
 
-function applyExceptions(data){
+function currentWeekDates(date=new Date()){
+  const parts={};
+  new Intl.DateTimeFormat("en-CA",{
+    timeZone:"Europe/Paris",year:"numeric",month:"2-digit",day:"2-digit"
+  }).formatToParts(date).forEach(part=>{
+    if(part.type!=="literal") parts[part.type]=part.value;
+  });
+  const current=new Date(Date.UTC(Number(parts.year),Number(parts.month)-1,Number(parts.day),12));
+  const currentDay=current.getUTCDay()||7;
+  const monday=new Date(current);
+  monday.setUTCDate(current.getUTCDate()-(currentDay-1));
+  const names=["lundi","mardi","mercredi","jeudi","vendredi","samedi","dimanche"];
+  const dates={};
+  names.forEach((name,index)=>{
+    const day=new Date(monday);
+    day.setUTCDate(monday.getUTCDate()+index);
+    dates[day.toISOString().slice(0,10)]=name;
+  });
+  return dates;
+}
+
+function applyExceptions(data,date=new Date()){
   exceptions={};
+  const weekDates=currentWeekDates(date);
 
   data.forEach(row=>{
-    if(row.date){
-      const d=new Date(row.date);
-      const jour=d.toLocaleDateString("fr-FR",{weekday:"long"}).toLowerCase();
-      exceptions[jour]=row.message;
-    }
+    const jour=weekDates[String(row.date||"")];
+    if(jour) exceptions[jour]=row.message;
   });
 }
 
