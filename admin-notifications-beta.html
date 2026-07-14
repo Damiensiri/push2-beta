@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Administration des alertes — Bêta</title>
 <meta name="theme-color" content="#102b45">
-<link rel="stylesheet" href="assets/css/pages/admin-notifications-beta.css?v=20260714-141500">
+<link rel="stylesheet" href="assets/css/pages/admin-notifications-beta.css?v=20260714-143000">
 </head>
 <body>
 <main class="admin-shell">
@@ -56,13 +56,15 @@
       <label>Message
         <textarea id="message" maxlength="5000" rows="7" required placeholder="Message complet"></textarea>
       </label>
-      <div class="switches">
+      <div class="switches single-option">
         <label class="check"><input id="epingle" type="checkbox"> Épingler l’alerte</label>
-        <label class="check"><input id="active" type="checkbox" checked> Publier dans la PWA</label>
-        <label class="check"><input id="pushRequested" type="checkbox"> Envoyer aussi un push</label>
       </div>
       <p class="safety-note">Le push est réservé aux appareils abonnés à l’application OneSignal bêta.</p>
-      <button id="saveBtn" type="submit">Créer l’alerte</button>
+      <div class="form-actions">
+        <button id="publishBtn" type="submit" name="delivery" value="publish">Publier</button>
+        <button id="sendBtn" class="send" type="submit" name="delivery" value="send">Envoyer</button>
+      </div>
+      <p class="action-help"><strong>Publier</strong> : visible dans la PWA sans push. <strong>Envoyer</strong> : visible dans la PWA avec push.</p>
       <p id="formStatus" class="status" role="status"></p>
     </form>
   </section>
@@ -79,6 +81,6 @@
     </div>
   </section>
 </main>
-<script src="assets/js/pages/admin-notifications-beta.js?v=20260714-141500"></script>
+<script src="assets/js/pages/admin-notifications-beta.js?v=20260714-143000"></script>
 </body>
 </html>

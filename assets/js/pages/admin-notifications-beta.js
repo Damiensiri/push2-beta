@@ -13,10 +13,9 @@
     titre:document.getElementById("titre"),
     message:document.getElementById("message"),
     epingle:document.getElementById("epingle"),
-    active:document.getElementById("active"),
-    pushRequested:document.getElementById("pushRequested"),
     formTitle:document.getElementById("formTitle"),
-    save:document.getElementById("saveBtn"),
+    publish:document.getElementById("publishBtn"),
+    send:document.getElementById("sendBtn"),
     cancel:document.getElementById("cancelEditBtn"),
     formStatus:document.getElementById("formStatus"),
     refresh:document.getElementById("refreshBtn"),
@@ -159,10 +158,7 @@
     elements.titre.value=alert.titre;
     elements.message.value=alert.message;
     elements.epingle.checked=alert.epingle==="oui";
-    elements.active.checked=alert.active==="oui";
-    elements.pushRequested.checked=Boolean(alert.push_requested);
     elements.formTitle.textContent=`Modifier l’alerte #${alert.id}`;
-    elements.save.textContent="Enregistrer les modifications";
     elements.cancel.hidden=false;
     elements.form.scrollIntoView({behavior:"smooth",block:"start"});
   }
@@ -170,9 +166,7 @@
   function resetForm(){
     elements.form.reset();
     elements.editingId.value="";
-    elements.active.checked=true;
     elements.formTitle.textContent="Nouvelle alerte";
-    elements.save.textContent="Créer l’alerte";
     elements.cancel.hidden=true;
     setStatus(elements.formStatus,"");
   }
@@ -180,16 +174,18 @@
   elements.form.addEventListener("submit",async event=>{
     event.preventDefault();
     const id=elements.editingId.value;
+    const sendPush=event.submitter?.value==="send";
     const payload={
       categorie:elements.categorie.value,
       titre:elements.titre.value,
       message:elements.message.value,
       epingle:elements.epingle.checked,
-      active:elements.active.checked,
-      pushRequested:elements.pushRequested.checked
+      active:true,
+      pushRequested:sendPush
     };
     setStatus(elements.formStatus,"Enregistrement…");
-    elements.save.disabled=true;
+    elements.publish.disabled=true;
+    elements.send.disabled=true;
     try{
       const result=await api(id?`/api/admin/notifications/${id}`:"/api/admin/notifications",{
         method:id?"PATCH":"POST",
@@ -200,7 +196,6 @@
         sent:"Alerte enregistrée et push envoyé.",
         "already-sent":"Alerte enregistrée. Le push avait déjà été envoyé.",
         "not-requested":"Alerte enregistrée sans push.",
-        "inactive-alert":"Alerte enregistrée sans push car elle est inactive.",
         "disabled-in-beta":"Alerte enregistrée. Le push bêta n’est pas encore activé.",
         failed:`Alerte enregistrée, mais le push a échoué${result.push?.error?" : "+result.push.error:"."}`
       };
@@ -210,7 +205,8 @@
     }catch(error){
       setStatus(elements.formStatus,error.message,"error");
     }finally{
-      elements.save.disabled=false;
+      elements.publish.disabled=false;
+      elements.send.disabled=false;
     }
   });
 

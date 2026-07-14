@@ -23,7 +23,7 @@ button{cursor:pointer}
 .panel h2{font-size:19px;margin:0 0 16px}
 .panel-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}
 label{display:block;margin:13px 0 6px;color:#d8e9f4;font-size:13px;font-weight:700}
-input,textarea,select{width:100%;margin-top:7px;border:1px solid #ffffff30;border-radius:14px;padding:13px;color:#fff;background:#061827;outline:none}
+input,textarea,select{width:100%;margin-top:7px;border:1px solid #ffffff30;border-radius:14px;padding:13px;color:#fff;background:#061827;outline:none;font-size:16px}
 input:focus,textarea:focus,select:focus{border-color:#70c7f5;box-shadow:0 0 0 3px #70c7f529}
 textarea{resize:vertical;line-height:1.5}
 
@@ -31,9 +31,13 @@ button{width:100%;border:0;border-radius:14px;padding:13px 16px;background:#ffb2
 button.secondary{width:auto;padding:9px 12px;border:1px solid #ffffff30;background:#ffffff12;color:#fff;font-size:12px}
 .forget-button{margin-top:10px}
 .switches{display:grid;gap:2px;margin:15px 0}
+.single-option{margin-bottom:10px}
 .check{display:flex;align-items:center;gap:10px;margin:4px 0;padding:10px 12px;border-radius:14px;background:#ffffff0d}
 .check input{width:20px;height:20px;margin:0;accent-color:#ffb23f}
 .safety-note{color:#ffd99d;font-size:12px;line-height:1.5}
+.form-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.form-actions .send{background:#63d492;color:#092719}
+.action-help{margin:10px 2px 0;color:#b9d6e6;font-size:11px;line-height:1.45}
 .status{min-height:18px;margin:10px 2px 0;color:#b9ddf2;font-size:12px}
 .status.error{color:#ffaaa7}
 .status.success{color:#a9efc2}
