@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Administration — Bêta</title>
 <meta name="theme-color" content="#102b45">
-<link rel="stylesheet" href="assets/css/pages/admin-notifications-beta.css?v=20260714-170000">
+<link rel="stylesheet" href="assets/css/pages/admin-notifications-beta.css?v=20260714-173000">
 </head>
 <body>
 <main class="admin-shell">
@@ -22,8 +22,8 @@
   </header>
 
   <nav class="admin-tabs" aria-label="Sections d’administration">
-    <button type="button" data-section-button="notifications" class="active">Notifications</button>
-    <button type="button" data-section-button="spaces">Espaces</button>
+    <button type="button" data-section-button="spaces" class="active">Espaces</button>
+    <button type="button" data-section-button="notifications">Notifications</button>
     <button type="button" data-section-button="general">Écuries</button>
     <button type="button" data-section-button="exceptions">Exceptions</button>
     <button type="button" data-section-button="home-alert">Alerte accueil</button>
@@ -42,7 +42,7 @@
     <p id="connectionStatus" class="status" role="status"></p>
   </section>
 
-  <div data-admin-section="notifications">
+  <div data-admin-section="notifications" hidden>
   <section class="panel" aria-labelledby="formTitle">
     <div class="panel-heading">
       <h2 id="formTitle">Nouvelle alerte</h2>
@@ -96,12 +96,20 @@
   </section>
   </div>
 
-  <section class="admin-section" data-admin-section="spaces" hidden>
+  <section class="admin-section" data-admin-section="spaces">
+    <div class="panel spaces-overview">
+      <h2>Espaces</h2>
+      <p class="section-help">Touchez un statut pour le changer immédiatement. Le chevron ouvre tous les réglages.</p>
+      <div id="spacePills" class="space-pills"></div>
+      <p id="spaceListStatus" class="status" role="status"></p>
+    </div>
+    <div id="spaceEditor" hidden>
     <div class="panel">
-      <h2>Statut d’un espace</h2>
-      <label>Espace
-        <select id="spaceSelect"></select>
-      </label>
+      <div class="panel-heading">
+        <h2 id="spaceEditorTitle">Modifier l’espace</h2>
+        <button id="closeSpaceEditorBtn" class="secondary" type="button">Fermer</button>
+      </div>
+      <select id="spaceSelect" hidden aria-label="Espace sélectionné"></select>
       <label>Statut
         <select id="spaceStatus">
           <option value="ouvert">Ouvert / Auto</option>
@@ -133,6 +141,7 @@
       <div id="spaceSchedules" class="schedule-grid"></div>
       <button id="saveSpaceSchedulesBtn" type="button">Enregistrer les horaires</button>
       <p id="spaceSchedulesStatus" class="status" role="status"></p>
+    </div>
     </div>
   </section>
 
@@ -176,7 +185,7 @@
     </div>
   </section>
 </main>
-<script src="assets/js/notification-format.js?v=20260714-170000"></script>
-<script src="assets/js/pages/admin-notifications-beta.js?v=20260714-170000"></script>
+<script src="assets/js/notification-format.js?v=20260714-173000"></script>
+<script src="assets/js/pages/admin-notifications-beta.js?v=20260714-173000"></script>
 </body>
 </html>

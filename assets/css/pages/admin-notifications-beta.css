@@ -92,6 +92,21 @@ button.secondary{width:auto;padding:9px 12px;border:1px solid #ffffff30;backgrou
 .alert-item button.danger{border:1px solid #ffaaa766;background:#d05a5a2e;color:#ffc0bd}
 .empty{color:#b5cedd;text-align:center;padding:16px}
 .section-help{margin:-7px 0 14px;color:#b9d6e6;font-size:12px;line-height:1.45}
+.space-pills{display:grid;gap:12px}
+.space-pill{padding:14px;border:1px solid #ffffff24;border-radius:20px;background:#071b2b80}
+.space-pill-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.space-summary{display:grid;gap:4px;min-width:0}
+.space-summary strong{font-size:16px}
+.space-summary span{color:#b9d6e6;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.space-chevron{flex:0 0 42px;width:42px;height:42px;padding:0;border:1px solid #ffffff30;border-radius:50%;background:#ffffff12;color:#fff;font-size:28px;line-height:1}
+.quick-actions{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:12px}
+.quick-actions button,.quick-toggle button{padding:8px 6px;border:1px solid #ffffff24;background:#ffffff0d;color:#d9ecf6;font-size:10px}
+.quick-actions button.selected,.quick-toggle button.selected{border-color:#ffb23f;background:#ffb23f;color:#172430}
+.quick-options{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.quick-toggle{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:5px;padding:7px 8px;border-radius:12px;background:#ffffff08}
+.quick-toggle span{font-size:10px;font-weight:800;color:#c9dfed}
+.quick-toggle button{width:auto;padding:6px 7px}
+#spaceEditor{scroll-margin-top:14px}
 .two-columns{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .schedule-grid{display:grid;gap:8px;margin-bottom:14px}
 .schedule-row{display:grid;grid-template-columns:minmax(84px,1fr) 105px 105px;align-items:center;gap:8px;padding:9px;border-radius:14px;background:#071b2b80}
@@ -106,5 +121,6 @@ button.compact{width:auto;padding:8px 10px;font-size:11px}
 @media(max-width:520px){
   .admin-header{display:block}
   .header-actions{margin-top:14px}
+  .quick-options{grid-template-columns:1fr}
   .schedule-row{grid-template-columns:82px 1fr 1fr}
 }

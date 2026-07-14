@@ -20,6 +20,11 @@
     formStatus:document.getElementById("formStatus"),
     refresh:document.getElementById("refreshBtn"),
     list:document.getElementById("alertsList"),
+    spacePills:document.getElementById("spacePills"),
+    spaceListStatus:document.getElementById("spaceListStatus"),
+    spaceEditor:document.getElementById("spaceEditor"),
+    spaceEditorTitle:document.getElementById("spaceEditorTitle"),
+    closeSpaceEditor:document.getElementById("closeSpaceEditorBtn"),
     spaceSelect:document.getElementById("spaceSelect"),
     spaceStatus:document.getElementById("spaceStatus"),
     spaceLiberte:document.getElementById("spaceLiberte"),
@@ -46,6 +51,7 @@
   };
   let alerts=[];
   let operations={spaces:[],spaceSchedules:[],generalSchedules:[],exceptions:[],homeAlert:{}};
+  let publicStatuses=[];
   const days=["Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi","Dimanche"];
 
   const storedUrl=localStorage.getItem("notifications_beta_api_url")||
@@ -109,9 +115,10 @@
     try{
       const config=settings();
       localStorage.setItem("notifications_beta_api_url",config.base);
-      [alerts,operations]=await Promise.all([
+      [alerts,operations,publicStatuses]=await Promise.all([
         api("/api/admin/notifications"),
-        api("/api/admin/operations")
+        api("/api/admin/operations"),
+        fetch(config.base+"/api/statuses",{cache:"no-store"}).then(response=>response.json())
       ]);
       localStorage.setItem("notifications_beta_admin_token",config.token);
       render();
@@ -133,11 +140,115 @@
       return option;
     }));
     if(operations.spaces.some(space=>space.slug===selected))elements.spaceSelect.value=selected;
+    renderSpacePills();
     renderSelectedSpace();
     renderScheduleInputs(elements.generalSchedules,operations.generalSchedules);
     renderExceptions();
     elements.homeAlertMessage.value=operations.homeAlert?.message||"";
     elements.homeAlertUrgent.checked=operations.homeAlert?.urgent==="oui";
+  }
+
+  function renderSpacePills(){
+    elements.spacePills.replaceChildren();
+    const jsDay=new Date().getDay();
+    const day=jsDay===0?7:jsDay;
+    operations.spaces.forEach(space=>{
+      const current=publicStatuses.find(item=>item.espace===space.slug)||{};
+      const schedule=operations.spaceSchedules.find(item=>item.space_slug===space.slug&&Number(item.day)===day);
+      const pill=document.createElement("article");
+      pill.className="space-pill";
+
+      const summary=document.createElement("div");
+      summary.className="space-summary";
+      const name=document.createElement("strong");
+      name.textContent=space.label;
+      const detail=document.createElement("span");
+      const statusLabel={ouvert:"Ouvert",prevision:"Prévision",ferme:"Fermé","hors-service":"Hors service"}[current.statut_auto||space.manual_status]||"—";
+      const hours=schedule?`${schedule.opens_at}–${schedule.closes_at}`:"—";
+      detail.textContent=`${statusLabel} / ${hours}${space.info?"  💬":""}`;
+      summary.append(name,detail);
+
+      const open=document.createElement("button");
+      open.type="button";
+      open.className="space-chevron";
+      open.textContent="›";
+      open.setAttribute("aria-label",`Modifier ${space.label}`);
+      open.addEventListener("click",()=>openSpaceEditor(space.slug));
+
+      const head=document.createElement("div");
+      head.className="space-pill-head";
+      head.append(summary,open);
+      pill.appendChild(head);
+
+      const statuses=document.createElement("div");
+      statuses.className="quick-actions status-actions";
+      [
+        ["ouvert","Auto"],["prevision","Prévision"],["ferme","Fermé"],["hors-service","HS"]
+      ].forEach(([value,label])=>{
+        const button=document.createElement("button");
+        button.type="button";
+        button.textContent=label;
+        button.classList.toggle("selected",space.manual_status===value);
+        button.addEventListener("click",()=>quickSaveSpace(space,{manualStatus:value}));
+        statuses.appendChild(button);
+      });
+      pill.appendChild(statuses);
+
+      if(space.slug==="carriere"||space.slug==="manege"){
+        const options=document.createElement("div");
+        options.className="quick-options";
+        options.append(
+          quickToggle(space,"Liberté","liberte"),
+          quickToggle(space,"Longe","longe")
+        );
+        pill.appendChild(options);
+      }
+      elements.spacePills.appendChild(pill);
+    });
+  }
+
+  function quickToggle(space,label,field){
+    const wrapper=document.createElement("div");
+    wrapper.className="quick-toggle";
+    const name=document.createElement("span");
+    name.textContent=label;
+    wrapper.appendChild(name);
+    ["oui","non"].forEach(value=>{
+      const button=document.createElement("button");
+      button.type="button";
+      button.textContent=value.toUpperCase();
+      button.classList.toggle("selected",space[field]===value);
+      button.addEventListener("click",()=>quickSaveSpace(space,{[field]:value}));
+      wrapper.appendChild(button);
+    });
+    return wrapper;
+  }
+
+  async function quickSaveSpace(space,changes){
+    setStatus(elements.spaceListStatus,`Mise à jour de ${space.label}…`);
+    try{
+      await api(`/api/admin/spaces/${space.slug}`,{
+        method:"PUT",
+        body:JSON.stringify({
+          manualStatus:changes.manualStatus??space.manual_status,
+          liberte:changes.liberte??space.liberte,
+          longe:changes.longe??space.longe,
+          specialHours:space.special_hours,
+          info:space.info
+        })
+      });
+      await refreshOperations();
+      setStatus(elements.spaceListStatus,`${space.label} mis à jour.`,"success");
+    }catch(error){setStatus(elements.spaceListStatus,error.message,"error");}
+  }
+
+  function openSpaceEditor(slug){
+    elements.spaceSelect.value=slug;
+    renderSelectedSpace();
+    const space=operations.spaces.find(item=>item.slug===slug);
+    elements.spaceEditorTitle.textContent=`Modifier ${space?.label||"l’espace"}`;
+    elements.spaceEditor.hidden=false;
+    elements.spaceEditor.scrollIntoView({behavior:"smooth",block:"start"});
   }
 
   function renderSelectedSpace(){
@@ -221,7 +332,11 @@
   }
 
   async function refreshOperations(){
-    operations=await api("/api/admin/operations");
+    const config=settings();
+    [operations,publicStatuses]=await Promise.all([
+      api("/api/admin/operations"),
+      fetch(config.base+"/api/statuses",{cache:"no-store"}).then(response=>response.json())
+    ]);
     renderOperations();
   }
 
@@ -385,6 +500,9 @@
   });
 
   elements.spaceSelect.addEventListener("change",renderSelectedSpace);
+  elements.closeSpaceEditor.addEventListener("click",()=>{
+    elements.spaceEditor.hidden=true;
+  });
   elements.saveSpace.addEventListener("click",async()=>{
     const slug=elements.spaceSelect.value;
     setStatus(elements.spaceMessage,"Enregistrement…");
