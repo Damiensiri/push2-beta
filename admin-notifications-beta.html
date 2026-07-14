@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Administration des alertes — Bêta</title>
+<meta name="theme-color" content="#102b45">
+<link rel="stylesheet" href="assets/css/pages/admin-notifications-beta.css">
+</head>
+<body>
+<main class="admin-shell">
+  <header class="admin-header">
+    <div>
+      <span class="environment">BÊTA · PUSH DÉSACTIVÉ</span>
+      <h1>Alertes</h1>
+      <p>Administration mobile du futur système de notifications.</p>
+    </div>
+    <a href="index.html">Retour</a>
+  </header>
+
+  <section class="panel connection-panel" aria-labelledby="connectionTitle">
+    <h2 id="connectionTitle">Connexion au backend bêta</h2>
+    <label>Adresse de l’API
+      <input id="apiUrl" type="url" inputmode="url" placeholder="https://…workers.dev">
+    </label>
+    <label>Jeton d’administration
+      <input id="adminToken" type="password" autocomplete="current-password" placeholder="Jeton non enregistré sur l’appareil">
+    </label>
+    <button id="connectBtn" type="button">Se connecter</button>
+    <p id="connectionStatus" class="status" role="status"></p>
+  </section>
+
+  <section class="panel" aria-labelledby="formTitle">
+    <div class="panel-heading">
+      <h2 id="formTitle">Nouvelle alerte</h2>
+      <button id="cancelEditBtn" class="secondary" type="button" hidden>Annuler</button>
+    </div>
+    <form id="alertForm">
+      <input id="editingId" type="hidden">
+      <label>Catégorie
+        <input id="categorie" maxlength="80" placeholder="Ex. Espace de travail">
+      </label>
+      <label>Titre
+        <input id="titre" maxlength="160" required placeholder="Titre visible dans la liste">
+      </label>
+      <label>Message
+        <textarea id="message" maxlength="5000" rows="7" required placeholder="Message complet"></textarea>
+      </label>
+      <div class="switches">
+        <label class="check"><input id="epingle" type="checkbox"> Épingler l’alerte</label>
+        <label class="check"><input id="active" type="checkbox" checked> Publier dans la PWA</label>
+        <label class="check"><input id="pushRequested" type="checkbox"> Préparer un push</label>
+      </div>
+      <p class="safety-note">En bêta, aucun push ne peut être envoyé. La demande est seulement mémorisée.</p>
+      <button id="saveBtn" type="submit">Créer l’alerte</button>
+      <p id="formStatus" class="status" role="status"></p>
+    </form>
+  </section>
+
+  <section class="panel" aria-labelledby="listTitle">
+    <div class="panel-heading">
+      <h2 id="listTitle">Alertes enregistrées</h2>
+      <button id="refreshBtn" class="secondary" type="button">Actualiser</button>
+    </div>
+    <div id="alertsList" class="alerts-list">
+      <p class="empty">Connectez le backend pour afficher les alertes.</p>
+    </div>
+  </section>
+</main>
+<script src="assets/js/pages/admin-notifications-beta.js"></script>
+</body>
+</html>
+
