@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Administration des alertes — Bêta</title>
 <meta name="theme-color" content="#102b45">
-<link rel="stylesheet" href="assets/css/pages/admin-notifications-beta.css?v=20260714-144500">
+<link rel="stylesheet" href="assets/css/pages/admin-notifications-beta.css?v=20260714-150000">
 </head>
 <body>
 <main class="admin-shell">
@@ -54,6 +54,11 @@
         <input id="titre" maxlength="160" required placeholder="Titre visible dans la liste">
       </label>
       <label>Message
+        <span class="format-toolbar" aria-label="Mise en forme du message">
+          <button type="button" data-format="bold" aria-label="Mettre en gras"><strong>G</strong></button>
+          <button type="button" data-format="underline" aria-label="Souligner"><u>S</u></button>
+          <button type="button" data-format="link" aria-label="Ajouter un lien">Lien</button>
+        </span>
         <textarea id="message" maxlength="5000" rows="7" required placeholder="Message complet"></textarea>
       </label>
       <div class="switches single-option">
@@ -81,6 +86,7 @@
     </div>
   </section>
 </main>
-<script src="assets/js/pages/admin-notifications-beta.js?v=20260714-144500"></script>
+<script src="assets/js/notification-format.js?v=20260714-150000"></script>
+<script src="assets/js/pages/admin-notifications-beta.js?v=20260714-150000"></script>
 </body>
 </html>

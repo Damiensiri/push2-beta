@@ -165,7 +165,7 @@ async function sendRequestedPush(env,alert){
         app_id:env.ONESIGNAL_APP_ID,
         included_segments:["All"],
         headings:{fr:alert.titre,en:alert.titre},
-        contents:{fr:alert.message,en:alert.message},
+        contents:{fr:plainTextMessage(alert.message),en:plainTextMessage(alert.message)},
         url:detailUrl
       })
     });
@@ -204,6 +204,13 @@ function validateAlert(input){
     active:input?.active===false||String(input?.active).toLowerCase()==="non"?"non":"oui",
     pushRequested:input?.pushRequested===true?1:0
   };
+}
+
+function plainTextMessage(value){
+  return String(value||"")
+    .replace(/\[([^\]\n]+)\]\(https?:\/\/[^\s)]+\)/gi,"$1")
+    .replace(/\*\*([^*\n]+)\*\*/g,"$1")
+    .replace(/__([^_\n]+)__/g,"$1");
 }
 
 function parisNow(){
@@ -253,4 +260,4 @@ function json(value,status,headers={}){
   });
 }
 
-export{compatibleAlert,validateAlert,parisNow,isPushEnabled,sendRequestedPush};
+export{compatibleAlert,validateAlert,parisNow,isPushEnabled,sendRequestedPush,plainTextMessage};

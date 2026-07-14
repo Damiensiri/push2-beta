@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  compatibleAlert,validateAlert,parisNow,isPushEnabled,sendRequestedPush
+  compatibleAlert,validateAlert,parisNow,isPushEnabled,sendRequestedPush,plainTextMessage
 } from "../src/worker.js";
 
 test("le contrat public conserve les neuf champs historiques",()=>{
@@ -65,4 +65,11 @@ test("un push déjà envoyé ne peut pas être envoyé deux fois",async()=>{
     push_requested:1,push_sent_at:"2026-07-14T13:00:00.000Z"
   });
   assert.equal(result.status,"already-sent");
+});
+
+test("OneSignal reçoit un message sans marqueurs de mise en forme",()=>{
+  assert.equal(
+    plainTextMessage("**Important**\n__Souligné__\n[Consulter](https://example.com/page)"),
+    "Important\nSouligné\nConsulter"
+  );
 });

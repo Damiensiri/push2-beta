@@ -26,6 +26,8 @@ label{display:block;margin:13px 0 6px;color:#d8e9f4;font-size:13px;font-weight:7
 input,textarea,select{width:100%;margin-top:7px;border:1px solid #ffffff30;border-radius:14px;padding:13px;color:#fff;background:#061827;outline:none;font-size:16px}
 input:focus,textarea:focus,select:focus{border-color:#70c7f5;box-shadow:0 0 0 3px #70c7f529}
 textarea{resize:vertical;line-height:1.5}
+.format-toolbar{display:flex;gap:7px;margin-top:8px}
+.format-toolbar button{width:auto;min-width:42px;padding:8px 11px;border:1px solid #ffffff30;border-radius:10px;background:#ffffff12;color:#fff;font-size:13px}
 
 button{width:100%;border:0;border-radius:14px;padding:13px 16px;background:#ffb23f;color:#172430;font-weight:800}
 button.secondary{width:auto;padding:9px 12px;border:1px solid #ffffff30;background:#ffffff12;color:#fff;font-size:12px}

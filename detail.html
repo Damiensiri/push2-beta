@@ -10,16 +10,16 @@
 
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700&display=swap" rel="stylesheet">
 
-<script src="assets/js/app-config.js?v=20260714-144500"></script>
-<script src="assets/js/app-layout.js?v=20260714-144500"></script>
+<script src="assets/js/app-config.js?v=20260714-150000"></script>
+<script src="assets/js/app-layout.js?v=20260714-150000"></script>
 
-<link rel="stylesheet" href="assets/css/app.css?v=20260714-144500">
-<link rel="stylesheet" href="assets/css/themes/summer.css?v=20260714-144500">
-<link rel="stylesheet" href="assets/css/themes/autumn.css?v=20260714-144500">
-<link rel="stylesheet" href="assets/css/themes/christmas.css?v=20260714-144500">
-<link rel="stylesheet" href="assets/css/themes/winter.css?v=20260714-144500">
-<link rel="stylesheet" href="assets/css/themes/spring.css?v=20260714-144500">
-<link rel="stylesheet" href="assets/css/pages/detail.css?v=20260714-144500">
+<link rel="stylesheet" href="assets/css/app.css?v=20260714-150000">
+<link rel="stylesheet" href="assets/css/themes/summer.css?v=20260714-150000">
+<link rel="stylesheet" href="assets/css/themes/autumn.css?v=20260714-150000">
+<link rel="stylesheet" href="assets/css/themes/christmas.css?v=20260714-150000">
+<link rel="stylesheet" href="assets/css/themes/winter.css?v=20260714-150000">
+<link rel="stylesheet" href="assets/css/themes/spring.css?v=20260714-150000">
+<link rel="stylesheet" href="assets/css/pages/detail.css?v=20260714-150000">
 </head>
 
 <body class="app-page detail-page">
@@ -46,8 +46,19 @@
 </div>
 </div>
 
+<dialog id="externalLinkDialog" class="external-link-dialog">
+  <h2>Ouvrir un lien externe ?</h2>
+  <p>Ce lien va ouvrir Safari et quitter temporairement la PWA.</p>
+  <div class="external-link-actions">
+    <button id="cancelExternalLink" type="button">Annuler</button>
+    <button id="copyExternalLink" type="button">Copier</button>
+    <button id="openExternalLink" type="button">Ouvrir</button>
+  </div>
+</dialog>
+
 </div>
 
+<script src="assets/js/notification-format.js?v=20260714-150000"></script>
 <script>
 
 /* Chargement du détail de l’alerte. */
@@ -139,7 +150,11 @@ async function loadDetail(){
         document.getElementById("titre").innerText=notif.titre;
         document.getElementById("categorie").innerText=notif.categorie||"";
         document.getElementById("heure").innerText=notif.heure||"";
-        document.getElementById("message").innerHTML=notif.message||"";
+        NotificationFormat.render(
+          document.getElementById("message"),
+          notif.message||"",
+          openExternalLinkDialog
+        );
       }
     }
 
@@ -154,6 +169,27 @@ async function loadDetail(){
 function goBack(){
   window.history.back();
 }
+
+const externalLinkDialog=document.getElementById("externalLinkDialog");
+let pendingExternalUrl="";
+
+function openExternalLinkDialog(url){
+  pendingExternalUrl=url;
+  externalLinkDialog.showModal();
+}
+
+document.getElementById("cancelExternalLink").onclick=()=>externalLinkDialog.close();
+document.getElementById("copyExternalLink").onclick=async()=>{
+  try{
+    await navigator.clipboard.writeText(pendingExternalUrl);
+    document.getElementById("copyExternalLink").textContent="Copié";
+    setTimeout(()=>{document.getElementById("copyExternalLink").textContent="Copier";},1200);
+  }catch(e){}
+};
+document.getElementById("openExternalLink").onclick=()=>{
+  externalLinkDialog.close();
+  window.open(pendingExternalUrl,"_blank","noopener,noreferrer");
+};
 
 loadDetail();
 

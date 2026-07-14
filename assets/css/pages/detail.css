@@ -103,6 +103,14 @@ body.detail-page .page{
   font-weight:700;
 }
 
+.external-link-dialog{width:min(420px,calc(100% - 32px));padding:20px;border:1px solid var(--glass-line);border-radius:22px;color:var(--text-main);background:#102d45;box-shadow:var(--shadow-card)}
+.external-link-dialog::backdrop{background:rgba(0,12,24,.72);backdrop-filter:blur(5px)}
+.external-link-dialog h2{margin:0 0 10px;font-size:19px}
+.external-link-dialog p{margin:0 0 18px;color:rgba(255,255,255,.78);font-size:14px;line-height:1.5}
+.external-link-actions{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.external-link-actions button{border:0;border-radius:12px;padding:11px 8px;font:inherit;font-weight:700}
+.external-link-actions button:last-child{background:#ffb23f;color:#172430}
+
 .message p{
   margin:0 0 1em;
 }

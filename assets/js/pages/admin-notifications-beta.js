@@ -105,7 +105,7 @@
 
       const message=document.createElement("p");
       message.className="alert-message";
-      message.textContent=alert.message;
+      message.textContent=NotificationFormat.toPlainText(alert.message);
 
       const badges=document.createElement("div");
       badges.className="badges";
@@ -219,6 +219,42 @@
   });
   elements.refresh.addEventListener("click",loadAlerts);
   elements.cancel.addEventListener("click",resetForm);
+
+  document.querySelectorAll("[data-format]").forEach(button=>{
+    button.addEventListener("click",()=>applyFormat(button.dataset.format));
+  });
+
+  function replaceSelection(before,after,placeholder){
+    const start=elements.message.selectionStart;
+    const end=elements.message.selectionEnd;
+    const selected=elements.message.value.slice(start,end)||placeholder;
+    elements.message.setRangeText(before+selected+after,start,end,"select");
+    elements.message.focus();
+  }
+
+  function applyFormat(format){
+    if(format==="bold")replaceSelection("**","**","texte en gras");
+    if(format==="underline")replaceSelection("__","__","texte souligné");
+    if(format==="link"){
+      const start=elements.message.selectionStart;
+      const end=elements.message.selectionEnd;
+      const selected=elements.message.value.slice(start,end);
+      const label=selected||window.prompt("Texte du lien :","Voir le lien");
+      if(!label)return;
+      let url=window.prompt("Adresse du lien :","https://");
+      if(!url)return;
+      url=url.trim();
+      if(!/^https?:\/\//i.test(url))url="https://"+url;
+      try{
+        const parsed=new URL(url);
+        if(!["http:","https:"].includes(parsed.protocol))throw new Error();
+        elements.message.setRangeText(`[${label}](${parsed.href})`,start,end,"end");
+        elements.message.focus();
+      }catch(error){
+        window.alert("Adresse de lien invalide.");
+      }
+    }
+  }
 
   if(storedToken){
     loadAlerts();
