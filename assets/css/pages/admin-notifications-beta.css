@@ -13,7 +13,9 @@ button{cursor:pointer}
 
 .admin-shell{width:min(760px,100%);margin:auto;padding:calc(20px + env(safe-area-inset-top)) 16px calc(32px + env(safe-area-inset-bottom))}
 .admin-header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:20px}
-.admin-header h1{font-size:34px;margin:8px 0 4px}
+.admin-heading{min-width:0;flex:1}
+.admin-title-row{display:flex;align-items:center;gap:12px}
+.admin-header h1{font-size:34px;margin:0 0 4px;white-space:nowrap}
 .admin-header p{margin:0;color:#c9dfed;line-height:1.45}
 .admin-header a{color:#fff;text-decoration:none;border:1px solid #ffffff40;border-radius:999px;padding:10px 14px;background:#ffffff12}
 .header-actions{display:flex;align-items:center;gap:8px}
@@ -28,6 +30,7 @@ button{cursor:pointer}
 .panel{margin:16px 0;padding:18px;border:1px solid #ffffff30;border-radius:24px;background:#102d45d9;box-shadow:0 18px 48px #00101f4d;backdrop-filter:blur(18px)}
 .panel h2{font-size:19px;margin:0 0 16px}
 .panel-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.panel-heading h2{margin:0}
 label{display:block;margin:13px 0 6px;color:#d8e9f4;font-size:13px;font-weight:700}
 input,textarea,select{width:100%;margin-top:7px;border:1px solid #ffffff30;border-radius:14px;padding:13px;color:#fff;background:#061827;outline:none;font-size:16px}
 input:focus,textarea:focus,select:focus{border-color:#70c7f5;box-shadow:0 0 0 3px #70c7f529}
@@ -120,6 +123,9 @@ button.compact{width:auto;padding:8px 10px;font-size:11px}
 
 @media(max-width:520px){
   .admin-header{display:block}
+  .admin-title-row{justify-content:space-between;gap:8px}
+  .admin-header h1{font-size:28px}
+  .environment{flex:0 0 auto;padding:4px 7px;font-size:8px;letter-spacing:.04em;white-space:nowrap}
   .header-actions{margin-top:14px}
   .quick-options{grid-template-columns:1fr}
   .schedule-row{grid-template-columns:82px 1fr 1fr}

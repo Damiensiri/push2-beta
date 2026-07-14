@@ -20,6 +20,7 @@
     formStatus:document.getElementById("formStatus"),
     refresh:document.getElementById("refreshBtn"),
     list:document.getElementById("alertsList"),
+    refreshSpaces:document.getElementById("refreshSpacesBtn"),
     spacePills:document.getElementById("spacePills"),
     spaceListStatus:document.getElementById("spaceListStatus"),
     spaceEditor:document.getElementById("spaceEditor"),
@@ -49,6 +50,7 @@
   let alerts=[];
   let operations={spaces:[],spaceSchedules:[],generalSchedules:[],exceptions:[],homeAlert:{}};
   let publicStatuses=[];
+  let liveRefreshTimer=null;
   const days=["Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi","Dimanche"];
 
   const storedUrl=localStorage.getItem("notifications_beta_api_url")||
@@ -334,6 +336,16 @@
     renderOperations();
   }
 
+  async function refreshOperationsWithFeedback(message="Données actualisées."){
+    setStatus(elements.spaceListStatus,"Actualisation…");
+    try{
+      await refreshOperations();
+      setStatus(elements.spaceListStatus,message,"success");
+    }catch(error){
+      setStatus(elements.spaceListStatus,error.message,"error");
+    }
+  }
+
   async function deleteException(item){
     if(!window.confirm(`Supprimer l’exception du ${item.date} ?`))return;
     try{
@@ -482,6 +494,7 @@
     setStatus(elements.connectionStatus,"Jeton oublié sur cet appareil.","success");
   });
   elements.refresh.addEventListener("click",loadAlerts);
+  elements.refreshSpaces.addEventListener("click",()=>refreshOperationsWithFeedback());
   elements.cancel.addEventListener("click",resetForm);
 
   document.querySelectorAll("[data-section-button]").forEach(button=>{
@@ -570,6 +583,18 @@
 
   document.querySelectorAll("[data-format]").forEach(button=>{
     button.addEventListener("click",()=>applyFormat(button.dataset.format));
+  });
+
+  window.addEventListener("pwa-data-changed",()=>{
+    if(!elements.token.value)return;
+    clearTimeout(liveRefreshTimer);
+    liveRefreshTimer=setTimeout(()=>refreshOperationsWithFeedback("Mis à jour en direct."),150);
+  });
+
+  document.addEventListener("visibilitychange",()=>{
+    if(document.visibilityState==="visible"&&elements.token.value){
+      refreshOperationsWithFeedback("Données synchronisées.");
+    }
   });
 
   function replaceSelection(before,after,placeholder){

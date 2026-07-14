@@ -5,14 +5,16 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Administration — Bêta</title>
 <meta name="theme-color" content="#102b45">
-<link rel="stylesheet" href="assets/css/pages/admin-notifications-beta.css?v=20260714-183000">
+<link rel="stylesheet" href="assets/css/pages/admin-notifications-beta.css?v=20260714-193000">
 </head>
 <body>
 <main class="admin-shell">
   <header class="admin-header">
-    <div>
-      <span class="environment">BÊTA · PUSH ACTIF</span>
-      <h1>Administration</h1>
+    <div class="admin-heading">
+      <div class="admin-title-row">
+        <h1>Administration</h1>
+        <span class="environment">BÊTA · PUSH ACTIF</span>
+      </div>
       <p>Notifications, espaces et horaires de la PWA bêta.</p>
     </div>
     <div class="header-actions">
@@ -98,7 +100,10 @@
 
   <section class="admin-section" data-admin-section="spaces">
     <div class="panel spaces-overview">
-      <h2>Espaces</h2>
+      <div class="panel-heading">
+        <h2>Espaces</h2>
+        <button id="refreshSpacesBtn" class="secondary" type="button">Actualiser</button>
+      </div>
       <p class="section-help">Touchez un statut pour le changer immédiatement. Le chevron ouvre tous les réglages.</p>
       <div id="spacePills" class="space-pills"></div>
       <p id="spaceListStatus" class="status" role="status"></p>
@@ -169,7 +174,8 @@
     </div>
   </section>
 </main>
-<script src="assets/js/notification-format.js?v=20260714-183000"></script>
-<script src="assets/js/pages/admin-notifications-beta.js?v=20260714-183000"></script>
+<script src="assets/js/notification-format.js?v=20260714-193000"></script>
+<script src="assets/js/pages/admin-notifications-beta.js?v=20260714-193000"></script>
+<script src="assets/js/status-realtime.js?v=20260714-193000"></script>
 </body>
 </html>
