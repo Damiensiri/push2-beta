@@ -123,7 +123,7 @@ function cacheIsFresh(){
 }
 
 function fetchJson(url){
-  return fetch(url+"&t="+Date.now(),{cache:"no-store"}).then(response=>{
+  return fetch(url+"?t="+Date.now(),{cache:"no-store"}).then(response=>{
     if(!response.ok) throw new Error("Réponse réseau invalide");
     return response.json();
   });

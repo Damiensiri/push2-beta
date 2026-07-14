@@ -94,7 +94,7 @@ async function load(){
 
 try{
 
-const r=await fetch(API+"&t="+Date.now(),{cache:"no-store"});
+const r=await fetch(API+"?t="+Date.now(),{cache:"no-store"});
 if(!r.ok) throw new Error("Réponse réseau invalide");
 const data=await r.json();
 

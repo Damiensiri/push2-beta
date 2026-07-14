@@ -43,7 +43,7 @@ panelIconImg.src=PADDOCK_ICONS[espace]||"image/paddock.svg";
 }
 
 function loadData(){
-fetch(SHEET_URL+"&t="+Date.now(),{cache:"no-store"})
+fetch(SHEET_URL+"?t="+Date.now(),{cache:"no-store"})
 .then(r=>{
 if(!r.ok) throw new Error("Réponse réseau invalide");
 return r.json();
