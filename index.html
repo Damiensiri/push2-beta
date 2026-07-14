@@ -8,7 +8,7 @@
 <title>Ecurie Damien Siri</title>
 
 <script>
-const APP_VERSION="20260714-131500";
+const APP_VERSION="20260714-133500";
 const APP_BASE_URL=new URL("./",window.location.href);
 const IS_BETA=window.location.hostname==="damiensiri.github.io" &&
               APP_BASE_URL.pathname==="/push2-beta/";
@@ -46,11 +46,12 @@ if(registration)registration.update();
 
 <script>
 window.OneSignalDeferred = window.OneSignalDeferred || [];
-if(!IS_BETA){
 OneSignalDeferred.push(async function(OneSignal) {
 
-await OneSignal.init({
-appId:"85a477ff-3d8d-4975-960d-c7e69100a0ff",
+const oneSignalConfig={
+appId:IS_BETA
+?"186e6f3b-def4-4b8e-8700-650456ff93cc"
+:"85a477ff-3d8d-4975-960d-c7e69100a0ff",
 notifyButton:{enable:false},
 promptOptions:{
 slidedown:{
@@ -65,25 +66,31 @@ cancelButton:"Plus tard"
 }]
 }
 }
-});
+};
+
+if(IS_BETA){
+oneSignalConfig.serviceWorkerPath="push2-beta/OneSignalSDKWorker.js";
+oneSignalConfig.serviceWorkerParam={scope:"/push2-beta/"};
+}
+
+await OneSignal.init(oneSignalConfig);
 
 });
-}
 </script>
 
-<script src="assets/js/app-config.js?v=20260714-131500"></script>
-<script src="assets/js/app-layout.js?v=20260714-131500"></script>
-<script src="assets/js/profile-store.js?v=20260714-131500" defer></script>
-<script src="assets/js/pages/index-profile.js?v=20260714-131500" defer></script>
-<script src="assets/js/pages/index-install-prompt.js?v=20260714-131500" defer></script>
+<script src="assets/js/app-config.js?v=20260714-133500"></script>
+<script src="assets/js/app-layout.js?v=20260714-133500"></script>
+<script src="assets/js/profile-store.js?v=20260714-133500" defer></script>
+<script src="assets/js/pages/index-profile.js?v=20260714-133500" defer></script>
+<script src="assets/js/pages/index-install-prompt.js?v=20260714-133500" defer></script>
 
-<link rel="stylesheet" href="assets/css/app.css?v=20260714-131500">
-<link rel="stylesheet" href="assets/css/themes/summer.css?v=20260714-131500">
-<link rel="stylesheet" href="assets/css/themes/autumn.css?v=20260714-131500">
-<link rel="stylesheet" href="assets/css/themes/christmas.css?v=20260714-131500">
-<link rel="stylesheet" href="assets/css/themes/winter.css?v=20260714-131500">
-<link rel="stylesheet" href="assets/css/themes/spring.css?v=20260714-131500">
-<link rel="stylesheet" href="assets/css/pages/index.css?v=20260714-131500">
+<link rel="stylesheet" href="assets/css/app.css?v=20260714-133500">
+<link rel="stylesheet" href="assets/css/themes/summer.css?v=20260714-133500">
+<link rel="stylesheet" href="assets/css/themes/autumn.css?v=20260714-133500">
+<link rel="stylesheet" href="assets/css/themes/christmas.css?v=20260714-133500">
+<link rel="stylesheet" href="assets/css/themes/winter.css?v=20260714-133500">
+<link rel="stylesheet" href="assets/css/themes/spring.css?v=20260714-133500">
+<link rel="stylesheet" href="assets/css/pages/index.css?v=20260714-133500">
 </head>
 
 <!-- REMPLACE UNIQUEMENT ÇA -->
