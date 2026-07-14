@@ -4,7 +4,7 @@ compatibility_date = "2026-07-14"
 
 [vars]
 ENVIRONMENT = "beta"
-PUSH_ENABLED = "false"
+PUSH_ENABLED = "true"
 ONESIGNAL_APP_ID = "186e6f3b-def4-4b8e-8700-650456ff93cc"
 ALLOWED_ORIGIN = "https://damiensiri.github.io,http://127.0.0.1:8000"
 

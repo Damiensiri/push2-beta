@@ -6,7 +6,7 @@ séparée permet les essais de push sans toucher aux abonnés de production.
 
 ## Garanties de la phase bêta
 
-- `PUSH_ENABLED` reste à `false` tant que le secret OneSignal bêta n’est pas créé.
+- `PUSH_ENABLED` est activé uniquement avec l’application et la clé OneSignal bêta.
 - Aucune clé OneSignal ne doit être ajoutée au dépôt.
 - L’API publique conserve les neuf champs attendus, avec `expire: ""`.
 - L’ID est généré atomiquement par SQLite/D1.
@@ -28,8 +28,7 @@ validation. Le `database_id` factice de `wrangler.toml` devra être remplacé pa
 celui de la base bêta au moment du déploiement.
 
 Les secrets `ADMIN_TOKEN` et `ONESIGNAL_REST_API_KEY` sont créés avec Wrangler
-et ne doivent jamais être écrits dans un fichier versionné. Une fois la clé
-OneSignal bêta installée, `PUSH_ENABLED` peut être passé à `true`.
+et ne doivent jamais être écrits dans un fichier versionné.
 
 ## Test local
 
