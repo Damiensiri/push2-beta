@@ -10,16 +10,16 @@
 
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700&display=swap" rel="stylesheet">
 
-<script src="assets/js/app-config.js?v=20260714-174500"></script>
-<script src="assets/js/app-layout.js?v=20260714-174500"></script>
+<script src="assets/js/app-config.js?v=20260714-180000"></script>
+<script src="assets/js/app-layout.js?v=20260714-180000"></script>
 
-<link rel="stylesheet" href="assets/css/app.css?v=20260714-174500">
-<link rel="stylesheet" href="assets/css/themes/summer.css?v=20260714-174500">
-<link rel="stylesheet" href="assets/css/themes/autumn.css?v=20260714-174500">
-<link rel="stylesheet" href="assets/css/themes/christmas.css?v=20260714-174500">
-<link rel="stylesheet" href="assets/css/themes/winter.css?v=20260714-174500">
-<link rel="stylesheet" href="assets/css/themes/spring.css?v=20260714-174500">
-<link rel="stylesheet" href="assets/css/pages/notifications.css?v=20260714-174500">
+<link rel="stylesheet" href="assets/css/app.css?v=20260714-180000">
+<link rel="stylesheet" href="assets/css/themes/summer.css?v=20260714-180000">
+<link rel="stylesheet" href="assets/css/themes/autumn.css?v=20260714-180000">
+<link rel="stylesheet" href="assets/css/themes/christmas.css?v=20260714-180000">
+<link rel="stylesheet" href="assets/css/themes/winter.css?v=20260714-180000">
+<link rel="stylesheet" href="assets/css/themes/spring.css?v=20260714-180000">
+<link rel="stylesheet" href="assets/css/pages/notifications.css?v=20260714-180000">
 </head>
 
 <body class="app-page notifications-page">
@@ -57,19 +57,34 @@ const API_URL="https://ecurie-notifications-beta.damiensiri-pro.workers.dev/api/
 
 const STORAGE_KEY="alerts_lues";
 
-function getLues(){ return JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]"); }
+function getLues(){
+  try{
+    return JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]").map(String);
+  }catch(e){
+    return [];
+  }
+}
 function setLues(arr){ localStorage.setItem(STORAGE_KEY,JSON.stringify(arr)); }
 
 function marquerLu(id){
+  const idLu=String(id);
   const lues=getLues();
-  if(!lues.includes(id)){ lues.push(id); setLues(lues); }
+  if(!lues.includes(idLu)){ lues.push(idLu); setLues(lues); }
 }
 
-function marquerToutLu(){
-  const ids=[];
-  document.querySelectorAll(".card").forEach(c=>{ ids.push(c.dataset.id); });
+async function marquerToutLu(){
+  const bouton=document.getElementById("markAllBtn");
+  const cartes=[...document.querySelectorAll(".card")];
+  const ids=cartes.map(c=>String(c.dataset.id));
   setLues(ids);
-  loadNotifications();
+  cartes.forEach(c=>c.classList.add("lu"));
+  bouton.disabled=true;
+  bouton.textContent="Tout est marqué comme lu ✓";
+  await loadNotifications();
+  window.setTimeout(()=>{
+    bouton.disabled=false;
+    bouton.textContent="Tout marquer comme lu";
+  },1800);
 }
 
 function parseDateFR(str){
@@ -119,7 +134,7 @@ async function loadNotifications(){
         const card=document.createElement("div");
         card.className="card";
         card.dataset.id=n.id;
-        if(lues.includes(n.id)){ card.classList.add("lu"); }
+        if(lues.includes(String(n.id))){ card.classList.add("lu"); }
         card.innerHTML=`
           <div class="card-time">${n.heure||""}</div>
           <div class="card-category">${n.categorie||""}</div>

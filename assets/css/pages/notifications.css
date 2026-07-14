@@ -39,6 +39,13 @@ body.notifications-page .page{
   -webkit-backdrop-filter:blur(18px) saturate(140%);
 }
 
+#markAllBtn:disabled{
+  color:#082b20;
+  background:#63d492;
+  opacity:1;
+  cursor:default;
+}
+
 #loader{
   position:fixed;
   inset:0;
