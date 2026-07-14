@@ -237,3 +237,5 @@ closePanel.onclick=()=>panel.classList.remove("active");
 function goReserve(){
 location.href="planningpaddock.html";
 }
+
+window.addEventListener("pwa-data-changed",loadData);

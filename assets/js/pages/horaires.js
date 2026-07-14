@@ -197,3 +197,5 @@ document.addEventListener("visibilitychange",()=>{
 window.addEventListener("online",()=>{
   if(syncPending) loadHoraires();
 });
+
+window.addEventListener("pwa-data-changed",loadHoraires);

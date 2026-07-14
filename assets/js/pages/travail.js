@@ -196,3 +196,5 @@ window.addEventListener("online",()=>{
 if(syncPending) loadData()
 
 })
+
+window.addEventListener("pwa-data-changed",loadData)

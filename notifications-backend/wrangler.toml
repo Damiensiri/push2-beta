@@ -12,3 +12,11 @@ ALLOWED_ORIGIN = "https://damiensiri.github.io,http://127.0.0.1:8000"
 binding = "DB"
 database_name = "ecurie-notifications-beta"
 database_id = "c88d9f28-f645-4c61-abd2-3ddebcbc0cab"
+
+[[durable_objects.bindings]]
+name = "REALTIME_HUB"
+class_name = "RealtimeHub"
+
+[[migrations]]
+tag = "v1-realtime"
+new_sqlite_classes = ["RealtimeHub"]

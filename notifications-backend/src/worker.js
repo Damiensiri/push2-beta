@@ -48,6 +48,11 @@ export default{
         return json(result.results,200,{...cors,"cache-control":"public, max-age=15"});
       }
 
+      if(request.method==="GET"&&url.pathname==="/api/realtime"){
+        if(request.headers.get("upgrade")!=="websocket")return json({error:"WebSocket requis"},426,cors);
+        return realtimeStub(env).fetch(request);
+      }
+
       if(url.pathname.startsWith("/api/admin/")){
         if(!isAdmin(request,env))return json({error:"Non autorisé"},401,cors);
 
@@ -68,6 +73,7 @@ export default{
             WHERE slug=?
           `).bind(validated.manualStatus,validated.liberte,validated.longe,validated.info,
             validated.specialHours,now,spaceMatch[1]).run();
+          await notifyRealtime(env,"statuses");
           return json({saved:true,space:spaceMatch[1]},200,cors);
         }
 
@@ -82,6 +88,7 @@ export default{
             INSERT INTO space_schedules(space_slug,day,opens_at,closes_at) VALUES(?,?,?,?)
             ON CONFLICT(space_slug,day) DO UPDATE SET opens_at=excluded.opens_at,closes_at=excluded.closes_at
           `).bind(schedulesMatch[1],row.day,row.opensAt,row.closesAt)));
+          await notifyRealtime(env,"statuses");
           return json({saved:true,space:schedulesMatch[1]},200,cors);
         }
 
@@ -94,6 +101,7 @@ export default{
             INSERT INTO general_schedules(day,opens_at,closes_at,updated_at) VALUES(?,?,?,?)
             ON CONFLICT(day) DO UPDATE SET opens_at=excluded.opens_at,closes_at=excluded.closes_at,updated_at=excluded.updated_at
           `).bind(row.day,row.opensAt,row.closesAt,now)));
+          await notifyRealtime(env,"schedules");
           return json({saved:true},200,cors);
         }
 
@@ -108,6 +116,7 @@ export default{
             INSERT INTO schedule_exceptions(date,message,created_at,updated_at) VALUES(?,?,?,?)
             ON CONFLICT(date) DO UPDATE SET message=excluded.message,updated_at=excluded.updated_at
           `).bind(date,message,now,now).run();
+          await notifyRealtime(env,"exceptions");
           return json({saved:true},200,cors);
         }
 
@@ -116,6 +125,7 @@ export default{
           const result=await env.DB.prepare("DELETE FROM schedule_exceptions WHERE id=?")
             .bind(Number(exceptionMatch[1])).run();
           if(!result.meta.changes)return json({error:"Exception introuvable"},404,cors);
+          await notifyRealtime(env,"exceptions");
           return json({deleted:true},200,cors);
         }
 
@@ -129,6 +139,7 @@ export default{
             INSERT INTO home_alert(id,message,urgent,updated_at) VALUES(1,?,?,?)
             ON CONFLICT(id) DO UPDATE SET message=excluded.message,urgent=excluded.urgent,updated_at=excluded.updated_at
           `).bind(message,urgent,now).run();
+          await notifyRealtime(env,"home-alert");
           return json({saved:true},200,cors);
         }
 
@@ -474,6 +485,48 @@ function json(value,status,headers={}){
     status,
     headers:{...JSON_HEADERS,...headers}
   });
+}
+
+function realtimeStub(env){
+  return env.REALTIME_HUB.get(env.REALTIME_HUB.idFromName("pwa-beta"));
+}
+
+async function notifyRealtime(env,type){
+  await realtimeStub(env).fetch("https://realtime.internal/broadcast",{
+    method:"POST",
+    headers:{"content-type":"application/json"},
+    body:JSON.stringify({type,updatedAt:new Date().toISOString()})
+  });
+}
+
+export class RealtimeHub{
+  constructor(state){
+    this.state=state;
+  }
+
+  async fetch(request){
+    const url=new URL(request.url);
+    if(request.method==="POST"&&url.pathname==="/broadcast"){
+      const message=await request.text();
+      for(const socket of this.state.getWebSockets()){
+        try{socket.send(message);}catch(error){}
+      }
+      return new Response(null,{status:204});
+    }
+    if(request.headers.get("upgrade")!=="websocket")return new Response("WebSocket requis",{status:426});
+    const pair=new WebSocketPair();
+    const [client,server]=Object.values(pair);
+    this.state.acceptWebSocket(server);
+    return new Response(null,{status:101,webSocket:client});
+  }
+
+  webSocketMessage(socket,message){
+    if(message==="ping")socket.send("pong");
+  }
+
+  webSocketClose(socket,code,reason){
+    socket.close(code,reason);
+  }
 }
 
 export{

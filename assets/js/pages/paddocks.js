@@ -157,3 +157,5 @@ load();
 window.addEventListener("online",()=>{
 if(syncPending) load();
 });
+
+window.addEventListener("pwa-data-changed",load);
