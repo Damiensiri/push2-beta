@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Administration — Bêta</title>
 <meta name="theme-color" content="#102b45">
-<link rel="stylesheet" href="assets/css/pages/admin-notifications-beta.css?v=20260714-173000">
+<link rel="stylesheet" href="assets/css/pages/admin-notifications-beta.css?v=20260714-174500">
 </head>
 <body>
 <main class="admin-shell">
@@ -110,29 +110,13 @@
         <button id="closeSpaceEditorBtn" class="secondary" type="button">Fermer</button>
       </div>
       <select id="spaceSelect" hidden aria-label="Espace sélectionné"></select>
-      <label>Statut
-        <select id="spaceStatus">
-          <option value="ouvert">Ouvert / Auto</option>
-          <option value="prevision">Prévision</option>
-          <option value="ferme">Fermé</option>
-          <option value="hors-service">Hors service</option>
-        </select>
-      </label>
-      <div class="two-columns">
-        <label>Liberté
-          <select id="spaceLiberte"><option value="">Non affiché</option><option value="oui">Oui</option><option value="non">Non</option></select>
-        </label>
-        <label>Longe
-          <select id="spaceLonge"><option value="">Non affiché</option><option value="oui">Oui</option><option value="non">Non</option></select>
-        </label>
-      </div>
       <label>Horaire spécial
         <input id="spaceSpecial" maxlength="120" placeholder="Ex. 🌡️ Prévu 19h">
       </label>
       <label>Information
         <textarea id="spaceInfo" maxlength="500" rows="3" placeholder="Information affichée sur cet espace"></textarea>
       </label>
-      <button id="saveSpaceBtn" type="button">Enregistrer le statut</button>
+      <button id="saveSpaceBtn" type="button">Enregistrer les informations</button>
       <p id="spaceStatusMessage" class="status" role="status"></p>
     </div>
     <div class="panel">
@@ -185,7 +169,7 @@
     </div>
   </section>
 </main>
-<script src="assets/js/notification-format.js?v=20260714-173000"></script>
-<script src="assets/js/pages/admin-notifications-beta.js?v=20260714-173000"></script>
+<script src="assets/js/notification-format.js?v=20260714-174500"></script>
+<script src="assets/js/pages/admin-notifications-beta.js?v=20260714-174500"></script>
 </body>
 </html>

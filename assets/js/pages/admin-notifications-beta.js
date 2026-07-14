@@ -26,9 +26,6 @@
     spaceEditorTitle:document.getElementById("spaceEditorTitle"),
     closeSpaceEditor:document.getElementById("closeSpaceEditorBtn"),
     spaceSelect:document.getElementById("spaceSelect"),
-    spaceStatus:document.getElementById("spaceStatus"),
-    spaceLiberte:document.getElementById("spaceLiberte"),
-    spaceLonge:document.getElementById("spaceLonge"),
     spaceSpecial:document.getElementById("spaceSpecial"),
     spaceInfo:document.getElementById("spaceInfo"),
     saveSpace:document.getElementById("saveSpaceBtn"),
@@ -255,9 +252,6 @@
     const slug=elements.spaceSelect.value;
     const space=operations.spaces.find(item=>item.slug===slug);
     if(!space)return;
-    elements.spaceStatus.value=space.manual_status;
-    elements.spaceLiberte.value=space.liberte||"";
-    elements.spaceLonge.value=space.longe||"";
     elements.spaceSpecial.value=space.special_hours||"";
     elements.spaceInfo.value=space.info||"";
     renderScheduleInputs(elements.spaceSchedules,
@@ -505,14 +499,16 @@
   });
   elements.saveSpace.addEventListener("click",async()=>{
     const slug=elements.spaceSelect.value;
+    const space=operations.spaces.find(item=>item.slug===slug);
+    if(!space)return;
     setStatus(elements.spaceMessage,"Enregistrement…");
     try{
       await api(`/api/admin/spaces/${slug}`,{
         method:"PUT",
         body:JSON.stringify({
-          manualStatus:elements.spaceStatus.value,
-          liberte:elements.spaceLiberte.value,
-          longe:elements.spaceLonge.value,
+          manualStatus:space.manual_status,
+          liberte:space.liberte,
+          longe:space.longe,
           specialHours:elements.spaceSpecial.value,
           info:elements.spaceInfo.value
         })
@@ -520,7 +516,7 @@
       await refreshOperations();
       elements.spaceSelect.value=slug;
       renderSelectedSpace();
-      setStatus(elements.spaceMessage,"Statut enregistré.","success");
+      setStatus(elements.spaceMessage,"Informations enregistrées.","success");
     }catch(error){setStatus(elements.spaceMessage,error.message,"error");}
   });
 
