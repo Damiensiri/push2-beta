@@ -61,7 +61,7 @@
       localStorage.setItem("notifications_beta_api_url",config.base);
       alerts=await api("/api/admin/notifications");
       render();
-      setStatus(elements.connectionStatus,`${alerts.length} alerte(s) chargée(s). Push désactivé.`,"success");
+      setStatus(elements.connectionStatus,`${alerts.length} alerte(s) chargée(s).`,"success");
     }catch(error){
       setStatus(elements.connectionStatus,error.message,"error");
     }
@@ -157,12 +157,21 @@
     setStatus(elements.formStatus,"Enregistrement…");
     elements.save.disabled=true;
     try{
-      await api(id?`/api/admin/notifications/${id}`:"/api/admin/notifications",{
+      const result=await api(id?`/api/admin/notifications/${id}`:"/api/admin/notifications",{
         method:id?"PATCH":"POST",
         body:JSON.stringify(payload)
       });
       resetForm();
-      setStatus(elements.formStatus,"Alerte enregistrée. Aucun push envoyé.","success");
+      const pushMessages={
+        sent:"Alerte enregistrée et push envoyé.",
+        "already-sent":"Alerte enregistrée. Le push avait déjà été envoyé.",
+        "not-requested":"Alerte enregistrée sans push.",
+        "inactive-alert":"Alerte enregistrée sans push car elle est inactive.",
+        "disabled-in-beta":"Alerte enregistrée. Le push bêta n’est pas encore activé.",
+        failed:`Alerte enregistrée, mais le push a échoué${result.push?.error?" : "+result.push.error:"."}`
+      };
+      const pushFailed=result.push?.status==="failed";
+      setStatus(elements.formStatus,pushMessages[result.push?.status]||"Alerte enregistrée.",pushFailed?"error":"success");
       await loadAlerts();
     }catch(error){
       setStatus(elements.formStatus,error.message,"error");
