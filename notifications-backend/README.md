@@ -1,12 +1,12 @@
 # Backend notifications — bêta
 
 Ce dossier prépare le remplacement de Google Sheet / Apps Script par Cloudflare
-Workers + D1. Il est isolé du client actuel : aucune page existante ne l’utilise
-encore et OneSignal reste désactivé.
+Workers + D1. Les trois pages bêta l’utilisent et une application OneSignal
+séparée permet les essais de push sans toucher aux abonnés de production.
 
 ## Garanties de la phase bêta
 
-- `PUSH_ENABLED` reste à `false`.
+- `PUSH_ENABLED` reste à `false` tant que le secret OneSignal bêta n’est pas créé.
 - Aucune clé OneSignal ne doit être ajoutée au dépôt.
 - L’API publique conserve les neuf champs attendus, avec `expire: ""`.
 - L’ID est généré atomiquement par SQLite/D1.
@@ -27,8 +27,9 @@ Le déploiement nécessite un compte Cloudflare et ne doit être exécuté qu’
 validation. Le `database_id` factice de `wrangler.toml` devra être remplacé par
 celui de la base bêta au moment du déploiement.
 
-Le secret d’administration devra être créé avec Wrangler et ne devra jamais
-être écrit dans un fichier versionné.
+Les secrets `ADMIN_TOKEN` et `ONESIGNAL_REST_API_KEY` sont créés avec Wrangler
+et ne doivent jamais être écrits dans un fichier versionné. Une fois la clé
+OneSignal bêta installée, `PUSH_ENABLED` peut être passé à `true`.
 
 ## Test local
 

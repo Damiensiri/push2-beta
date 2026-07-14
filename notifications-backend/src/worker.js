@@ -15,7 +15,7 @@ export default{
 
     try{
       if(request.method==="GET"&&url.pathname==="/api/health"){
-        return json({ok:true,environment:env.ENVIRONMENT||"unknown",pushEnabled:false},200,cors);
+        return json({ok:true,environment:env.ENVIRONMENT||"unknown",pushEnabled:isPushEnabled(env)},200,cors);
       }
 
       if(request.method==="GET"&&url.pathname==="/api/notifications"){
@@ -64,7 +64,13 @@ export default{
             FROM alerts WHERE id=?
           `).bind(result.meta.last_row_id).first();
 
-          return json({alert:created,push:{enabled:false,status:validated.pushRequested?"pending-beta":"not-requested"}},201,cors);
+          const push=await sendRequestedPush(env,created);
+          if(push.status==="sent"){
+            await markPushSent(env,created.id,push.sentAt);
+            created.push_sent_at=push.sentAt;
+          }
+
+          return json({alert:created,push},201,cors);
         }
 
         const match=url.pathname.match(/^\/api\/admin\/notifications\/(\d+)$/);
@@ -99,7 +105,12 @@ export default{
                    push_requested,push_sent_at,created_at,updated_at
             FROM alerts WHERE id=?
           `).bind(Number(match[1])).first();
-          return json({alert:updated,push:{enabled:false,status:"disabled-in-beta"}},200,cors);
+          const push=await sendRequestedPush(env,updated);
+          if(push.status==="sent"){
+            await markPushSent(env,updated.id,push.sentAt);
+            updated.push_sent_at=push.sentAt;
+          }
+          return json({alert:updated,push},200,cors);
         }
       }
 
@@ -122,6 +133,49 @@ function compatibleAlert(row){
     expire:"",
     active:row.active
   };
+}
+
+function isPushEnabled(env){
+  return String(env.PUSH_ENABLED).toLowerCase()==="true"&&
+    Boolean(env.ONESIGNAL_APP_ID)&&Boolean(env.ONESIGNAL_REST_API_KEY);
+}
+
+async function sendRequestedPush(env,alert){
+  if(!alert.push_requested)return{enabled:isPushEnabled(env),status:"not-requested"};
+  if(alert.push_sent_at)return{enabled:isPushEnabled(env),status:"already-sent",sentAt:alert.push_sent_at};
+  if(alert.active!=="oui")return{enabled:isPushEnabled(env),status:"inactive-alert"};
+  if(!isPushEnabled(env))return{enabled:false,status:"disabled-in-beta"};
+
+  const detailUrl=`https://damiensiri.github.io/push2-beta/detail.html?id=${encodeURIComponent(alert.id)}`;
+  try{
+    const response=await fetch("https://api.onesignal.com/notifications",{
+      method:"POST",
+      headers:{
+        "authorization":`Key ${env.ONESIGNAL_REST_API_KEY}`,
+        "content-type":"application/json; charset=utf-8"
+      },
+      body:JSON.stringify({
+        app_id:env.ONESIGNAL_APP_ID,
+        included_segments:["All"],
+        headings:{fr:alert.titre,en:alert.titre},
+        contents:{fr:alert.message,en:alert.message},
+        url:detailUrl
+      })
+    });
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok||data.errors){
+      const detail=Array.isArray(data.errors)?data.errors.join(", "):data.errors||`HTTP ${response.status}`;
+      return{enabled:true,status:"failed",error:String(detail)};
+    }
+    return{enabled:true,status:"sent",id:data.id||null,sentAt:new Date().toISOString()};
+  }catch(error){
+    return{enabled:true,status:"failed",error:String(error?.message||error)};
+  }
+}
+
+async function markPushSent(env,id,sentAt){
+  await env.DB.prepare("UPDATE alerts SET push_sent_at=?,updated_at=? WHERE id=?")
+    .bind(sentAt,sentAt,id).run();
 }
 
 function validateAlert(input){
@@ -192,4 +246,4 @@ function json(value,status,headers={}){
   });
 }
 
-export{compatibleAlert,validateAlert,parisNow};
+export{compatibleAlert,validateAlert,parisNow,isPushEnabled,sendRequestedPush};

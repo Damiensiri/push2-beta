@@ -1,6 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {compatibleAlert,validateAlert,parisNow} from "../src/worker.js";
+import {
+  compatibleAlert,validateAlert,parisNow,isPushEnabled,sendRequestedPush
+} from "../src/worker.js";
 
 test("le contrat public conserve les neuf champs historiques",()=>{
   const value=compatibleAlert({
@@ -46,4 +48,21 @@ test("la date serveur est produite au format historique",()=>{
   assert.match(now.date,/^\d{4}-\d{2}-\d{2}$/);
   assert.match(now.time,/^\d{2}:\d{2}$/);
   assert.match(now.iso,/^\d{4}-\d{2}-\d{2}T/);
+});
+
+test("le push exige le drapeau, l’App ID et la clé REST",()=>{
+  assert.equal(isPushEnabled({PUSH_ENABLED:"true",ONESIGNAL_APP_ID:"app"}),false);
+  assert.equal(isPushEnabled({
+    PUSH_ENABLED:"true",ONESIGNAL_APP_ID:"app",ONESIGNAL_REST_API_KEY:"secret"
+  }),true);
+});
+
+test("un push déjà envoyé ne peut pas être envoyé deux fois",async()=>{
+  const result=await sendRequestedPush({
+    PUSH_ENABLED:"true",ONESIGNAL_APP_ID:"app",ONESIGNAL_REST_API_KEY:"secret"
+  },{
+    id:168,titre:"Test",message:"Message",active:"oui",
+    push_requested:1,push_sent_at:"2026-07-14T13:00:00.000Z"
+  });
+  assert.equal(result.status,"already-sent");
 });
