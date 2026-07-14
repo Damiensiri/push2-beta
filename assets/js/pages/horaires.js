@@ -1,7 +1,7 @@
 /* ===== CONFIG ===== */
 
-const SHEET_URL="https://script.google.com/macros/s/AKfycbzWEB8PPqSQ4rinnTbh4414U3QPX836XtPOPBmKr0Bw2W4mRFWAl7Chv6WKHOjrcWoZew/exec?sheet=horaires";
-const EXCEPTIONS_URL="https://script.google.com/macros/s/AKfycbzWEB8PPqSQ4rinnTbh4414U3QPX836XtPOPBmKr0Bw2W4mRFWAl7Chv6WKHOjrcWoZew/exec?sheet=exceptions";
+const SHEET_URL="https://ecurie-notifications-beta.damiensiri-pro.workers.dev/api/schedules";
+const EXCEPTIONS_URL="https://ecurie-notifications-beta.damiensiri-pro.workers.dev/api/exceptions";
 
 const REFRESH=60000;
 const FRESHNESS=60000;

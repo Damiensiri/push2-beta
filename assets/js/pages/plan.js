@@ -1,4 +1,4 @@
-const SHEET_URL="https://script.google.com/macros/s/AKfycbzWEB8PPqSQ4rinnTbh4414U3QPX836XtPOPBmKr0Bw2W4mRFWAl7Chv6WKHOjrcWoZew/exec?sheet=statuts";
+const SHEET_URL="https://ecurie-notifications-beta.damiensiri-pro.workers.dev/api/statuses";
 const FRESHNESS=60000;
 const CACHE_KEY="statuts";
 const CACHE_CONFIRMED_AT_KEY="statuts_confirmed_at";
