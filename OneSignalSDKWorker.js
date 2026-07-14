@@ -1,6 +1,6 @@
 importScripts("https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js");
 
-const APP_VERSION="20260714-193000";
+const APP_VERSION="20260714-194000";
 const APP_SCOPE_URL=new URL(self.registration.scope);
 const APP_INDEX=new URL("index.html",APP_SCOPE_URL).href;
 

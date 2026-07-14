@@ -95,6 +95,8 @@ button.secondary{width:auto;padding:9px 12px;border:1px solid #ffffff30;backgrou
 .alert-item button.danger{border:1px solid #ffaaa766;background:#d05a5a2e;color:#ffc0bd}
 .empty{color:#b5cedd;text-align:center;padding:16px}
 .section-help{margin:-7px 0 14px;color:#b9d6e6;font-size:12px;line-height:1.45}
+.spaces-overview .panel-heading{margin-bottom:12px}
+.spaces-overview .section-help{margin:0 0 14px}
 .space-pills{display:grid;gap:12px}
 .space-pill{padding:14px;border:1px solid #ffffff24;border-radius:20px;background:#071b2b80}
 .space-pill-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
