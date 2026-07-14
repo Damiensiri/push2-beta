@@ -29,8 +29,108 @@ export default{
         return json(alerts,200,{...cors,"cache-control":"public, max-age=15"});
       }
 
+      if(request.method==="GET"&&url.pathname==="/api/statuses"){
+        const statuses=await loadPublicStatuses(env);
+        return json(statuses,200,{...cors,"cache-control":"public, max-age=5"});
+      }
+
+      if(request.method==="GET"&&url.pathname==="/api/schedules"){
+        const result=await env.DB.prepare(`
+          SELECT day,opens_at,closes_at FROM general_schedules ORDER BY day
+        `).all();
+        return json(result.results.map(publicSchedule),200,{...cors,"cache-control":"public, max-age=15"});
+      }
+
+      if(request.method==="GET"&&url.pathname==="/api/exceptions"){
+        const result=await env.DB.prepare(`
+          SELECT date,message FROM schedule_exceptions ORDER BY date
+        `).all();
+        return json(result.results,200,{...cors,"cache-control":"public, max-age=15"});
+      }
+
       if(url.pathname.startsWith("/api/admin/")){
         if(!isAdmin(request,env))return json({error:"Non autorisé"},401,cors);
+
+        if(request.method==="GET"&&url.pathname==="/api/admin/operations"){
+          return json(await loadOperations(env),200,cors);
+        }
+
+        const spaceMatch=url.pathname.match(/^\/api\/admin\/spaces\/([a-z0-9-]+)$/);
+        if(request.method==="PUT"&&spaceMatch){
+          const input=await readJson(request);
+          const validated=validateSpace(input);
+          if(validated.error)return json({error:validated.error},400,cors);
+          const exists=await env.DB.prepare("SELECT slug FROM spaces WHERE slug=?").bind(spaceMatch[1]).first();
+          if(!exists)return json({error:"Espace introuvable"},404,cors);
+          const now=parisNow().iso;
+          await env.DB.prepare(`
+            UPDATE spaces SET manual_status=?,liberte=?,longe=?,info=?,special_hours=?,updated_at=?
+            WHERE slug=?
+          `).bind(validated.manualStatus,validated.liberte,validated.longe,validated.info,
+            validated.specialHours,now,spaceMatch[1]).run();
+          return json({saved:true,space:spaceMatch[1]},200,cors);
+        }
+
+        const schedulesMatch=url.pathname.match(/^\/api\/admin\/spaces\/([a-z0-9-]+)\/schedules$/);
+        if(request.method==="PUT"&&schedulesMatch){
+          const input=await readJson(request);
+          const schedules=validateSchedules(input?.schedules);
+          if(schedules.error)return json({error:schedules.error},400,cors);
+          const exists=await env.DB.prepare("SELECT slug FROM spaces WHERE slug=?").bind(schedulesMatch[1]).first();
+          if(!exists)return json({error:"Espace introuvable"},404,cors);
+          await env.DB.batch(schedules.rows.map(row=>env.DB.prepare(`
+            INSERT INTO space_schedules(space_slug,day,opens_at,closes_at) VALUES(?,?,?,?)
+            ON CONFLICT(space_slug,day) DO UPDATE SET opens_at=excluded.opens_at,closes_at=excluded.closes_at
+          `).bind(schedulesMatch[1],row.day,row.opensAt,row.closesAt)));
+          return json({saved:true,space:schedulesMatch[1]},200,cors);
+        }
+
+        if(request.method==="PUT"&&url.pathname==="/api/admin/general-schedules"){
+          const input=await readJson(request);
+          const schedules=validateSchedules(input?.schedules);
+          if(schedules.error)return json({error:schedules.error},400,cors);
+          const now=parisNow().iso;
+          await env.DB.batch(schedules.rows.map(row=>env.DB.prepare(`
+            INSERT INTO general_schedules(day,opens_at,closes_at,updated_at) VALUES(?,?,?,?)
+            ON CONFLICT(day) DO UPDATE SET opens_at=excluded.opens_at,closes_at=excluded.closes_at,updated_at=excluded.updated_at
+          `).bind(row.day,row.opensAt,row.closesAt,now)));
+          return json({saved:true},200,cors);
+        }
+
+        if(request.method==="POST"&&url.pathname==="/api/admin/exceptions"){
+          const input=await readJson(request);
+          const date=String(input?.date||"").trim();
+          const message=String(input?.message||"").trim();
+          if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return json({error:"Date invalide"},400,cors);
+          if(!message||message.length>500)return json({error:"Texte d’exception invalide"},400,cors);
+          const now=parisNow().iso;
+          await env.DB.prepare(`
+            INSERT INTO schedule_exceptions(date,message,created_at,updated_at) VALUES(?,?,?,?)
+            ON CONFLICT(date) DO UPDATE SET message=excluded.message,updated_at=excluded.updated_at
+          `).bind(date,message,now,now).run();
+          return json({saved:true},200,cors);
+        }
+
+        const exceptionMatch=url.pathname.match(/^\/api\/admin\/exceptions\/(\d+)$/);
+        if(request.method==="DELETE"&&exceptionMatch){
+          const result=await env.DB.prepare("DELETE FROM schedule_exceptions WHERE id=?")
+            .bind(Number(exceptionMatch[1])).run();
+          if(!result.meta.changes)return json({error:"Exception introuvable"},404,cors);
+          return json({deleted:true},200,cors);
+        }
+
+        if(request.method==="PUT"&&url.pathname==="/api/admin/home-alert"){
+          const input=await readJson(request);
+          const message=String(input?.message||"").trim();
+          if(message.length>500)return json({error:"Texte d’alerte trop long"},400,cors);
+          const urgent=normalizeYesNo(input?.urgent,false);
+          const now=parisNow().iso;
+          await env.DB.prepare(`
+            INSERT INTO home_alert(id,message,urgent,updated_at) VALUES(1,?,?,?)
+            ON CONFLICT(id) DO UPDATE SET message=excluded.message,urgent=excluded.urgent,updated_at=excluded.updated_at
+          `).bind(message,urgent,now).run();
+          return json({saved:true},200,cors);
+        }
 
         if(request.method==="GET"&&url.pathname==="/api/admin/notifications"){
           const result=await env.DB.prepare(`
@@ -140,6 +240,122 @@ function compatibleAlert(row){
     expire:"",
     active:row.active
   };
+}
+
+const DAY_NAMES=["","lundi","mardi","mercredi","jeudi","vendredi","samedi","dimanche"];
+
+async function loadPublicStatuses(env,date=new Date()){
+  const [spacesResult,schedulesResult,alert]=await Promise.all([
+    env.DB.prepare("SELECT * FROM spaces ORDER BY position").all(),
+    env.DB.prepare("SELECT * FROM space_schedules ORDER BY space_slug,day").all(),
+    env.DB.prepare("SELECT message,urgent FROM home_alert WHERE id=1").first()
+  ]);
+  const paris=parisClock(date);
+  const scheduleMap=new Map(schedulesResult.results.map(row=>[`${row.space_slug}:${row.day}`,row]));
+  const rows=spacesResult.results.map(space=>{
+    const schedule=scheduleMap.get(`${space.slug}:${paris.day}`)||null;
+    return publicSpace(space,schedule,paris.minutes);
+  });
+  rows.push({
+    espace:"accueil",statut_manuel:"",statut_auto:"ferme",liberte:"",longe:"",info:"",
+    alerte:alert?.message||"",horaire_special:"",horaire_affiche:"",urgent:alert?.urgent||"non"
+  });
+  return rows;
+}
+
+function publicSpace(space,schedule,minutes){
+  const normalHours=schedule?`${schedule.opens_at} - ${schedule.closes_at}`:"";
+  const status=calculateStatus(space.manual_status,schedule,minutes);
+  const hidesHours=status==="ferme"||status==="hors-service";
+  return{
+    espace:space.slug,
+    statut_manuel:space.manual_status,
+    statut_auto:status,
+    liberte:space.liberte||"",
+    longe:space.longe||"",
+    info:space.info||"",
+    alerte:"",
+    horaire_special:hidesHours?"":space.special_hours||"",
+    horaire_affiche:hidesHours?"":normalHours,
+    urgent:""
+  };
+}
+
+function calculateStatus(manualStatus,schedule,minutes){
+  if(["ferme","prevision","hors-service"].includes(manualStatus))return manualStatus;
+  if(!schedule)return"prevision";
+  const opens=timeToMinutes(schedule.opens_at);
+  const closes=timeToMinutes(schedule.closes_at);
+  if(opens===null||closes===null)return"prevision";
+  const open=closes>opens?minutes>=opens&&minutes<closes:minutes>=opens||minutes<closes;
+  return open?"ouvert":"prevision";
+}
+
+function publicSchedule(row){
+  return{jour:DAY_NAMES[row.day],ouvert:row.opens_at,ferme:row.closes_at};
+}
+
+async function loadOperations(env){
+  const [spaces,schedules,general,exceptions,homeAlert]=await Promise.all([
+    env.DB.prepare("SELECT * FROM spaces ORDER BY position").all(),
+    env.DB.prepare("SELECT * FROM space_schedules ORDER BY space_slug,day").all(),
+    env.DB.prepare("SELECT * FROM general_schedules ORDER BY day").all(),
+    env.DB.prepare("SELECT * FROM schedule_exceptions ORDER BY date DESC").all(),
+    env.DB.prepare("SELECT * FROM home_alert WHERE id=1").first()
+  ]);
+  return{spaces:spaces.results,spaceSchedules:schedules.results,
+    generalSchedules:general.results,exceptions:exceptions.results,homeAlert:homeAlert||{message:"",urgent:"non"}};
+}
+
+function validateSpace(input){
+  const manualStatus=String(input?.manualStatus||"").trim().toLowerCase();
+  if(!["ouvert","prevision","ferme","hors-service"].includes(manualStatus))return{error:"Statut invalide"};
+  const info=String(input?.info||"").trim();
+  const specialHours=String(input?.specialHours||"").trim();
+  if(info.length>500||specialHours.length>120)return{error:"Texte trop long"};
+  return{manualStatus,liberte:normalizeYesNo(input?.liberte,true),longe:normalizeYesNo(input?.longe,true),info,specialHours};
+}
+
+function validateSchedules(value){
+  if(!Array.isArray(value)||value.length!==7)return{error:"Les sept jours sont obligatoires"};
+  const rows=[];
+  for(const item of value){
+    const day=Number(item?.day);
+    const opensAt=String(item?.opensAt||"");
+    const closesAt=String(item?.closesAt||"");
+    if(day<1||day>7||!/^\d{2}:\d{2}$/.test(opensAt)||!/^\d{2}:\d{2}$/.test(closesAt)){
+      return{error:"Horaire invalide"};
+    }
+    if(timeToMinutes(opensAt)===null||timeToMinutes(closesAt)===null)return{error:"Horaire invalide"};
+    rows.push({day,opensAt,closesAt});
+  }
+  if(new Set(rows.map(row=>row.day)).size!==7)return{error:"Chaque jour doit être présent une seule fois"};
+  return{rows:rows.sort((a,b)=>a.day-b.day)};
+}
+
+function normalizeYesNo(value,allowEmpty){
+  const normalized=String(value??"").trim().toLowerCase();
+  if(normalized==="oui"||value===true)return"oui";
+  if(normalized==="non"||value===false)return"non";
+  return allowEmpty?"":"non";
+}
+
+function timeToMinutes(value){
+  const match=String(value||"").match(/^(\d{2}):(\d{2})$/);
+  if(!match)return null;
+  const hours=Number(match[1]);
+  const minutes=Number(match[2]);
+  if(hours>23||minutes>59)return null;
+  return hours*60+minutes;
+}
+
+function parisClock(date=new Date()){
+  const values={};
+  new Intl.DateTimeFormat("en-GB",{
+    timeZone:"Europe/Paris",weekday:"short",hour:"2-digit",minute:"2-digit",hourCycle:"h23"
+  }).formatToParts(date).forEach(part=>{if(part.type!=="literal")values[part.type]=part.value;});
+  const days={Mon:1,Tue:2,Wed:3,Thu:4,Fri:5,Sat:6,Sun:7};
+  return{day:days[values.weekday],minutes:Number(values.hour)*60+Number(values.minute)};
 }
 
 function isPushEnabled(env){
@@ -260,4 +476,7 @@ function json(value,status,headers={}){
   });
 }
 
-export{compatibleAlert,validateAlert,parisNow,isPushEnabled,sendRequestedPush,plainTextMessage};
+export{
+  compatibleAlert,validateAlert,parisNow,isPushEnabled,sendRequestedPush,plainTextMessage,
+  calculateStatus,publicSpace,publicSchedule,validateSpace,validateSchedules,timeToMinutes,parisClock
+};

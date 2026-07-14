@@ -19,9 +19,34 @@
     cancel:document.getElementById("cancelEditBtn"),
     formStatus:document.getElementById("formStatus"),
     refresh:document.getElementById("refreshBtn"),
-    list:document.getElementById("alertsList")
+    list:document.getElementById("alertsList"),
+    spaceSelect:document.getElementById("spaceSelect"),
+    spaceStatus:document.getElementById("spaceStatus"),
+    spaceLiberte:document.getElementById("spaceLiberte"),
+    spaceLonge:document.getElementById("spaceLonge"),
+    spaceSpecial:document.getElementById("spaceSpecial"),
+    spaceInfo:document.getElementById("spaceInfo"),
+    saveSpace:document.getElementById("saveSpaceBtn"),
+    spaceMessage:document.getElementById("spaceStatusMessage"),
+    spaceSchedules:document.getElementById("spaceSchedules"),
+    saveSpaceSchedules:document.getElementById("saveSpaceSchedulesBtn"),
+    spaceSchedulesStatus:document.getElementById("spaceSchedulesStatus"),
+    generalSchedules:document.getElementById("generalSchedules"),
+    saveGeneralSchedules:document.getElementById("saveGeneralSchedulesBtn"),
+    generalSchedulesStatus:document.getElementById("generalSchedulesStatus"),
+    exceptionDate:document.getElementById("exceptionDate"),
+    exceptionMessage:document.getElementById("exceptionMessage"),
+    saveException:document.getElementById("saveExceptionBtn"),
+    exceptionStatus:document.getElementById("exceptionStatus"),
+    exceptionsList:document.getElementById("exceptionsList"),
+    homeAlertMessage:document.getElementById("homeAlertMessage"),
+    homeAlertUrgent:document.getElementById("homeAlertUrgent"),
+    saveHomeAlert:document.getElementById("saveHomeAlertBtn"),
+    homeAlertStatus:document.getElementById("homeAlertStatus")
   };
   let alerts=[];
+  let operations={spaces:[],spaceSchedules:[],generalSchedules:[],exceptions:[],homeAlert:{}};
+  const days=["Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi","Dimanche"];
 
   const storedUrl=localStorage.getItem("notifications_beta_api_url")||
     "https://ecurie-notifications-beta.damiensiri-pro.workers.dev";
@@ -77,6 +102,136 @@
     }catch(error){
       setStatus(elements.connectionStatus,error.message,"error");
     }
+  }
+
+  async function loadAll(){
+    setStatus(elements.connectionStatus,"Chargement…");
+    try{
+      const config=settings();
+      localStorage.setItem("notifications_beta_api_url",config.base);
+      [alerts,operations]=await Promise.all([
+        api("/api/admin/notifications"),
+        api("/api/admin/operations")
+      ]);
+      localStorage.setItem("notifications_beta_admin_token",config.token);
+      render();
+      renderOperations();
+      setStatus(elements.connectionStatus,"Administration connectée.","success");
+      toggleSettings(false);
+    }catch(error){
+      setStatus(elements.connectionStatus,error.message,"error");
+      toggleSettings(true);
+    }
+  }
+
+  function renderOperations(){
+    const selected=elements.spaceSelect.value||operations.spaces[0]?.slug||"";
+    elements.spaceSelect.replaceChildren(...operations.spaces.map(space=>{
+      const option=document.createElement("option");
+      option.value=space.slug;
+      option.textContent=space.label;
+      return option;
+    }));
+    if(operations.spaces.some(space=>space.slug===selected))elements.spaceSelect.value=selected;
+    renderSelectedSpace();
+    renderScheduleInputs(elements.generalSchedules,operations.generalSchedules);
+    renderExceptions();
+    elements.homeAlertMessage.value=operations.homeAlert?.message||"";
+    elements.homeAlertUrgent.checked=operations.homeAlert?.urgent==="oui";
+  }
+
+  function renderSelectedSpace(){
+    const slug=elements.spaceSelect.value;
+    const space=operations.spaces.find(item=>item.slug===slug);
+    if(!space)return;
+    elements.spaceStatus.value=space.manual_status;
+    elements.spaceLiberte.value=space.liberte||"";
+    elements.spaceLonge.value=space.longe||"";
+    elements.spaceSpecial.value=space.special_hours||"";
+    elements.spaceInfo.value=space.info||"";
+    renderScheduleInputs(elements.spaceSchedules,
+      operations.spaceSchedules.filter(item=>item.space_slug===slug));
+    setStatus(elements.spaceMessage,"");
+    setStatus(elements.spaceSchedulesStatus,"");
+  }
+
+  function renderScheduleInputs(container,rows){
+    container.replaceChildren();
+    days.forEach((label,index)=>{
+      const day=index+1;
+      const row=rows.find(item=>Number(item.day)===day)||{};
+      const wrapper=document.createElement("div");
+      wrapper.className="schedule-row";
+      const name=document.createElement("strong");
+      name.textContent=label;
+      const open=document.createElement("input");
+      open.type="time";
+      open.value=row.opens_at||"08:00";
+      open.dataset.day=String(day);
+      open.dataset.kind="open";
+      open.setAttribute("aria-label",`Ouverture ${label}`);
+      const close=document.createElement("input");
+      close.type="time";
+      close.value=row.closes_at||"21:00";
+      close.dataset.day=String(day);
+      close.dataset.kind="close";
+      close.setAttribute("aria-label",`Fermeture ${label}`);
+      wrapper.append(name,open,close);
+      container.appendChild(wrapper);
+    });
+  }
+
+  function readScheduleInputs(container){
+    return days.map((_,index)=>{
+      const day=index+1;
+      return{
+        day,
+        opensAt:container.querySelector(`[data-day="${day}"][data-kind="open"]`).value,
+        closesAt:container.querySelector(`[data-day="${day}"][data-kind="close"]`).value
+      };
+    });
+  }
+
+  function renderExceptions(){
+    elements.exceptionsList.replaceChildren();
+    if(!operations.exceptions.length){
+      const empty=document.createElement("p");
+      empty.className="empty";
+      empty.textContent="Aucune exception enregistrée.";
+      elements.exceptionsList.appendChild(empty);
+      return;
+    }
+    operations.exceptions.forEach(item=>{
+      const row=document.createElement("article");
+      row.className="exception-item";
+      const text=document.createElement("div");
+      const title=document.createElement("strong");
+      title.textContent=item.date;
+      const message=document.createElement("p");
+      message.textContent=item.message;
+      text.append(title,message);
+      const remove=document.createElement("button");
+      remove.type="button";
+      remove.className="danger compact";
+      remove.textContent="Supprimer";
+      remove.addEventListener("click",()=>deleteException(item));
+      row.append(text,remove);
+      elements.exceptionsList.appendChild(row);
+    });
+  }
+
+  async function refreshOperations(){
+    operations=await api("/api/admin/operations");
+    renderOperations();
+  }
+
+  async function deleteException(item){
+    if(!window.confirm(`Supprimer l’exception du ${item.date} ?`))return;
+    try{
+      await api(`/api/admin/exceptions/${item.id}`,{method:"DELETE"});
+      await refreshOperations();
+      setStatus(elements.exceptionStatus,"Exception supprimée.","success");
+    }catch(error){setStatus(elements.exceptionStatus,error.message,"error");}
   }
 
   function render(){
@@ -210,7 +365,7 @@
     }
   });
 
-  elements.connect.addEventListener("click",loadAlerts);
+  elements.connect.addEventListener("click",loadAll);
   elements.settingsButton.addEventListener("click",()=>toggleSettings());
   elements.forgetToken.addEventListener("click",()=>{
     localStorage.removeItem("notifications_beta_admin_token");
@@ -219,6 +374,85 @@
   });
   elements.refresh.addEventListener("click",loadAlerts);
   elements.cancel.addEventListener("click",resetForm);
+
+  document.querySelectorAll("[data-section-button]").forEach(button=>{
+    button.addEventListener("click",()=>{
+      document.querySelectorAll("[data-section-button]").forEach(item=>item.classList.toggle("active",item===button));
+      document.querySelectorAll("[data-admin-section]").forEach(section=>{
+        section.hidden=section.dataset.adminSection!==button.dataset.sectionButton;
+      });
+    });
+  });
+
+  elements.spaceSelect.addEventListener("change",renderSelectedSpace);
+  elements.saveSpace.addEventListener("click",async()=>{
+    const slug=elements.spaceSelect.value;
+    setStatus(elements.spaceMessage,"Enregistrement…");
+    try{
+      await api(`/api/admin/spaces/${slug}`,{
+        method:"PUT",
+        body:JSON.stringify({
+          manualStatus:elements.spaceStatus.value,
+          liberte:elements.spaceLiberte.value,
+          longe:elements.spaceLonge.value,
+          specialHours:elements.spaceSpecial.value,
+          info:elements.spaceInfo.value
+        })
+      });
+      await refreshOperations();
+      elements.spaceSelect.value=slug;
+      renderSelectedSpace();
+      setStatus(elements.spaceMessage,"Statut enregistré.","success");
+    }catch(error){setStatus(elements.spaceMessage,error.message,"error");}
+  });
+
+  elements.saveSpaceSchedules.addEventListener("click",async()=>{
+    const slug=elements.spaceSelect.value;
+    setStatus(elements.spaceSchedulesStatus,"Enregistrement…");
+    try{
+      await api(`/api/admin/spaces/${slug}/schedules`,{
+        method:"PUT",body:JSON.stringify({schedules:readScheduleInputs(elements.spaceSchedules)})
+      });
+      await refreshOperations();
+      elements.spaceSelect.value=slug;
+      renderSelectedSpace();
+      setStatus(elements.spaceSchedulesStatus,"Horaires enregistrés.","success");
+    }catch(error){setStatus(elements.spaceSchedulesStatus,error.message,"error");}
+  });
+
+  elements.saveGeneralSchedules.addEventListener("click",async()=>{
+    setStatus(elements.generalSchedulesStatus,"Enregistrement…");
+    try{
+      await api("/api/admin/general-schedules",{
+        method:"PUT",body:JSON.stringify({schedules:readScheduleInputs(elements.generalSchedules)})
+      });
+      await refreshOperations();
+      setStatus(elements.generalSchedulesStatus,"Horaires des écuries enregistrés.","success");
+    }catch(error){setStatus(elements.generalSchedulesStatus,error.message,"error");}
+  });
+
+  elements.saveException.addEventListener("click",async()=>{
+    setStatus(elements.exceptionStatus,"Enregistrement…");
+    try{
+      await api("/api/admin/exceptions",{
+        method:"POST",body:JSON.stringify({date:elements.exceptionDate.value,message:elements.exceptionMessage.value})
+      });
+      elements.exceptionMessage.value="";
+      await refreshOperations();
+      setStatus(elements.exceptionStatus,"Exception enregistrée.","success");
+    }catch(error){setStatus(elements.exceptionStatus,error.message,"error");}
+  });
+
+  elements.saveHomeAlert.addEventListener("click",async()=>{
+    setStatus(elements.homeAlertStatus,"Enregistrement…");
+    try{
+      await api("/api/admin/home-alert",{
+        method:"PUT",body:JSON.stringify({message:elements.homeAlertMessage.value,urgent:elements.homeAlertUrgent.checked})
+      });
+      await refreshOperations();
+      setStatus(elements.homeAlertStatus,"Alerte d’accueil enregistrée.","success");
+    }catch(error){setStatus(elements.homeAlertStatus,error.message,"error");}
+  });
 
   document.querySelectorAll("[data-format]").forEach(button=>{
     button.addEventListener("click",()=>applyFormat(button.dataset.format));
@@ -257,7 +491,7 @@
   }
 
   if(storedToken){
-    loadAlerts();
+    loadAll();
   }else{
     toggleSettings(true);
   }

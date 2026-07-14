@@ -1,7 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  compatibleAlert,validateAlert,parisNow,isPushEnabled,sendRequestedPush,plainTextMessage
+  compatibleAlert,validateAlert,parisNow,isPushEnabled,sendRequestedPush,plainTextMessage,
+  calculateStatus,publicSpace,publicSchedule,validateSpace,validateSchedules,timeToMinutes
 } from "../src/worker.js";
 
 test("le contrat public conserve les neuf champs historiques",()=>{
@@ -72,4 +73,56 @@ test("OneSignal reçoit un message sans marqueurs de mise en forme",()=>{
     plainTextMessage("**Important**\n__Souligné__\n[Consulter](https://example.com/page)"),
     "Important\nSouligné\nConsulter"
   );
+});
+
+test("le mode ouvert suit les horaires propres à l’espace",()=>{
+  const schedule={opens_at:"10:00",closes_at:"20:00"};
+  assert.equal(calculateStatus("ouvert",schedule,9*60),"prevision");
+  assert.equal(calculateStatus("ouvert",schedule,10*60),"ouvert");
+  assert.equal(calculateStatus("ouvert",schedule,19*60+59),"ouvert");
+  assert.equal(calculateStatus("ouvert",schedule,20*60),"prevision");
+});
+
+test("les statuts manuels neutralisent le calcul automatique",()=>{
+  const schedule={opens_at:"08:00",closes_at:"21:00"};
+  assert.equal(calculateStatus("prevision",schedule,12*60),"prevision");
+  assert.equal(calculateStatus("ferme",schedule,12*60),"ferme");
+  assert.equal(calculateStatus("hors-service",schedule,12*60),"hors-service");
+});
+
+test("fermé et hors service masquent les horaires",()=>{
+  const base={slug:"manege",manual_status:"ferme",liberte:"non",longe:"oui",info:"",special_hours:"Prévu 19h"};
+  const schedule={opens_at:"10:00",closes_at:"20:00"};
+  const closed=publicSpace(base,schedule,12*60);
+  assert.equal(closed.horaire_affiche,"");
+  assert.equal(closed.horaire_special,"");
+  const forecast=publicSpace({...base,manual_status:"prevision"},schedule,12*60);
+  assert.equal(forecast.horaire_affiche,"10:00 - 20:00");
+  assert.equal(forecast.horaire_special,"Prévu 19h");
+});
+
+test("les horaires de nuit sont acceptés",()=>{
+  const schedule={opens_at:"20:00",closes_at:"02:00"};
+  assert.equal(calculateStatus("ouvert",schedule,23*60),"ouvert");
+  assert.equal(calculateStatus("ouvert",schedule,60),"ouvert");
+  assert.equal(calculateStatus("ouvert",schedule,12*60),"prevision");
+});
+
+test("les sept jours sont validés",()=>{
+  const schedules=Array.from({length:7},(_,index)=>({day:index+1,opensAt:"08:00",closesAt:"21:00"}));
+  assert.equal(validateSchedules(schedules).rows.length,7);
+  assert.equal(validateSchedules(schedules.slice(0,6)).error,"Les sept jours sont obligatoires");
+  assert.equal(timeToMinutes("24:00"),null);
+  assert.deepEqual(publicSchedule({day:1,opens_at:"08:00",closes_at:"21:00"}),{
+    jour:"lundi",ouvert:"08:00",ferme:"21:00"
+  });
+});
+
+test("les champs d’un espace sont normalisés",()=>{
+  const value=validateSpace({manualStatus:" OUVERT ",liberte:"oui",longe:"non",info:" Test ",specialHours:" Prévu 19h "});
+  assert.equal(value.manualStatus,"ouvert");
+  assert.equal(value.liberte,"oui");
+  assert.equal(value.longe,"non");
+  assert.equal(value.info,"Test");
+  assert.equal(value.specialHours,"Prévu 19h");
 });
