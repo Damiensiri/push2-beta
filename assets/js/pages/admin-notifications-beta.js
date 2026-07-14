@@ -21,7 +21,8 @@
   };
   let alerts=[];
 
-  const storedUrl=localStorage.getItem("notifications_beta_api_url")||"";
+  const storedUrl=localStorage.getItem("notifications_beta_api_url")||
+    "https://ecurie-notifications-beta.damiensiri-pro.workers.dev";
   elements.apiUrl.value=storedUrl;
 
   function settings(){
