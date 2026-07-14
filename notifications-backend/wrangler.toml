@@ -10,4 +10,4 @@ ALLOWED_ORIGIN = "https://damiensiri.github.io,http://127.0.0.1:8000"
 [[d1_databases]]
 binding = "DB"
 database_name = "ecurie-notifications-beta"
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "c88d9f28-f645-4c61-abd2-3ddebcbc0cab"

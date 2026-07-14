@@ -12,7 +12,6 @@ if(!Array.isArray(rows))throw new Error("L’export doit être un tableau JSON")
 const quote=value=>"'"+String(value??"").replaceAll("'","''")+"'";
 const now=new Date().toISOString();
 
-console.log("BEGIN TRANSACTION;");
 for(const row of rows){
   if(!Number.isInteger(Number(row.id)))throw new Error("ID invalide dans l’export");
   console.log(`INSERT OR REPLACE INTO alerts(
@@ -24,4 +23,3 @@ for(const row of rows){
   ${quote(row.active||"non")},0,NULL,NULL,${quote(now)},${quote(now)}
 );`);
 }
-console.log("COMMIT;");

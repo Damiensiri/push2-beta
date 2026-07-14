@@ -164,7 +164,7 @@ function parisNow(){
 function isAdmin(request,env){
   if(!env.ADMIN_TOKEN)return false;
   const value=request.headers.get("authorization")||"";
-  return value===`Bearer ${env.ADMIN_TOKEN}`;
+  return value===`Bearer ${String(env.ADMIN_TOKEN).trim()}`;
 }
 
 function corsHeaders(request,env){
