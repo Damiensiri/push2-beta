@@ -74,6 +74,13 @@ export default{
         }
 
         const match=url.pathname.match(/^\/api\/admin\/notifications\/(\d+)$/);
+        if(request.method==="DELETE"&&match){
+          const result=await env.DB.prepare("DELETE FROM alerts WHERE id=?")
+            .bind(Number(match[1])).run();
+          if(!result.meta.changes)return json({error:"Alerte introuvable"},404,cors);
+          return json({deleted:true,id:Number(match[1])},200,cors);
+        }
+
         if(request.method==="PATCH"&&match){
           const current=await env.DB.prepare("SELECT * FROM alerts WHERE id=?")
             .bind(Number(match[1])).first();
@@ -227,7 +234,7 @@ function corsHeaders(request,env){
   const allowed=origins.includes(origin)?origin:"";
   return{
     "access-control-allow-origin":allowed,
-    "access-control-allow-methods":"GET,POST,PATCH,OPTIONS",
+    "access-control-allow-methods":"GET,POST,PATCH,DELETE,OPTIONS",
     "access-control-allow-headers":"authorization,content-type",
     "vary":"Origin"
   };

@@ -1,8 +1,11 @@
 (function(){
   const elements={
+    settingsButton:document.getElementById("settingsBtn"),
+    settingsPanel:document.getElementById("settingsPanel"),
     apiUrl:document.getElementById("apiUrl"),
     token:document.getElementById("adminToken"),
     connect:document.getElementById("connectBtn"),
+    forgetToken:document.getElementById("forgetTokenBtn"),
     connectionStatus:document.getElementById("connectionStatus"),
     form:document.getElementById("alertForm"),
     editingId:document.getElementById("editingId"),
@@ -23,7 +26,15 @@
 
   const storedUrl=localStorage.getItem("notifications_beta_api_url")||
     "https://ecurie-notifications-beta.damiensiri-pro.workers.dev";
+  const storedToken=localStorage.getItem("notifications_beta_admin_token")||"";
   elements.apiUrl.value=storedUrl;
+  elements.token.value=storedToken;
+
+  function toggleSettings(force){
+    const open=typeof force==="boolean"?force:elements.settingsPanel.hidden;
+    elements.settingsPanel.hidden=!open;
+    elements.settingsButton.setAttribute("aria-expanded",String(open));
+  }
 
   function settings(){
     return{
@@ -60,8 +71,10 @@
       const config=settings();
       localStorage.setItem("notifications_beta_api_url",config.base);
       alerts=await api("/api/admin/notifications");
+      localStorage.setItem("notifications_beta_admin_token",config.token);
       render();
       setStatus(elements.connectionStatus,`${alerts.length} alerte(s) chargée(s).`,"success");
+      toggleSettings(false);
     }catch(error){
       setStatus(elements.connectionStatus,error.message,"error");
     }
@@ -107,9 +120,30 @@
       edit.type="button";
       edit.textContent="Modifier";
       edit.addEventListener("click",()=>startEdit(alert));
-      card.append(top,message,badges,edit);
+      const remove=document.createElement("button");
+      remove.type="button";
+      remove.className="danger";
+      remove.textContent="Supprimer";
+      remove.addEventListener("click",()=>deleteAlert(alert));
+      const actions=document.createElement("div");
+      actions.className="alert-actions";
+      actions.append(edit,remove);
+      card.append(top,message,badges,actions);
       elements.list.appendChild(card);
     });
+  }
+
+  async function deleteAlert(alert){
+    if(!window.confirm(`Supprimer définitivement l’alerte #${alert.id} « ${alert.titre} » ?`))return;
+    setStatus(elements.connectionStatus,"Suppression…");
+    try{
+      await api(`/api/admin/notifications/${alert.id}`,{method:"DELETE"});
+      if(String(elements.editingId.value)===String(alert.id))resetForm();
+      await loadAlerts();
+      setStatus(elements.connectionStatus,"Alerte supprimée.","success");
+    }catch(error){
+      setStatus(elements.connectionStatus,error.message,"error");
+    }
   }
 
   function badge(text,className=""){
@@ -181,6 +215,18 @@
   });
 
   elements.connect.addEventListener("click",loadAlerts);
+  elements.settingsButton.addEventListener("click",()=>toggleSettings());
+  elements.forgetToken.addEventListener("click",()=>{
+    localStorage.removeItem("notifications_beta_admin_token");
+    elements.token.value="";
+    setStatus(elements.connectionStatus,"Jeton oublié sur cet appareil.","success");
+  });
   elements.refresh.addEventListener("click",loadAlerts);
   elements.cancel.addEventListener("click",resetForm);
+
+  if(storedToken){
+    loadAlerts();
+  }else{
+    toggleSettings(true);
+  }
 })();

@@ -5,28 +5,32 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Administration des alertes — Bêta</title>
 <meta name="theme-color" content="#102b45">
-<link rel="stylesheet" href="assets/css/pages/admin-notifications-beta.css">
+<link rel="stylesheet" href="assets/css/pages/admin-notifications-beta.css?v=20260714-141500">
 </head>
 <body>
 <main class="admin-shell">
   <header class="admin-header">
     <div>
-      <span class="environment">BÊTA · PUSH DÉSACTIVÉ</span>
+      <span class="environment">BÊTA · PUSH ACTIF</span>
       <h1>Alertes</h1>
       <p>Administration mobile du futur système de notifications.</p>
     </div>
-    <a href="index.html">Retour</a>
+    <div class="header-actions">
+      <button id="settingsBtn" class="icon-button" type="button" aria-label="Ouvrir les paramètres" aria-expanded="false">⚙︎</button>
+      <a href="index.html">Retour</a>
+    </div>
   </header>
 
-  <section class="panel connection-panel" aria-labelledby="connectionTitle">
+  <section id="settingsPanel" class="panel connection-panel" aria-labelledby="connectionTitle" hidden>
     <h2 id="connectionTitle">Connexion au backend bêta</h2>
     <label>Adresse de l’API
       <input id="apiUrl" type="url" inputmode="url" placeholder="https://…workers.dev">
     </label>
     <label>Jeton d’administration
-      <input id="adminToken" type="password" autocomplete="current-password" placeholder="Jeton non enregistré sur l’appareil">
+      <input id="adminToken" type="password" autocomplete="current-password" placeholder="Jeton mémorisé uniquement sur cet appareil">
     </label>
     <button id="connectBtn" type="button">Se connecter</button>
+    <button id="forgetTokenBtn" class="secondary forget-button" type="button">Oublier le jeton</button>
     <p id="connectionStatus" class="status" role="status"></p>
   </section>
 
@@ -38,7 +42,13 @@
     <form id="alertForm">
       <input id="editingId" type="hidden">
       <label>Catégorie
-        <input id="categorie" maxlength="80" placeholder="Ex. Espace de travail">
+        <select id="categorie" required>
+          <option value="">Choisir une catégorie</option>
+          <option value="Espaces de travail">Espaces de travail</option>
+          <option value="Paddocks">Paddocks</option>
+          <option value="Informations">Informations</option>
+          <option value="Mise à jour">Mise à jour</option>
+        </select>
       </label>
       <label>Titre
         <input id="titre" maxlength="160" required placeholder="Titre visible dans la liste">
@@ -62,11 +72,13 @@
       <h2 id="listTitle">Alertes enregistrées</h2>
       <button id="refreshBtn" class="secondary" type="button">Actualiser</button>
     </div>
-    <div id="alertsList" class="alerts-list">
+    <div class="alerts-scroll">
+      <div id="alertsList" class="alerts-list">
       <p class="empty">Connectez le backend pour afficher les alertes.</p>
+      </div>
     </div>
   </section>
 </main>
-<script src="assets/js/pages/admin-notifications-beta.js"></script>
+<script src="assets/js/pages/admin-notifications-beta.js?v=20260714-141500"></script>
 </body>
 </html>
