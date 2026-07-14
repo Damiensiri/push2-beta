@@ -1,0 +1,13 @@
+name = "ecurie-notifications-beta"
+main = "src/worker.js"
+compatibility_date = "2026-07-14"
+
+[vars]
+ENVIRONMENT = "beta"
+PUSH_ENABLED = "false"
+ALLOWED_ORIGIN = "https://damiensiri.github.io,http://127.0.0.1:8000"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ecurie-notifications-beta"
+database_id = "00000000-0000-0000-0000-000000000000"

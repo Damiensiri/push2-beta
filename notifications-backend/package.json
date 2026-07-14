@@ -1,0 +1,11 @@
+{
+  "name": "ecurie-notifications-beta",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
+  "devDependencies": {
+    "wrangler": "^4.110.0"
+  }
+}
