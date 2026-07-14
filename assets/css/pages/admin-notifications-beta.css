@@ -33,7 +33,33 @@ button.secondary{width:auto;padding:9px 12px;border:1px solid #ffffff30;backgrou
 .switches{display:grid;gap:2px;margin:15px 0}
 .single-option{margin-bottom:10px}
 .check{display:flex;align-items:center;gap:10px;margin:4px 0;padding:10px 12px;border-radius:14px;background:#ffffff0d}
-.check input{width:20px;height:20px;margin:0;accent-color:#ffb23f}
+.check input[type="checkbox"]{
+  appearance:none;
+  -webkit-appearance:none;
+  display:grid;
+  place-content:center;
+  flex:0 0 24px;
+  width:24px;
+  height:24px;
+  margin:0;
+  padding:0;
+  border:2px solid #d8e9f4;
+  border-radius:7px;
+  background:#061827;
+  box-shadow:none;
+}
+.check input[type="checkbox"]::before{
+  content:"";
+  width:11px;
+  height:6px;
+  border-left:3px solid #172430;
+  border-bottom:3px solid #172430;
+  transform:rotate(-45deg) scale(0);
+  transform-origin:center;
+}
+.check input[type="checkbox"]:checked{border-color:#ffb23f;background:#ffb23f}
+.check input[type="checkbox"]:checked::before{transform:rotate(-45deg) scale(1)}
+.check input[type="checkbox"]:focus-visible{box-shadow:0 0 0 3px #70c7f54d}
 .safety-note{color:#ffd99d;font-size:12px;line-height:1.5}
 .form-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .form-actions .send{background:#63d492;color:#092719}
