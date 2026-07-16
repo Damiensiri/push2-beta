@@ -180,9 +180,12 @@ const miseEmailNotice=document.getElementById("miseEmailNotice")
 
 function updateEmailRequirement(){
 const mise=document.getElementById("type").value==="mise"
-confirmationEmailOption.hidden=mise
+confirmEmail.checked=mise
+confirmEmail.disabled=mise
+confirmationEmailOption.hidden=false
+confirmationEmailOption.lastChild.textContent=mise?" Confirmation par email obligatoire":" Recevoir une confirmation par email"
 miseEmailNotice.hidden=!mise
-miseEmailNotice.textContent=mise&&currentViewer?"La confirmation sera envoyée à "+currentViewer.email:""
+miseEmailNotice.textContent=mise&&currentViewer?"Elle sera envoyée à "+currentViewer.email:""
 }
 
 function showStep(id){
