@@ -693,7 +693,9 @@ export default{
               .bind(now,current.id).run();
           }
           const updated=await env.DB.prepare("SELECT * FROM users WHERE id=?").bind(current.id).first();
-          return json({user:publicUser(updated)},200,cors);
+          const justApproved=(current.approval_status||"approved")==="pending"&&approvalStatus==="approved"&&effectiveStatus==="active";
+          const email=justApproved?await sendAccountApprovedEmail(env,updated,now):null;
+          return json({user:publicUser(updated),email},200,cors);
         }
 
         if(request.method==="DELETE"&&userMatch){
@@ -1263,6 +1265,19 @@ async function sendPaddockReservationCancellationEmail(env,row,comment){
     idempotencyKey:`paddock-reservation-cancelled:${row.id}:${new Date().toISOString()}`,
     customer:{email:row.email,firstName:row.name},
     reservation:{id:String(row.id),paddock:row.paddock,date:row.date,time:row.time,duration:Number(row.duration),comment}};
+  try{
+    const response=await fetch(env.MAILER_ENDPOINT,{method:"POST",headers:{"content-type":"text/plain;charset=UTF-8"},body:JSON.stringify(payload)});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok||!data.ok)return{requested:true,sent:false,error:data.error||`Mailer HTTP ${response.status}`};
+    return{requested:true,sent:Boolean(data.sent),duplicate:Boolean(data.duplicate)};
+  }catch(error){return{requested:true,sent:false,error:String(error?.message||error)};}
+}
+
+async function sendAccountApprovedEmail(env,user,approvedAt){
+  if(!env.MAILER_ENDPOINT)return{requested:true,sent:false,error:"Mailer bêta non configuré"};
+  const payload={type:"account_approved",idempotencyKey:`account-approved:${user.id}:${approvedAt}`,
+    customer:{email:user.email,firstName:user.first_name,lastName:user.last_name},
+    account:{id:String(user.id),loginUrl:"https://damiensiri.github.io/push2-beta/connexion.html"}};
   try{
     const response=await fetch(env.MAILER_ENDPOINT,{method:"POST",headers:{"content-type":"text/plain;charset=UTF-8"},body:JSON.stringify(payload)});
     const data=await response.json().catch(()=>({}));
