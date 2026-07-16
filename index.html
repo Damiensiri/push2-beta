@@ -41,45 +41,8 @@ if(registration)registration.update();
 
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700&display=swap" rel="stylesheet">
 
-<!-- OneSignal -->
-<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
-
-<script>
-window.OneSignalDeferred = window.OneSignalDeferred || [];
-OneSignalDeferred.push(async function(OneSignal) {
-
-const oneSignalConfig={
-appId:IS_BETA
-?"186e6f3b-def4-4b8e-8700-650456ff93cc"
-:"85a477ff-3d8d-4975-960d-c7e69100a0ff",
-notifyButton:{enable:false},
-promptOptions:{
-slidedown:{
-prompts:[{
-type:"push",
-autoPrompt:true,
-text:{
-actionMessage:"Souhaitez-vous recevoir les notifications de l’écurie ?",
-acceptButton:"Autoriser",
-cancelButton:"Plus tard"
-}
-}]
-}
-}
-};
-
-if(IS_BETA){
-oneSignalConfig.serviceWorkerPath="push2-beta/OneSignalSDKWorker.js";
-oneSignalConfig.serviceWorkerParam={scope:"/push2-beta/"};
-}
-
-await OneSignal.init(oneSignalConfig);
-
-});
-</script>
-
 <script src="assets/js/app-config.js?v=20260714-194000"></script>
-<script src="assets/js/app-layout.js?v=20260714-194000"></script>
+<script src="assets/js/app-layout.js?v=20260716-5"></script>
 <script src="assets/js/profile-store.js?v=20260714-194000" defer></script>
 <script src="assets/js/pages/index-profile.js?v=20260714-194000" defer></script>
 <script src="assets/js/pages/index-install-prompt.js?v=20260714-194000" defer></script>

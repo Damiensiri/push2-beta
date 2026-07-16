@@ -5,6 +5,9 @@ const JSON_HEADERS={
 };
 
 export default{
+  async scheduled(controller,env,ctx){
+    ctx.waitUntil(processPaddockPushReminders(env,new Date(controller.scheduledTime)));
+  },
   async fetch(request,env){
     const url=new URL(request.url);
     const cors=corsHeaders(request,env);
@@ -200,6 +203,25 @@ export default{
         }
         if(request.method==="DELETE"){
           await env.PRODUCT_IMAGES.delete(key);
+          return json({deleted:true},200,cors);
+        }
+      }
+
+      if(url.pathname==="/api/push/subscription"){
+        const viewer=await authenticatedUser(request,env);
+        if(!viewer)return json({error:"Non autorisé"},401,cors);
+        if(request.method==="PUT"||request.method==="DELETE"){
+          const input=await readJson(request);const subscriptionId=String(input?.subscriptionId||"").trim();
+          if(!isValidPushSubscriptionId(subscriptionId))return json({error:"Abonnement push invalide"},400,cors);
+          if(request.method==="PUT"){
+            const now=new Date().toISOString();
+            await env.DB.prepare(`INSERT INTO user_push_subscriptions(subscription_id,user_id,created_at,updated_at)
+              VALUES(?,?,?,?) ON CONFLICT(subscription_id) DO UPDATE SET user_id=excluded.user_id,updated_at=excluded.updated_at`)
+              .bind(subscriptionId,viewer.id,now,now).run();
+            return json({registered:true},200,cors);
+          }
+          await env.DB.prepare("DELETE FROM user_push_subscriptions WHERE subscription_id=? AND user_id=?")
+            .bind(subscriptionId,viewer.id).run();
           return json({deleted:true},200,cors);
         }
       }
@@ -757,6 +779,8 @@ export default{
             env.DB.prepare("DELETE FROM paddock_cards WHERE user_id=?").bind(current.id),
             env.DB.prepare("DELETE FROM paddock_requests WHERE user_id=?").bind(current.id),
             env.DB.prepare("DELETE FROM user_sessions WHERE user_id=?").bind(current.id),
+            env.DB.prepare("DELETE FROM user_push_subscriptions WHERE user_id=?").bind(current.id),
+            env.DB.prepare("DELETE FROM paddock_push_reminders WHERE reservation_id IN (SELECT id FROM paddock_reservations WHERE user_id=?)").bind(current.id),
             env.DB.prepare("DELETE FROM paddock_slot_locks WHERE reservation_key IN (SELECT lock_key FROM paddock_reservations WHERE user_id=?)").bind(current.id),
             env.DB.prepare("DELETE FROM paddock_reservations WHERE user_id=?").bind(current.id),
             env.DB.prepare("DELETE FROM users WHERE id=?").bind(current.id)
@@ -1112,6 +1136,75 @@ async function sendRequestedPush(env,alert){
   }catch(error){
     return{enabled:true,status:"failed",error:String(error?.message||error)};
   }
+}
+
+function parisLocalMinute(date=new Date()){
+  const values={};
+  new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Paris",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hourCycle:"h23"})
+    .formatToParts(date).forEach(part=>{if(part.type!=="literal")values[part.type]=part.value;});
+  return Date.UTC(Number(values.year),Number(values.month)-1,Number(values.day))/60000+Number(values.hour)*60+Number(values.minute);
+}
+
+function reservationLocalMinute(date,time){
+  const [year,month,day]=String(date).split("-").map(Number);const [hour,minute]=String(time).split(":").map(Number);
+  return Date.UTC(year,month-1,day)/60000+hour*60+minute;
+}
+
+function duePaddockReminderTypes(reservation,currentMinute){
+  const start=reservationLocalMinute(reservation.date,reservation.time);const duration=Number(reservation.duration)||0;
+  return [{type:"start_1h",due:start-60},{type:"end_5m",due:start+duration-5}]
+    .filter(item=>currentMinute>=item.due&&currentMinute<item.due+5).map(item=>item.type);
+}
+
+function isValidPushSubscriptionId(value){
+  return /^[A-Za-z0-9-]{20,100}$/.test(String(value||""));
+}
+
+async function processPaddockPushReminders(env,now=new Date()){
+  if(!isPushEnabled(env))return{processed:0,sent:0,disabled:true};
+  const parisDate=new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Paris",year:"numeric",month:"2-digit",day:"2-digit"}).format(now);
+  const result=await env.DB.prepare(`SELECT id,user_id,paddock,date,time,duration FROM paddock_reservations
+    WHERE user_id IS NOT NULL AND date BETWEEN date(?,'-1 day') AND date(?,'+1 day')`).bind(parisDate,parisDate).all();
+  const currentMinute=parisLocalMinute(now);let sent=0;
+  for(const reservation of result.results){
+    const subscriptions=await env.DB.prepare("SELECT subscription_id FROM user_push_subscriptions WHERE user_id=?")
+      .bind(reservation.user_id).all();
+    const subscriptionIds=subscriptions.results.map(item=>item.subscription_id).filter(Boolean);
+    if(!subscriptionIds.length)continue;
+    for(const type of duePaddockReminderTypes(reservation,currentMinute)){
+      const claimedAt=new Date().toISOString();
+      const claim=await env.DB.prepare(`INSERT OR IGNORE INTO paddock_push_reminders(reservation_id,reminder_type,claimed_at)
+        VALUES(?,?,?)`).bind(reservation.id,type,claimedAt).run();
+      if(!claim.meta.changes)continue;
+      const push=await sendPaddockReminderPush(env,reservation,type,subscriptionIds);
+      if(push.sent){
+        await env.DB.prepare("UPDATE paddock_push_reminders SET sent_at=?,onesignal_notification_id=? WHERE reservation_id=? AND reminder_type=?")
+          .bind(new Date().toISOString(),push.id||null,reservation.id,type).run();sent++;
+      }else{
+        await env.DB.prepare("DELETE FROM paddock_push_reminders WHERE reservation_id=? AND reminder_type=? AND sent_at IS NULL")
+          .bind(reservation.id,type).run();
+      }
+    }
+  }
+  return{processed:result.results.length,sent};
+}
+
+async function sendPaddockReminderPush(env,reservation,type,subscriptionIds){
+  const paddock=({maison:"Maison",grande:"Grande voie",beudot:"Beudot"})[reservation.paddock]||reservation.paddock;
+  const title=type==="start_1h"?"Rappel de votre réservation paddock":"Fin de votre réservation paddock";
+  const message=type==="start_1h"
+    ?`Votre réservation au paddock ${paddock} commence dans 1 heure, à ${reservation.time}.`
+    :`Votre réservation au paddock ${paddock} se termine dans 5 minutes. Merci de libérer le paddock.`;
+  try{
+    const response=await fetch("https://api.onesignal.com/notifications",{method:"POST",headers:{
+      "authorization":`Key ${env.ONESIGNAL_REST_API_KEY}`,"content-type":"application/json; charset=utf-8"},body:JSON.stringify({
+        app_id:env.ONESIGNAL_APP_ID,include_subscription_ids:subscriptionIds,
+        headings:{fr:title,en:title},contents:{fr:message,en:message},url:"https://damiensiri.github.io/push2-beta/mesreservations.html"
+      })});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok||data.errors||!data.id)return{sent:false,error:data.errors||"Aucun appareil push actif"};
+    return{sent:true,id:data.id};
+  }catch(error){return{sent:false,error:String(error?.message||error)};}
 }
 
 async function markPushSent(env,id,sentAt){
@@ -1517,5 +1610,6 @@ export class RealtimeHub{
 export{
   compatibleAlert,validateAlert,parisNow,isPushEnabled,sendRequestedPush,plainTextMessage,
   calculateStatus,publicSpace,publicSchedule,validateSpace,validateSchedules,timeToMinutes,parisClock,
-  normalizeEmail,validatePassword,validateNewUser,hashPassword,verifyPassword,publicUser,validatePaddockBooking,validatePaddockHours
+  normalizeEmail,validatePassword,validateNewUser,hashPassword,verifyPassword,publicUser,validatePaddockBooking,validatePaddockHours,
+  parisLocalMinute,reservationLocalMinute,duePaddockReminderTypes,isValidPushSubscriptionId,processPaddockPushReminders
 };

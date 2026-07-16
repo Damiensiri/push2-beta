@@ -9,15 +9,60 @@
     }
     fetch("https://ecurie-notifications-beta.damiensiri-pro.workers.dev/api/auth/me",{
       headers:{authorization:"Bearer "+authToken},cache:"no-store"
-    }).then(response=>{
+    }).then(async response=>{
       if(!response.ok)throw new Error("Session invalide");
+      const data=await response.json();
       document.documentElement.style.visibility="";
+      initializePushIdentity(data.user);
     }).catch(()=>{
       localStorage.removeItem("ecurie_beta_session");
       location.replace("connexion.html");
     });
   }else if(authToken){
     document.documentElement.style.visibility="hidden";
+  }
+
+  function initializePushIdentity(user){
+    if(!user?.id)return;
+    const endpoint="https://ecurie-notifications-beta.damiensiri-pro.workers.dev/api/push/subscription";
+    async function saveSubscription(subscriptionId,method="PUT"){
+      if(!subscriptionId)return;
+      const token=localStorage.getItem("ecurie_beta_session")||"";
+      if(!token)return;
+      const response=await fetch(endpoint,{method,headers:{authorization:"Bearer "+token,"content-type":"application/json"},
+        body:JSON.stringify({subscriptionId}),cache:"no-store"});
+      if(!response.ok)throw new Error("Enregistrement push refusé");
+    }
+    window.OneSignalDeferred=window.OneSignalDeferred||[];
+    window.EcuriePushIdentity={
+      logout(){return new Promise(resolve=>window.OneSignalDeferred.push(async OneSignal=>{
+        try{
+          const subscriptionId=OneSignal.User.PushSubscription.id;
+          if(subscriptionId)await saveSubscription(subscriptionId,"DELETE");
+          await OneSignal.logout();
+        }catch(error){}finally{resolve();}
+      }));}
+    };
+    window.OneSignalDeferred.push(async OneSignal=>{
+      try{
+        await OneSignal.init({appId:"186e6f3b-def4-4b8e-8700-650456ff93cc",notifyButton:{enable:false},
+          serviceWorkerPath:"push2-beta/OneSignalSDKWorker.js",serviceWorkerParam:{scope:"/push2-beta/"},
+          promptOptions:{slidedown:{prompts:[{type:"push",autoPrompt:true,text:{actionMessage:"Souhaitez-vous recevoir les notifications de l’écurie ?",acceptButton:"Autoriser",cancelButton:"Plus tard"}}]}}});
+        await OneSignal.login(`beta-user-${user.id}`);
+        const registerCurrent=async()=>{
+          const subscriptionId=OneSignal.User.PushSubscription.id;
+          if(subscriptionId)await saveSubscription(subscriptionId);
+        };
+        await registerCurrent();
+        OneSignal.User.PushSubscription.addEventListener("change",event=>{
+          const subscriptionId=event?.current?.id||OneSignal.User.PushSubscription.id;
+          if(subscriptionId)saveSubscription(subscriptionId).catch(()=>{});
+        });
+      }catch(error){console.warn("Identification push indisponible",error);}
+    });
+    if(!document.querySelector('script[data-onesignal-beta]')){
+      const script=document.createElement("script");script.src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js";script.defer=true;script.dataset.onesignalBeta="";document.head.appendChild(script);
+    }
   }
   const config=window.APP_CONFIG || {};
   const themes=Array.isArray(config.themes)?config.themes:["summer"];

@@ -3,7 +3,8 @@ import assert from "node:assert/strict";
 import {
   compatibleAlert,validateAlert,parisNow,isPushEnabled,sendRequestedPush,plainTextMessage,
   calculateStatus,publicSpace,publicSchedule,validateSpace,validateSchedules,timeToMinutes,
-  normalizeEmail,validatePassword,validateNewUser,hashPassword,verifyPassword,validatePaddockBooking
+  normalizeEmail,validatePassword,validateNewUser,hashPassword,verifyPassword,validatePaddockBooking,
+  reservationLocalMinute,duePaddockReminderTypes
 } from "../src/worker.js";
 
 test("les comptes utilisateurs normalisent et valident l’identité",()=>{
@@ -21,6 +22,14 @@ test("les créneaux paddock sont validés côté Worker",()=>{
   });
   assert.equal(validatePaddockBooking({paddock:"inconnu",date:"2026-07-17",time:"09:30",duration:90}).error,"Paddock invalide");
   assert.equal(validatePaddockBooking({paddock:"grande",date:"2026-07-17",time:"09:30",duration:45}).error,"Durée invalide");
+});
+
+test("les rappels paddock sont calculés une seule fois aux bons instants",()=>{
+  const reservation={date:"2026-07-17",time:"15:00",duration:90};
+  const start=reservationLocalMinute(reservation.date,reservation.time);
+  assert.deepEqual(duePaddockReminderTypes(reservation,start-60),["start_1h"]);
+  assert.deepEqual(duePaddockReminderTypes(reservation,start+85),["end_5m"]);
+  assert.deepEqual(duePaddockReminderTypes(reservation,start),[]);
 });
 
 test("les mots de passe sont salés et vérifiables",async()=>{

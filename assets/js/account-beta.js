@@ -120,6 +120,7 @@ setTimeout(()=>location.replace("connexion.html"),900);
 });
 
 document.getElementById("accountLogout").addEventListener("click",async()=>{
+if(window.EcuriePushIdentity)await window.EcuriePushIdentity.logout();
 try{await request("/api/auth/logout",{method:"POST"});}catch(error){}
 localStorage.removeItem(TOKEN_KEY);location.replace("connexion.html");
 });
