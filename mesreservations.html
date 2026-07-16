@@ -86,6 +86,10 @@ end.setMinutes(end.getMinutes()+(Number(duration)||0))
 return end
 }
 
+function isReservationPast(dateStr,timeStr,duration){
+return getReservationEndDateTime(dateStr,timeStr,duration) <= new Date()
+}
+
 function formatDateFR(dateStr){
 const date=new Date(dateStr+"T00:00")
 if(isNaN(date)) return dateStr || ""
@@ -328,7 +332,7 @@ loadPaddockCard()
 
 for(const data of reservationData){
 const id=data.id
-let old=isPast(data.date,data.time)
+let old=isReservationPast(data.date,data.time,data.duration)
 
 calendarReservations[id]={
 title:`Réservation ${data.paddock || ""}`,
@@ -429,6 +433,10 @@ document.getElementById("toggleHistory").innerText="Voir l’historique ▼"
 /* ===== START ===== */
 
 load()
+
+setInterval(()=>{
+if(!document.hidden) load()
+},60000)
 
 document.addEventListener("visibilitychange",()=>{
 if(!document.hidden) load()
