@@ -322,6 +322,51 @@ export default{
           return json({orders:await loadOrders(env,"",[])},200,cors);
         }
 
+        if(request.method==="GET"&&url.pathname==="/api/admin/catalog"){
+          const result=await env.DB.prepare(`SELECT id,category,name,description,price_cents,image_url,badge,featured,active,position,updated_at
+            FROM catalog_products ORDER BY category,position,id`).all();
+          return json({products:result.results.map(row=>({...publicProduct(row),active:Boolean(row.active),updatedAt:row.updated_at}))},200,cors);
+        }
+
+        if(request.method==="POST"&&url.pathname==="/api/admin/catalog"){
+          const input=await readJson(request);const product=validateCatalogProduct(input,true);
+          if(product.error)return json({error:product.error},400,cors);
+          const now=new Date().toISOString();
+          try{
+            await env.DB.prepare(`INSERT INTO catalog_products(id,category,name,description,price_cents,image_url,badge,featured,active,position,updated_at)
+              VALUES(?,?,?,?,?,?,?,?,?,?,?)`).bind(product.id,product.category,product.name,product.description,product.priceCents,
+              product.image,product.badge,product.featured?1:0,product.active?1:0,product.position,now).run();
+          }catch(error){if(String(error?.message||error).includes("UNIQUE"))return json({error:"Cet identifiant existe déjà"},409,cors);throw error;}
+          if(product.featured)await env.DB.prepare("UPDATE catalog_products SET featured=0 WHERE category=? AND id<>?")
+            .bind(product.category,product.id).run();
+          await notifyRealtime(env,"catalog");
+          return json({created:true,id:product.id},201,cors);
+        }
+
+        const adminCatalogMatch=url.pathname.match(/^\/api\/admin\/catalog\/([A-Za-z0-9_-]+)$/);
+        if(request.method==="PUT"&&adminCatalogMatch){
+          const input=await readJson(request);const product=validateCatalogProduct({...input,id:adminCatalogMatch[1]},false);
+          if(product.error)return json({error:product.error},400,cors);
+          const result=await env.DB.prepare(`UPDATE catalog_products SET category=?,name=?,description=?,price_cents=?,image_url=?,badge=?,
+            featured=?,active=?,position=?,updated_at=? WHERE id=?`).bind(product.category,product.name,product.description,
+            product.priceCents,product.image,product.badge,product.featured?1:0,product.active?1:0,product.position,
+            new Date().toISOString(),product.id).run();
+          if(!result.meta.changes)return json({error:"Article introuvable"},404,cors);
+          if(product.featured)await env.DB.prepare("UPDATE catalog_products SET featured=0 WHERE category=? AND id<>?")
+            .bind(product.category,product.id).run();
+          await notifyRealtime(env,"catalog");return json({saved:true},200,cors);
+        }
+        if(request.method==="DELETE"&&adminCatalogMatch){
+          const used=await env.DB.prepare("SELECT id FROM order_items WHERE product_id=? LIMIT 1").bind(adminCatalogMatch[1]).first();
+          if(used){
+            await env.DB.prepare("UPDATE catalog_products SET active=0,updated_at=? WHERE id=?")
+              .bind(new Date().toISOString(),adminCatalogMatch[1]).run();
+            await notifyRealtime(env,"catalog");return json({deleted:false,archived:true},200,cors);
+          }
+          await env.DB.prepare("DELETE FROM catalog_products WHERE id=?").bind(adminCatalogMatch[1]).run();
+          await notifyRealtime(env,"catalog");return json({deleted:true,archived:false},200,cors);
+        }
+
         const adminOrderMatch=url.pathname.match(/^\/api\/admin\/orders\/(\d+)$/);
         if(request.method==="PATCH"&&adminOrderMatch){
           const current=(await loadOrders(env,"WHERE o.id=?",[Number(adminOrderMatch[1])]))[0];
@@ -1040,6 +1085,19 @@ function publicPaddockRequest(row){
 function publicProduct(row){
   return{id:row.id,category:row.category,name:row.name,description:row.description||"",price:Number(row.price_cents)/100,
     image:row.image_url||"",badge:row.badge||"",featured:Boolean(row.featured),position:Number(row.position)};
+}
+
+function validateCatalogProduct(input,requireId){
+  const id=String(input?.id||"").trim();const category=String(input?.category||"");
+  const name=String(input?.name||"").trim();const description=String(input?.description||"").trim();
+  const price=Number(input?.price);const image=String(input?.image||"").trim();const badge=String(input?.badge||"").trim();
+  const position=Number(input?.position);const featured=Boolean(input?.featured);const active=input?.active===undefined?true:Boolean(input.active);
+  if((requireId||id)&&!/^[A-Za-z0-9_-]{1,40}$/.test(id))return{error:"Identifiant invalide"};
+  if(!["services","soins","laverie"].includes(category))return{error:"Catégorie invalide"};
+  if(!name||name.length>120||description.length>1000||badge.length>80||image.length>1000)return{error:"Contenu de l’article invalide"};
+  if(!Number.isFinite(price)||price<0||price>100000)return{error:"Prix invalide"};
+  if(!Number.isInteger(position)||position<0||position>9999)return{error:"Ordre invalide"};
+  return{id,category,name,description,priceCents:Math.round(price*100),image,badge,position,featured,active};
 }
 
 async function loadOrders(env,whereClause,bindings){
