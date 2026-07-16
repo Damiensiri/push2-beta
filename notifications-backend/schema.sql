@@ -155,6 +155,12 @@ CREATE TABLE IF NOT EXISTS user_push_subscriptions (
 CREATE INDEX IF NOT EXISTS idx_user_push_subscriptions_user
   ON user_push_subscriptions(user_id);
 
+CREATE TABLE IF NOT EXISTS admin_push_subscriptions (
+  subscription_id TEXT PRIMARY KEY,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS paddock_slot_locks (
   date TEXT NOT NULL,
   paddock TEXT NOT NULL,

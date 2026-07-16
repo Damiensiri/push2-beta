@@ -95,6 +95,7 @@ export default{
             password_hash,password_salt,password_iterations,must_change_password,created_at,updated_at)
             VALUES(?,?,?,'','client','disabled','pending',?,?,?,0,?,?)`).bind(validated.email,validated.firstName,
               validated.lastName,encoded.hash,encoded.salt,encoded.iterations,now,now).run();
+          await sendAdminEventPush(env,"Nouvelle demande de compte",`${validated.firstName} ${validated.lastName} attend votre validation.`,"users.html");
           return json({registered:true,pending:true},201,cors);
         }catch(error){
           if(String(error?.message||error).includes("UNIQUE"))return json({error:"Une demande ou un compte existe déjà avec cette adresse email."},409,cors);
@@ -279,6 +280,7 @@ export default{
         const order=(await loadOrders(env,"WHERE o.id=?",[result.meta.last_row_id]))[0];
         await notifyRealtime(env,"orders");
         const email=await sendOrderEmail(env,"order_confirmation",order,viewer);
+        await sendAdminEventPush(env,"Nouvelle commande",`${viewer.first_name} — ${order.items.length} article(s), ${order.total.toFixed(2).replace(".",",")} €`,"orders.html");
         return json({order,email},201,cors);
       }
 
@@ -344,6 +346,7 @@ export default{
         }
         const created=await env.DB.prepare("SELECT id FROM paddock_reservations WHERE lock_key=?").bind(lockKey).first();
         await notifyRealtime(env,"paddocks");
+        await sendAdminEventPush(env,"Nouvelle réservation paddock",`${viewer.first_name} — ${booking.date} à ${booking.time}`,"paddocks.html");
         return json({reservation:{id:String(created.id),name:viewer.first_name,paddock:booking.paddock,
           date:booking.date,time:booking.time,duration:booking.duration,mine:true},
           confirmationRequested:Boolean(input.confirmationRequested),email:viewer.email},201,cors);
@@ -378,6 +381,7 @@ export default{
           const created=await env.DB.prepare(`SELECT id,date,status,comment,created_at,updated_at
             FROM paddock_requests WHERE id=?`).bind(result.meta.last_row_id).first();
           await notifyRealtime(env,"paddock-requests");
+          await sendAdminEventPush(env,"Nouvelle demande de mise au paddock",`${viewer.first_name} — ${date}`,"paddocks.html");
           return json({request:publicPaddockRequest(created),email:viewer.email},201,cors);
         }catch(error){
           if(String(error?.message||error).includes("UNIQUE"))return json({error:"Vous avez déjà une demande pour ce jour"},409,cors);
@@ -398,11 +402,25 @@ export default{
           env.DB.prepare("DELETE FROM paddock_reservations WHERE id=?").bind(reservation.id)
         ]);
         await notifyRealtime(env,"paddocks");
+        await sendAdminEventPush(env,"Réservation paddock annulée",`${viewer.first_name} a annulé sa réservation.`,"paddocks.html");
         return json({deleted:true},200,cors);
       }
 
       if(url.pathname.startsWith("/api/admin/")){
         if(!isAdmin(request,env))return json({error:"Non autorisé"},401,cors);
+
+        if(url.pathname==="/api/admin/push/subscription"&&(request.method==="PUT"||request.method==="DELETE")){
+          const input=await readJson(request);const subscriptionId=String(input?.subscriptionId||"").trim();
+          if(!isValidPushSubscriptionId(subscriptionId))return json({error:"Abonnement push invalide"},400,cors);
+          if(request.method==="PUT"){
+            const now=new Date().toISOString();
+            await env.DB.prepare(`INSERT INTO admin_push_subscriptions(subscription_id,created_at,updated_at) VALUES(?,?,?)
+              ON CONFLICT(subscription_id) DO UPDATE SET updated_at=excluded.updated_at`).bind(subscriptionId,now,now).run();
+            return json({registered:true},200,cors);
+          }
+          await env.DB.prepare("DELETE FROM admin_push_subscriptions WHERE subscription_id=?").bind(subscriptionId).run();
+          return json({deleted:true},200,cors);
+        }
 
         if(request.method==="GET"&&url.pathname==="/api/admin/operations"){
           return json(await loadOperations(env),200,cors);
@@ -653,6 +671,7 @@ export default{
           await notifyRealtime(env,"paddocks");
           let email={requested:false,sent:false};
           if(reservation.email&&reservation.email.includes("@"))email=await sendPaddockReservationCancellationEmail(env,reservation,comment);
+          await sendAdminEventPush(env,"Réservation paddock annulée",`${reservation.name} — ${reservation.date} à ${reservation.time}`,"paddocks.html");
           return json({deleted:true,email},200,cors);
         }
 
@@ -1575,6 +1594,25 @@ async function notifyRealtime(env,type){
     headers:{"content-type":"application/json"},
     body:JSON.stringify({type,updatedAt:new Date().toISOString()})
   });
+}
+
+async function sendAdminEventPush(env,title,message,page){
+  if(!isPushEnabled(env))return{sent:false,disabled:true};
+  try{
+    const result=await env.DB.prepare("SELECT subscription_id FROM admin_push_subscriptions ORDER BY updated_at DESC").all();
+    const subscriptionIds=result.results.map(row=>row.subscription_id).filter(Boolean);
+    if(!subscriptionIds.length)return{sent:false,noSubscribers:true};
+    const response=await fetch("https://api.onesignal.com/notifications",{method:"POST",headers:{
+      "authorization":`Key ${env.ONESIGNAL_REST_API_KEY}`,"content-type":"application/json; charset=utf-8"},body:JSON.stringify({
+        app_id:env.ONESIGNAL_APP_ID,include_subscription_ids:subscriptionIds,
+        headings:{fr:title,en:title},contents:{fr:message,en:message},
+        url:`https://damiensiri.github.io/backstage-beta/${page}`
+      })});
+    const data=await response.json().catch(()=>({}));
+    return{sent:Boolean(response.ok&&data.id),id:data.id||null,error:data.errors||null};
+  }catch(error){
+    return{sent:false,error:String(error?.message||error)};
+  }
 }
 
 export class RealtimeHub{
