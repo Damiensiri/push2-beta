@@ -67,6 +67,9 @@ export default{
         const email=normalizeEmail(input?.email);
         const password=String(input?.password||"");
         const user=await env.DB.prepare("SELECT * FROM users WHERE email=? COLLATE NOCASE").bind(email).first();
+        if(user?.approval_status==="pending"&&await verifyPassword(password,user)){
+          return json({error:"Votre demande de compte est en attente de validation par l’écurie."},403,cors);
+        }
         if(!user||user.status!=="active"||!await verifyPassword(password,user)){
           return json({error:"Identifiants incorrects"},401,cors);
         }
@@ -74,6 +77,26 @@ export default{
         await env.DB.prepare("UPDATE users SET last_login_at=?,updated_at=? WHERE id=?")
           .bind(session.createdAt,session.createdAt,user.id).run();
         return json({token:session.token,expiresAt:session.expiresAt,user:publicUser(user)},200,cors);
+      }
+
+      if(request.method==="POST"&&url.pathname==="/api/auth/register"){
+        const input=await readJson(request);
+        const validated=validateNewUser({...input,cardNumber:"",role:"client"});
+        if(validated.error)return json({error:validated.error},400,cors);
+        const passwordError=validatePassword(input?.password);
+        if(passwordError)return json({error:passwordError},400,cors);
+        const encoded=await hashPassword(input.password);
+        const now=new Date().toISOString();
+        try{
+          await env.DB.prepare(`INSERT INTO users(email,first_name,last_name,card_number,role,status,approval_status,
+            password_hash,password_salt,password_iterations,must_change_password,created_at,updated_at)
+            VALUES(?,?,?,'','client','disabled','pending',?,?,?,0,?,?)`).bind(validated.email,validated.firstName,
+              validated.lastName,encoded.hash,encoded.salt,encoded.iterations,now,now).run();
+          return json({registered:true,pending:true},201,cors);
+        }catch(error){
+          if(String(error?.message||error).includes("UNIQUE"))return json({error:"Une demande ou un compte existe déjà avec cette adresse email."},409,cors);
+          throw error;
+        }
       }
 
       if(url.pathname==="/api/auth/me"){
@@ -315,7 +338,7 @@ export default{
         }
 
         if(request.method==="GET"&&url.pathname==="/api/admin/users"){
-          const result=await env.DB.prepare(`SELECT id,email,first_name,last_name,card_number,role,status,
+          const result=await env.DB.prepare(`SELECT id,email,first_name,last_name,card_number,role,status,approval_status,
             must_change_password,created_at,updated_at,last_login_at,
             (SELECT total FROM paddock_cards WHERE user_id=users.id) AS paddock_card_total,
             (SELECT remaining FROM paddock_cards WHERE user_id=users.id) AS paddock_card_remaining,
@@ -649,25 +672,36 @@ export default{
           if(!["active","disabled"].includes(status))return json({error:"Statut invalide"},400,cors);
           const role=input.role===undefined?current.role:String(input.role);
           if(!["client","staff","admin"].includes(role))return json({error:"Rôle invalide"},400,cors);
+          const approvalStatus=input.approvalStatus===undefined?(current.approval_status||"approved"):String(input.approvalStatus);
+          if(!["pending","approved"].includes(approvalStatus))return json({error:"Validation invalide"},400,cors);
+          const effectiveStatus=approvalStatus==="pending"?"disabled":status;
           const now=new Date().toISOString();
           if(input.temporaryPassword){
             const passwordError=validatePassword(input.temporaryPassword);
             if(passwordError)return json({error:passwordError},400,cors);
             const encoded=await hashPassword(input.temporaryPassword);
             await env.DB.batch([
-              env.DB.prepare(`UPDATE users SET status=?,role=?,password_hash=?,password_salt=?,
+              env.DB.prepare(`UPDATE users SET status=?,role=?,approval_status=?,password_hash=?,password_salt=?,
                 password_iterations=?,must_change_password=1,updated_at=? WHERE id=?`)
-                .bind(status,role,encoded.hash,encoded.salt,encoded.iterations,now,current.id),
+                .bind(effectiveStatus,role,approvalStatus,encoded.hash,encoded.salt,encoded.iterations,now,current.id),
               env.DB.prepare("UPDATE user_sessions SET revoked_at=? WHERE user_id=? AND revoked_at IS NULL").bind(now,current.id)
             ]);
           }else{
-            await env.DB.prepare("UPDATE users SET status=?,role=?,updated_at=? WHERE id=?")
-              .bind(status,role,now,current.id).run();
-            if(status==="disabled")await env.DB.prepare("UPDATE user_sessions SET revoked_at=? WHERE user_id=? AND revoked_at IS NULL")
+            await env.DB.prepare("UPDATE users SET status=?,role=?,approval_status=?,updated_at=? WHERE id=?")
+              .bind(effectiveStatus,role,approvalStatus,now,current.id).run();
+            if(effectiveStatus==="disabled")await env.DB.prepare("UPDATE user_sessions SET revoked_at=? WHERE user_id=? AND revoked_at IS NULL")
               .bind(now,current.id).run();
           }
           const updated=await env.DB.prepare("SELECT * FROM users WHERE id=?").bind(current.id).first();
           return json({user:publicUser(updated)},200,cors);
+        }
+
+        if(request.method==="DELETE"&&userMatch){
+          const current=await env.DB.prepare("SELECT id,approval_status FROM users WHERE id=?").bind(Number(userMatch[1])).first();
+          if(!current)return json({error:"Utilisateur introuvable"},404,cors);
+          if(current.approval_status!=="pending")return json({error:"Seules les demandes en attente peuvent être refusées"},400,cors);
+          await env.DB.prepare("DELETE FROM users WHERE id=?").bind(current.id).run();
+          return json({deleted:true},200,cors);
         }
 
         const spaceMatch=url.pathname.match(/^\/api\/admin\/spaces\/([a-z0-9-]+)$/);
@@ -1261,7 +1295,7 @@ function validatePaddockHours(input){
 
 function publicUser(user){
   return{id:Number(user.id),email:user.email,firstName:user.first_name,lastName:user.last_name,
-    cardNumber:user.card_number||"",role:user.role,status:user.status,
+    cardNumber:user.card_number||"",role:user.role,status:user.status,approvalStatus:user.approval_status||"approved",
     mustChangePassword:Boolean(user.must_change_password),createdAt:user.created_at,
     updatedAt:user.updated_at,lastLoginAt:user.last_login_at||null};
 }

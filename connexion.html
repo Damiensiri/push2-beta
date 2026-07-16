@@ -27,7 +27,7 @@ navigator.serviceWorker.register(new URL("OneSignalSDKWorker.js",base).href,{sco
 <link rel="stylesheet" href="assets/css/themes/christmas.css?v=20260714-194000">
 <link rel="stylesheet" href="assets/css/themes/winter.css?v=20260714-194000">
 <link rel="stylesheet" href="assets/css/themes/spring.css?v=20260714-194000">
-<link rel="stylesheet" href="assets/css/pages/connexion.css?v=20260716-1">
+<link rel="stylesheet" href="assets/css/pages/connexion.css?v=20260716-2">
 </head>
 <body class="app-page login-page">
 <div class="ambient-stage" aria-hidden="true"></div>
@@ -35,16 +35,31 @@ navigator.serviceWorker.register(new URL("OneSignalSDKWorker.js",base).href,{sco
   <section class="login-card">
     <img class="login-logo" src="image/logo.png" alt="Écurie Damien Siri">
     <div><p class="login-eyebrow">Espace clients</p><h1>Bienvenue</h1>
-      <p class="login-intro">Connectez-vous avec le compte créé par l’écurie.</p></div>
+      <p class="login-intro">Connectez-vous à votre espace personnel.</p></div>
+    <div class="auth-tabs" role="tablist">
+      <button id="showLogin" class="is-active" type="button">Connexion</button>
+      <button id="showRegister" type="button">Créer mon compte</button>
+    </div>
     <form id="loginForm" class="login-form">
       <label>Adresse email<input id="loginEmail" type="email" inputmode="email" autocomplete="username" required></label>
       <label>Mot de passe<input id="loginPassword" type="password" autocomplete="current-password" required></label>
       <button id="loginSubmit" type="submit">Se connecter</button>
       <p id="loginStatus" class="login-status" role="status"></p>
     </form>
-    <p class="login-help">Vous n’avez pas encore de compte ? Contactez l’écurie.</p>
+    <form id="registerForm" class="login-form" hidden>
+      <div class="register-names">
+        <label>Prénom<input id="registerFirstName" maxlength="60" autocomplete="given-name" required></label>
+        <label>Nom<input id="registerLastName" maxlength="80" autocomplete="family-name" required></label>
+      </div>
+      <label>Adresse email<input id="registerEmail" type="email" maxlength="160" inputmode="email" autocomplete="email" required></label>
+      <label>Mot de passe<input id="registerPassword" type="password" minlength="12" maxlength="200" autocomplete="new-password" required></label>
+      <label>Confirmer le mot de passe<input id="registerPasswordConfirm" type="password" minlength="12" maxlength="200" autocomplete="new-password" required></label>
+      <p class="login-help">12 caractères minimum. Votre accès sera ouvert après validation par Damien.</p>
+      <button id="registerSubmit" type="submit">Envoyer ma demande</button>
+      <p id="registerStatus" class="login-status" role="status"></p>
+    </form>
   </section>
 </main>
-<script src="assets/js/connexion-beta.js?v=20260716-1"></script>
+<script src="assets/js/connexion-beta.js?v=20260716-2"></script>
 </body>
 </html>

@@ -74,6 +74,7 @@ CREATE TABLE IF NOT EXISTS users (
   card_number TEXT NOT NULL DEFAULT '',
   role TEXT NOT NULL DEFAULT 'client' CHECK(role IN ('client','staff','admin')),
   status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','disabled')),
+  approval_status TEXT NOT NULL DEFAULT 'approved' CHECK(approval_status IN ('pending','approved')),
   password_hash TEXT NOT NULL,
   password_salt TEXT NOT NULL,
   password_iterations INTEGER NOT NULL,
