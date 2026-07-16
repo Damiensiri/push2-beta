@@ -229,7 +229,7 @@ return String(value ?? "").replace(/[&<>'"]/g,char=>({
 
 async function loadPaddockCard(){
 const paddockCard=document.getElementById("paddockCard")
-paddockCard.hidden=false
+paddockCard.hidden=true
 paddockCard.innerHTML=`
 <div class="card">
 <h3>🐴 Ma carte de mises au paddock</h3>
@@ -240,6 +240,13 @@ try{
 const account=await paddockApi("/api/paddocks/card")
 const card=account.card
 const invoiceUsages=(account.usages||[]).filter(item=>item.mode==="invoice")
+
+if(!card&&!invoiceUsages.length){
+paddockCard.innerHTML=""
+return
+}
+
+paddockCard.hidden=false
 
 if(!card){
 paddockCard.innerHTML=`
@@ -273,6 +280,7 @@ ${invoiceUsages.length?`<p><strong>À facturer :</strong> ${invoiceUsages.map(it
 </div>`
 }catch(error){
 console.error(error)
+paddockCard.hidden=false
 paddockCard.innerHTML=`
 <div class="card">
 <h3>🐴 Ma carte de mises au paddock</h3>

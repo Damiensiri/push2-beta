@@ -429,7 +429,11 @@ export default{
           return json(await loadPaddockAccount(env,userId),200,cors);
         }
         if(request.method==="DELETE"&&userCardMatch){
-          await env.DB.prepare("DELETE FROM paddock_cards WHERE user_id=?").bind(Number(userCardMatch[1])).run();
+          const userId=Number(userCardMatch[1]);
+          await env.DB.batch([
+            env.DB.prepare("DELETE FROM paddock_usages WHERE user_id=? AND mode='card'").bind(userId),
+            env.DB.prepare("DELETE FROM paddock_cards WHERE user_id=?").bind(userId)
+          ]);
           await notifyRealtime(env,"paddock-accounts");
           return json({deleted:true},200,cors);
         }
