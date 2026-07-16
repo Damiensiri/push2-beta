@@ -36,17 +36,12 @@
 </header>
 
 <section class="profile-card profile-form account-card" aria-labelledby="accountTitle">
-<div class="profile-section-title" id="accountTitle">Compte bêta</div>
-<div id="accountLoggedOut">
-<p class="account-help">Connectez le compte créé par l’écurie. Votre profil local restera disponible hors connexion.</p>
-<form id="accountLoginForm" class="profile-form">
-<div class="profile-field"><label for="accountEmail">Adresse mail</label><input id="accountEmail" type="email" autocomplete="username" required></div>
-<div class="profile-field"><label for="accountPassword">Mot de passe</label><input id="accountPassword" type="password" autocomplete="current-password" required></div>
-<button class="profile-primary" type="submit">Se connecter à la bêta</button>
-</form>
+<div class="account-summary">
+<div class="account-avatar" aria-hidden="true">✓</div>
+<div><div class="profile-section-title" id="accountTitle">Compte connecté</div>
+<h2 id="accountIdentity">Chargement…</h2></div>
 </div>
-<div id="accountLoggedIn" hidden>
-<p id="accountIdentity" class="account-help"></p>
+<dl class="account-details"><div><dt>Adresse email</dt><dd id="accountEmailDisplay">—</dd></div><div><dt>Accès</dt><dd id="accountRoleDisplay">—</dd></div></dl>
 <form id="accountPasswordForm" class="profile-form" hidden>
 <p class="account-warning">Remplacez le mot de passe temporaire avant de continuer.</p>
 <div class="profile-field"><label for="currentPassword">Mot de passe temporaire</label><input id="currentPassword" type="password" autocomplete="current-password" required></div>
@@ -54,7 +49,6 @@
 <button class="profile-primary" type="submit">Enregistrer le nouveau mot de passe</button>
 </form>
 <button id="accountLogout" class="profile-secondary account-logout" type="button">Se déconnecter</button>
-</div>
 <p id="accountStatus" class="profile-save-status" aria-live="polite"></p>
 </section>
 
@@ -76,7 +70,7 @@ Choisir une photo
 </div>
 </section>
 
-<form class="profile-card profile-form" id="profileForm">
+<form class="profile-card profile-form" id="profileForm" hidden>
 <div class="profile-field">
 <label for="profileFirstName">Prénom</label>
 <input id="profileFirstName" type="text" autocomplete="given-name" maxlength="60" placeholder="Votre prénom">
@@ -92,7 +86,7 @@ Choisir une photo
 <input id="profileEmail" type="email" inputmode="email" autocomplete="email" maxlength="160" placeholder="votre@email.fr">
 </div>
 
-<button class="profile-primary" type="submit">Enregistrer mon profil</button>
+<button class="profile-primary" type="submit">Enregistrer mon profil local</button>
 <p class="profile-save-status" id="profileSaveStatus" aria-live="polite"></p>
 </form>
 

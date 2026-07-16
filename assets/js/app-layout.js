@@ -1,4 +1,24 @@
 (function initializeAppLayout(){
+  const authPage=location.pathname.split("/").pop()==="connexion.html";
+  const authToken=localStorage.getItem("ecurie_beta_session")||"";
+  if(!authPage){
+    document.documentElement.style.visibility="hidden";
+    if(!authToken){
+      location.replace("connexion.html");
+      return;
+    }
+    fetch("https://ecurie-notifications-beta.damiensiri-pro.workers.dev/api/auth/me",{
+      headers:{authorization:"Bearer "+authToken},cache:"no-store"
+    }).then(response=>{
+      if(!response.ok)throw new Error("Session invalide");
+      document.documentElement.style.visibility="";
+    }).catch(()=>{
+      localStorage.removeItem("ecurie_beta_session");
+      location.replace("connexion.html");
+    });
+  }else if(authToken){
+    document.documentElement.style.visibility="hidden";
+  }
   const config=window.APP_CONFIG || {};
   const themes=Array.isArray(config.themes)?config.themes:["summer"];
   const themeStorageKey="ecurie-active-theme-v1";
