@@ -6,6 +6,7 @@ const passwordForm=document.getElementById("accountPasswordForm");
 const status=document.getElementById("accountStatus");
 const openPasswordChange=document.getElementById("openPasswordChange");
 const passwordHelp=document.getElementById("accountPasswordHelp");
+const cardContent=document.getElementById("profileCardContent");
 
 async function request(path,options={}){
 const token=localStorage.getItem(TOKEN_KEY)||"";
@@ -18,8 +19,66 @@ return data;
 async function copyToLocalProfile(user){
 const existing=await ProfileStore.get();
 await ProfileStore.saveProfile({firstName:user.firstName,lastName:user.lastName,email:user.email,photo:existing.photo});
-if(user.cardNumber)ProfileStore.saveCardNumber(user.cardNumber);else ProfileStore.removeCardNumber();
-window.dispatchEvent(new CustomEvent("profile:account-synced",{detail:user}));
+}
+
+async function photoRequest(method="GET",body=null){
+const token=localStorage.getItem(TOKEN_KEY)||"";
+return fetch(API+"/api/auth/profile-photo",{method,body,headers:{authorization:"Bearer "+token,...(body?{"content-type":body.type||"image/jpeg"}:{})}});
+}
+
+async function saveLocalPhoto(photo){
+const profile=await ProfileStore.get();
+await ProfileStore.saveProfile({firstName:profile.firstName,lastName:profile.lastName,email:profile.email,photo});
+window.dispatchEvent(new CustomEvent("profile:account-synced"));
+}
+
+async function syncRemotePhoto(){
+const response=await photoRequest();
+if(response.ok){
+await saveLocalPhoto(await response.blob());
+return;
+}
+if(response.status!==404)throw new Error("Photo indisponible");
+const profile=await ProfileStore.get();
+if(profile.photo){
+const upload=await photoRequest("PUT",profile.photo);
+if(!upload.ok)throw new Error("Migration de la photo impossible");
+}
+window.dispatchEvent(new CustomEvent("profile:account-synced"));
+}
+
+window.BetaAccountPhoto={
+async save(photo){
+const response=await photoRequest("PUT",photo);
+if(!response.ok){const data=await response.json().catch(()=>({}));throw new Error(data.error||"Enregistrement impossible");}
+},
+async remove(){
+const response=await photoRequest("DELETE");
+if(!response.ok)throw new Error("Suppression impossible");
+}
+};
+
+async function showPaddockCard(){
+try{
+const account=await request("/api/paddocks/card");
+const card=account.card;
+if(!card){
+cardContent.innerHTML='<p class="profile-card-message">Faire une demande de carte auprès de Damien</p>';
+return;
+}
+const remaining=Math.max(0,Number(card.remaining)||0);
+const total=Math.max(0,Number(card.total)||0);
+const progress=total>0?Math.min(100,Math.max(0,(remaining/total)*100)):0;
+const progressColor=remaining>=5?"profile-progress-green":remaining>=2?"profile-progress-orange":"profile-progress-red";
+const balance=remaining===0?'<span class="profile-card-complete">Carte complète</span>':`${remaining} / ${total}`;
+cardContent.innerHTML=`
+<p class="profile-card-balance"><strong>Mises restantes :</strong> ${balance}</p>
+<div class="profile-card-progress" role="progressbar" aria-label="Mises restantes" aria-valuemin="0" aria-valuemax="${total}" aria-valuenow="${remaining}">
+<div class="${progressColor}" style="width:${progress}%"></div>
+</div>`;
+}catch(error){
+cardContent.innerHTML='<p class="profile-card-message">Impossible d’actualiser la carte pour le moment.</p>';
+}
 }
 
 async function showUser(user){
@@ -48,16 +107,9 @@ try{await request("/api/auth/logout",{method:"POST"});}catch(error){}
 localStorage.removeItem(TOKEN_KEY);location.replace("connexion.html");
 });
 
-document.getElementById("profileCardForm").addEventListener("submit",async()=>{
-try{
-const data=await request("/api/auth/me",{method:"PATCH",body:JSON.stringify({cardNumber:document.getElementById("profileCardNumber").value})});
-await showUser(data.user);document.getElementById("profileCardStatus").textContent="Carte paddock enregistrée dans votre compte.";
-}catch(error){document.getElementById("profileCardStatus").textContent="Enregistrement local effectué, synchronisation impossible.";}
-});
-
-document.getElementById("removeCard").addEventListener("click",async()=>{
-try{const data=await request("/api/auth/me",{method:"PATCH",body:JSON.stringify({cardNumber:""})});await showUser(data.user);}catch(error){}
-});
-
-(async()=>{try{const data=await request("/api/auth/me");await showUser(data.user);}catch(error){localStorage.removeItem(TOKEN_KEY);location.replace("connexion.html");}})();
+(async()=>{try{
+const data=await request("/api/auth/me");
+await showUser(data.user);
+await Promise.all([showPaddockCard(),syncRemotePhoto().catch(()=>{})]);
+}catch(error){localStorage.removeItem(TOKEN_KEY);location.replace("connexion.html");}})();
 })();

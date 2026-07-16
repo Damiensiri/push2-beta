@@ -108,6 +108,30 @@ export default{
         }
       }
 
+      if(url.pathname==="/api/auth/profile-photo"){
+        const viewer=await authenticatedUser(request,env);
+        if(!viewer)return json({error:"Non autorisé"},401,cors);
+        const key=`profiles/${viewer.id}.jpg`;
+        if(request.method==="GET"){
+          const object=await env.PRODUCT_IMAGES.get(key);
+          if(!object)return json({error:"Photo introuvable"},404,cors);
+          return new Response(object.body,{headers:{...cors,"content-type":object.httpMetadata?.contentType||"image/jpeg",
+            "cache-control":"private, no-store","etag":object.httpEtag}});
+        }
+        if(request.method==="PUT"){
+          const contentType=String(request.headers.get("content-type")||"").split(";")[0].trim().toLowerCase();
+          if(!["image/jpeg","image/png","image/webp"].includes(contentType))return json({error:"Format d’image invalide"},400,cors);
+          const data=await request.arrayBuffer();
+          if(!data.byteLength||data.byteLength>3*1024*1024)return json({error:"La photo doit peser moins de 3 Mo"},400,cors);
+          await env.PRODUCT_IMAGES.put(key,data,{httpMetadata:{contentType}});
+          return json({saved:true},200,cors);
+        }
+        if(request.method==="DELETE"){
+          await env.PRODUCT_IMAGES.delete(key);
+          return json({deleted:true},200,cors);
+        }
+      }
+
       if(request.method==="POST"&&url.pathname==="/api/auth/logout"){
         const token=bearerToken(request);
         if(token)await env.DB.prepare("UPDATE user_sessions SET revoked_at=? WHERE token_hash=?")

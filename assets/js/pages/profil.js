@@ -1,13 +1,9 @@
 (function initializeProfilePage(){
-const cardForm=document.getElementById("profileCardForm");
-const cardNumber=document.getElementById("profileCardNumber");
 const photoInput=document.getElementById("profilePhotoInput");
 const photoPreview=document.getElementById("profilePhotoPreview");
 const photoFallback=document.getElementById("profilePhotoFallback");
 const removePhoto=document.getElementById("removePhoto");
 const photoStatus=document.getElementById("profilePhotoStatus");
-const cardStatus=document.getElementById("profileCardStatus");
-const removeCard=document.getElementById("removeCard");
 const cropDialog=document.getElementById("cropDialog");
 const cropCanvas=document.getElementById("cropCanvas");
 const cropZoom=document.getElementById("cropZoom");
@@ -111,11 +107,12 @@ else reject(new Error("Compression impossible"));
 
 async function loadProfile(){
 const profile=await ProfileStore.get();
-cardNumber.value=profile.cardNumber;
 setPreview(profile.photo);
 }
 
 async function savePhoto(photo){
+if(photo&&window.BetaAccountPhoto)await window.BetaAccountPhoto.save(photo);
+if(!photo&&window.BetaAccountPhoto)await window.BetaAccountPhoto.remove();
 const profile=await ProfileStore.get();
 await ProfileStore.saveProfile({
 firstName:profile.firstName,
@@ -190,7 +187,7 @@ const croppedPhoto=await cropToBlob();
 setPreview(croppedPhoto);
 await savePhoto(croppedPhoto);
 closeCropper();
-photoStatus.textContent="Photo de profil enregistrée sur cet appareil.";
+photoStatus.textContent="Photo de profil enregistrée dans votre compte.";
 }catch(e){
 photoStatus.textContent="Cette photo ne peut pas être utilisée.";
 }finally{
@@ -209,30 +206,10 @@ removePhoto.addEventListener("click",async()=>{
 setPreview(null);
 try{
 await savePhoto(null);
-photoStatus.textContent="Photo supprimée de cet appareil.";
+photoStatus.textContent="Photo supprimée de votre compte.";
 }catch(e){
 photoStatus.textContent="Impossible de supprimer la photo.";
 }
-});
-
-cardForm.addEventListener("submit",event=>{
-event.preventDefault();
-if(!cardForm.reportValidity())return;
-
-cardStatus.textContent="Enregistrement…";
-try{
-const savedNumber=ProfileStore.saveCardNumber(cardNumber.value);
-cardNumber.value=savedNumber;
-cardStatus.textContent="Carte paddock enregistrée sur cet appareil.";
-}catch(e){
-cardStatus.textContent="Impossible d’enregistrer la carte.";
-}
-});
-
-removeCard.addEventListener("click",()=>{
-ProfileStore.removeCardNumber();
-cardForm.reset();
-cardStatus.textContent="Carte paddock supprimée de cet appareil.";
 });
 
 window.addEventListener("beforeunload",()=>{

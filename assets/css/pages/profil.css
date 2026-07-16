@@ -157,6 +157,38 @@
   margin-top:0;
 }
 
+.profile-paddock-card{
+  display:grid;
+  gap:14px;
+}
+
+.profile-card-message,
+.profile-card-balance{
+  margin:0;
+  color:rgba(255,255,255,.88);
+  font-size:15px;
+  line-height:1.5;
+}
+
+.profile-card-progress{
+  height:10px;
+  margin-top:12px;
+  overflow:hidden;
+  border-radius:999px;
+  background:rgba(255,255,255,.18);
+}
+
+.profile-card-progress>div{
+  height:100%;
+  border-radius:inherit;
+  transition:width .25s ease;
+}
+
+.profile-progress-green{background:#42dc88}
+.profile-progress-orange{background:#ffad32}
+.profile-progress-red{background:#ff6b6b}
+.profile-card-complete{color:#ffcf70;font-weight:800}
+
 .profile-danger{
   width:100%;
   color:#ffe4e4;

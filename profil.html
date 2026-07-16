@@ -64,19 +64,12 @@
 <p id="accountStatus" class="profile-save-status" aria-live="polite"></p>
 </section>
 
-<form class="profile-card profile-form" id="profileCardForm">
+<section class="profile-card profile-paddock-card" aria-labelledby="profileCardTitle">
 <div class="profile-section-title">Carte paddock</div>
-<div class="profile-field">
-<label for="profileCardNumber">Numéro de carte paddock</label>
-<input id="profileCardNumber" type="text" autocomplete="off" maxlength="80" placeholder="Facultatif">
+<div id="profileCardContent" aria-live="polite">
+<p class="profile-card-message">Actualisation de la carte…</p>
 </div>
-
-<div class="profile-card-actions">
-<button class="profile-primary" type="submit">Enregistrer la carte</button>
-<button class="profile-danger" id="removeCard" type="button">Supprimer la carte</button>
-</div>
-<p class="profile-save-status" id="profileCardStatus" aria-live="polite"></p>
-</form>
+</section>
 
 </div>
 
@@ -99,8 +92,8 @@ Zoom
 </div>
 
 <script src="assets/js/profile-store.js?v=20260714-194000"></script>
-<script src="assets/js/pages/profil.js?v=20260714-194000"></script>
-<script src="assets/js/account-beta.js?v=20260716-1"></script>
+<script src="assets/js/pages/profil.js?v=20260716-3"></script>
+<script src="assets/js/account-beta.js?v=20260716-3"></script>
 
 </body>
 </html>
