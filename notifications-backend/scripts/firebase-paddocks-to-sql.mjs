@@ -39,8 +39,15 @@ const statements=[];
 for(const document of reservations.filter(document=>String(decode(document).date||"")>=RESERVATION_CUTOFF)){
   const row=decode(document);
   const legacyId=document.name.split("/").pop();
+  const lockKey="firebase-"+legacyId;
   const email=String(row.email||"").trim().toLowerCase();
-  statements.push(`INSERT OR IGNORE INTO paddock_reservations(legacy_firebase_id,user_id,name,email,paddock,date,time,duration,created_at) VALUES(${quote(legacyId)},${email?`(SELECT id FROM users WHERE email=${quote(email)} COLLATE NOCASE LIMIT 1)`:"NULL"},${quote(row.name||"")},${quote(email)},${quote(row.paddock)},${quote(row.date)},${quote(row.time)},${Number(row.duration)||60},${quote(document.createTime||now)});`);
+  const duration=Number(row.duration)||60;
+  statements.push(`INSERT OR IGNORE INTO paddock_reservations(lock_key,legacy_firebase_id,user_id,name,email,paddock,date,time,duration,created_at) VALUES(${quote(lockKey)},${quote(legacyId)},${email?`(SELECT id FROM users WHERE email=${quote(email)} COLLATE NOCASE LIMIT 1)`:"NULL"},${quote(row.name||"")},${quote(email)},${quote(row.paddock)},${quote(row.date)},${quote(row.time)},${duration},${quote(document.createTime||now)});`);
+  const [hoursValue,minutesValue]=String(row.time||"00:00").split(":").map(Number);
+  const start=hoursValue*60+minutesValue;
+  for(let slot=start;slot<start+duration;slot+=30){
+    statements.push(`INSERT OR IGNORE INTO paddock_slot_locks(date,paddock,slot_minute,reservation_key) VALUES(${quote(row.date)},${quote(row.paddock)},${slot},${quote(lockKey)});`);
+  }
 }
 
 for(const document of hours){

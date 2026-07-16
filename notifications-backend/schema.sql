@@ -1,5 +1,6 @@
 CREATE TABLE IF NOT EXISTS alerts (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
+  lock_key TEXT NOT NULL UNIQUE,
   date TEXT NOT NULL,
   heure TEXT NOT NULL,
   categorie TEXT NOT NULL DEFAULT '',
@@ -113,6 +114,15 @@ CREATE TABLE IF NOT EXISTS paddock_reservations (
 );
 CREATE INDEX IF NOT EXISTS idx_paddock_reservations_slot ON paddock_reservations(date,paddock,time);
 CREATE INDEX IF NOT EXISTS idx_paddock_reservations_user ON paddock_reservations(user_id,date);
+
+CREATE TABLE IF NOT EXISTS paddock_slot_locks (
+  date TEXT NOT NULL,
+  paddock TEXT NOT NULL,
+  slot_minute INTEGER NOT NULL,
+  reservation_key TEXT NOT NULL,
+  PRIMARY KEY(date,paddock,slot_minute)
+);
+CREATE INDEX IF NOT EXISTS idx_paddock_slot_locks_reservation ON paddock_slot_locks(reservation_key);
 
 CREATE TABLE IF NOT EXISTS paddock_hours (
   paddock TEXT PRIMARY KEY CHECK(paddock IN ('maison','grande','beudot')),

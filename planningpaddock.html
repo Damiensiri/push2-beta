@@ -164,6 +164,7 @@ let selectedDate=null
 let selected=null
 let reservationsLoaded=false
 let horairesLoaded=false
+let lastPlanningSignature=""
 
 let adminMode=false
 
@@ -412,6 +413,9 @@ durationSelect.addEventListener("change",updatePaddocks)
 async function loadDataRealtime(){
 try{
 const data=await paddockApi("/api/paddocks/planning")
+const nextSignature=JSON.stringify([data.reservations||[],data.horaires||{},data.restrictions||{}])
+const planningChanged=nextSignature!==lastPlanningSignature
+lastPlanningSignature=nextSignature
 reservations=data.reservations||[]
 horaires=data.horaires||{}
 restrictions=data.restrictions||{}
@@ -422,6 +426,7 @@ document.getElementById("bookingIdentity").textContent=currentViewer?"Réservati
 reservationsLoaded=true
 horairesLoaded=true
 updateEmailRequirement()
+if(!planningChanged)return
 renderTodayAvailability()
 generate()
 }catch(error){
@@ -1106,7 +1111,6 @@ updateEmailRequirement()
 buildDays()
 updatePaddocks()
 loadDataRealtime()
-setInterval(loadDataRealtime,5000)
 setInterval(renderTodayAvailability,60000)
 
 })
@@ -1117,8 +1121,13 @@ showDayIfOptionsReady()
 resetAfterPaddockChange()
 
 }
+
+window.addEventListener("pwa-data-changed",event=>{
+if(event.detail?.type==="paddocks"||event.detail?.type==="all")loadDataRealtime()
+})
   
 </script>
+<script src="assets/js/status-realtime.js?v=20260716-3"></script>
 <div id="confirmSheet">
 
 <div class="sheetContent">

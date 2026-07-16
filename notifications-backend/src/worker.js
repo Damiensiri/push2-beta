@@ -144,10 +144,21 @@ export default{
           if(existing)return json({error:"Vous avez déjà une réservation ce jour"},409,cors);
         }
         const now=new Date().toISOString();
-        const result=await env.DB.prepare(`INSERT INTO paddock_reservations(user_id,name,email,paddock,date,time,duration,created_at)
-          VALUES(?,?,?,?,?,?,?,?)`).bind(viewer.id,viewer.first_name,viewer.email,booking.paddock,
-          booking.date,booking.time,booking.duration,now).run();
-        return json({reservation:{id:String(result.meta.last_row_id),name:viewer.first_name,paddock:booking.paddock,
+        const lockKey=crypto.randomUUID();
+        try{
+          await env.DB.batch([
+            env.DB.prepare(`INSERT INTO paddock_reservations(lock_key,user_id,name,email,paddock,date,time,duration,created_at)
+              VALUES(?,?,?,?,?,?,?,?,?)`).bind(lockKey,viewer.id,viewer.first_name,viewer.email,booking.paddock,
+              booking.date,booking.time,booking.duration,now),
+            ...paddockLockStatements(env,{lockKey,date:booking.date,paddock:booking.paddock,startMinutes:booking.startMinutes,duration:booking.duration})
+          ]);
+        }catch(error){
+          if(String(error?.message||error).includes("UNIQUE"))return json({error:"Ce créneau vient d’être réservé"},409,cors);
+          throw error;
+        }
+        const created=await env.DB.prepare("SELECT id FROM paddock_reservations WHERE lock_key=?").bind(lockKey).first();
+        await notifyRealtime(env,"paddocks");
+        return json({reservation:{id:String(created.id),name:viewer.first_name,paddock:booking.paddock,
           date:booking.date,time:booking.time,duration:booking.duration,mine:true},
           confirmationRequested:Boolean(input.confirmationRequested),email:viewer.email},201,cors);
       }
@@ -156,11 +167,15 @@ export default{
       if(paddockReservationMatch&&request.method==="DELETE"){
         const viewer=await authenticatedUser(request,env);
         if(!viewer)return json({error:"Non autorisé"},401,cors);
-        const reservation=await env.DB.prepare("SELECT id,user_id FROM paddock_reservations WHERE id=?")
+        const reservation=await env.DB.prepare("SELECT id,user_id,lock_key FROM paddock_reservations WHERE id=?")
           .bind(Number(paddockReservationMatch[1])).first();
         if(!reservation)return json({error:"Réservation introuvable"},404,cors);
         if(viewer.role!=="admin"&&Number(reservation.user_id)!==Number(viewer.id))return json({error:"Action interdite"},403,cors);
-        await env.DB.prepare("DELETE FROM paddock_reservations WHERE id=?").bind(reservation.id).run();
+        await env.DB.batch([
+          env.DB.prepare("DELETE FROM paddock_slot_locks WHERE reservation_key=?").bind(reservation.lock_key),
+          env.DB.prepare("DELETE FROM paddock_reservations WHERE id=?").bind(reservation.id)
+        ]);
+        await notifyRealtime(env,"paddocks");
         return json({deleted:true},200,cors);
       }
 
@@ -222,16 +237,31 @@ export default{
           if(!paddocks.length||paddocks.some(value=>!["maison","grande","beudot"].includes(value)))return json({error:"Paddock invalide"},400,cors);
           const cleanName=(name.toLowerCase().startsWith("blocage")?name:"Blocage "+name).slice(0,120);
           const now=new Date().toISOString();
-          await env.DB.batch(paddocks.map(paddock=>env.DB.prepare(`INSERT INTO paddock_reservations(user_id,name,email,paddock,date,time,duration,created_at)
-            VALUES(NULL,?,'',?,?,?,?,?)`).bind(cleanName,paddock,date,time,duration,now)));
+          const statements=[];
+          for(const paddock of paddocks){
+            const lockKey=crypto.randomUUID();
+            statements.push(env.DB.prepare(`INSERT INTO paddock_reservations(lock_key,user_id,name,email,paddock,date,time,duration,created_at)
+              VALUES(?,NULL,?,'',?,?,?,?,?)`).bind(lockKey,cleanName,paddock,date,time,duration,now));
+            statements.push(...paddockLockStatements(env,{lockKey,date,paddock,startMinutes:timeToMinutes(time),duration}));
+          }
+          try{await env.DB.batch(statements);}catch(error){
+            if(String(error?.message||error).includes("UNIQUE"))return json({error:"Un créneau est déjà occupé"},409,cors);
+            throw error;
+          }
+          await notifyRealtime(env,"paddocks");
           return json({created:paddocks.length},201,cors);
         }
 
         const adminPaddockReservation=url.pathname.match(/^\/api\/admin\/paddocks\/reservations\/(\d+)$/);
         if(request.method==="DELETE"&&adminPaddockReservation){
-          const result=await env.DB.prepare("DELETE FROM paddock_reservations WHERE id=?")
-            .bind(Number(adminPaddockReservation[1])).run();
-          if(!result.meta.changes)return json({error:"Réservation introuvable"},404,cors);
+          const reservation=await env.DB.prepare("SELECT id,lock_key FROM paddock_reservations WHERE id=?")
+            .bind(Number(adminPaddockReservation[1])).first();
+          if(!reservation)return json({error:"Réservation introuvable"},404,cors);
+          await env.DB.batch([
+            env.DB.prepare("DELETE FROM paddock_slot_locks WHERE reservation_key=?").bind(reservation.lock_key),
+            env.DB.prepare("DELETE FROM paddock_reservations WHERE id=?").bind(reservation.id)
+          ]);
+          await notifyRealtime(env,"paddocks");
           return json({deleted:true},200,cors);
         }
 
@@ -242,12 +272,14 @@ export default{
             VALUES(?,?,?,?) ON CONFLICT(date) DO UPDATE SET block_grande_90=excluded.block_grande_90,
             block_beudot_90=excluded.block_beudot_90,updated_at=excluded.updated_at`)
             .bind(date,input.blockGrande90?1:0,input.blockBeudot90?1:0,new Date().toISOString()).run();
+          await notifyRealtime(env,"paddocks");
           return json({saved:true},200,cors);
         }
 
         const adminRestriction=url.pathname.match(/^\/api\/admin\/paddocks\/restrictions\/(\d{4}-\d{2}-\d{2})$/);
         if(request.method==="DELETE"&&adminRestriction){
           await env.DB.prepare("DELETE FROM paddock_restrictions WHERE date=?").bind(adminRestriction[1]).run();
+          await notifyRealtime(env,"paddocks");
           return json({deleted:true},200,cors);
         }
 
@@ -259,6 +291,7 @@ export default{
           await env.DB.batch(paddocks.map(paddock=>env.DB.prepare(`INSERT INTO paddock_hours(paddock,schedule_json,updated_at)
             VALUES(?,?,?) ON CONFLICT(paddock) DO UPDATE SET schedule_json=excluded.schedule_json,updated_at=excluded.updated_at`)
             .bind(paddock,encoded,now)));
+          await notifyRealtime(env,"paddocks");
           return json({saved:true,paddocks},200,cors);
         }
 
@@ -741,6 +774,15 @@ function validatePaddockBooking(input){
   if(!/^\d{2}:\d{2}$/.test(time)||timeToMinutes(time)===null)return{error:"Heure invalide"};
   if(![60,90].includes(duration))return{error:"Durée invalide"};
   return{paddock,date,time,duration,startMinutes:timeToMinutes(time)};
+}
+
+function paddockLockStatements(env,{lockKey,date,paddock,startMinutes,duration}){
+  const statements=[];
+  for(let slot=startMinutes;slot<startMinutes+duration;slot+=30){
+    statements.push(env.DB.prepare(`INSERT INTO paddock_slot_locks(date,paddock,slot_minute,reservation_key)
+      VALUES(?,?,?,?)`).bind(date,paddock,slot,lockKey));
+  }
+  return statements;
 }
 
 function validatePaddockHours(input){
