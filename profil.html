@@ -35,43 +35,34 @@
 <h1>MON PROFIL</h1>
 </header>
 
-<section class="profile-card profile-photo" aria-labelledby="photoTitle">
-<div class="profile-section-title" id="photoTitle">Photo de profil</div>
-<div class="profile-photo__preview">
+<section class="profile-card profile-form account-card" aria-labelledby="accountTitle">
+<div class="account-summary">
+<div class="profile-photo__preview account-photo">
 <img id="profilePhotoPreview" alt="Photo de profil" hidden>
 <svg id="profilePhotoFallback" viewBox="0 0 24 24" fill="none" aria-hidden="true">
 <circle cx="12" cy="8" r="3.2"/>
 <path d="M5.5 20c.6-4 2.8-6 6.5-6s5.9 2 6.5 6"/>
 </svg>
 </div>
-<div class="profile-photo__actions">
-<label class="profile-photo__button">
-Choisir une photo
-<input id="profilePhotoInput" type="file" accept="image/*">
-</label>
+<div><div class="profile-section-title" id="accountTitle">Compte connecté</div>
+<h2 id="accountIdentity">Chargement…</h2></div>
+</div>
+<div class="profile-photo__actions account-photo-actions">
+<label class="profile-photo__button">Changer la photo<input id="profilePhotoInput" type="file" accept="image/*"></label>
 <button class="profile-secondary" id="removePhoto" type="button" hidden>Supprimer</button>
 </div>
-</section>
-
-<form class="profile-card profile-form" id="profileForm" hidden>
-<div class="profile-field">
-<label for="profileFirstName">Prénom</label>
-<input id="profileFirstName" type="text" autocomplete="given-name" maxlength="60" placeholder="Votre prénom">
-</div>
-
-<div class="profile-field">
-<label for="profileLastName">Nom</label>
-<input id="profileLastName" type="text" autocomplete="family-name" maxlength="80" placeholder="Votre nom">
-</div>
-
-<div class="profile-field">
-<label for="profileEmail">Adresse mail</label>
-<input id="profileEmail" type="email" inputmode="email" autocomplete="email" maxlength="160" placeholder="votre@email.fr">
-</div>
-
-<button class="profile-primary" type="submit">Enregistrer mon profil local</button>
-<p class="profile-save-status" id="profileSaveStatus" aria-live="polite"></p>
+<p id="profilePhotoStatus" class="profile-save-status" aria-live="polite"></p>
+<dl class="account-details"><div><dt>Adresse email</dt><dd id="accountEmailDisplay">—</dd></div></dl>
+<button id="openPasswordChange" class="profile-secondary account-password-button" type="button">Changer mon mot de passe</button>
+<form id="accountPasswordForm" class="profile-form" hidden>
+<p id="accountPasswordHelp" class="account-warning">Choisissez un nouveau mot de passe.</p>
+<div class="profile-field"><label for="currentPassword">Mot de passe actuel</label><input id="currentPassword" type="password" autocomplete="current-password" required></div>
+<div class="profile-field"><label for="newPassword">Nouveau mot de passe</label><input id="newPassword" type="password" minlength="12" maxlength="200" autocomplete="new-password" required></div>
+<button class="profile-primary" type="submit">Enregistrer le nouveau mot de passe</button>
 </form>
+<button id="accountLogout" class="profile-secondary account-logout" type="button">Se déconnecter</button>
+<p id="accountStatus" class="profile-save-status" aria-live="polite"></p>
+</section>
 
 <form class="profile-card profile-form" id="profileCardForm">
 <div class="profile-section-title">Carte paddock</div>
@@ -86,24 +77,6 @@ Choisir une photo
 </div>
 <p class="profile-save-status" id="profileCardStatus" aria-live="polite"></p>
 </form>
-
-<section class="profile-card profile-form account-card" aria-labelledby="accountTitle">
-<div class="account-summary">
-<div class="account-avatar" aria-hidden="true">✓</div>
-<div><div class="profile-section-title" id="accountTitle">Compte connecté</div>
-<h2 id="accountIdentity">Chargement…</h2></div>
-</div>
-<dl class="account-details"><div><dt>Adresse email</dt><dd id="accountEmailDisplay">—</dd></div></dl>
-<button id="openPasswordChange" class="profile-secondary account-password-button" type="button">Changer mon mot de passe</button>
-<form id="accountPasswordForm" class="profile-form" hidden>
-<p id="accountPasswordHelp" class="account-warning">Choisissez un nouveau mot de passe.</p>
-<div class="profile-field"><label for="currentPassword">Mot de passe actuel</label><input id="currentPassword" type="password" autocomplete="current-password" required></div>
-<div class="profile-field"><label for="newPassword">Nouveau mot de passe</label><input id="newPassword" type="password" minlength="12" maxlength="200" autocomplete="new-password" required></div>
-<button class="profile-primary" type="submit">Enregistrer le nouveau mot de passe</button>
-</form>
-<button id="accountLogout" class="profile-secondary account-logout" type="button">Se déconnecter</button>
-<p id="accountStatus" class="profile-save-status" aria-live="polite"></p>
-</section>
 
 </div>
 

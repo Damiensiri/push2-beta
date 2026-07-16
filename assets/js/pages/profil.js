@@ -1,15 +1,11 @@
 (function initializeProfilePage(){
-const form=document.getElementById("profileForm");
 const cardForm=document.getElementById("profileCardForm");
-const firstName=document.getElementById("profileFirstName");
-const lastName=document.getElementById("profileLastName");
-const email=document.getElementById("profileEmail");
 const cardNumber=document.getElementById("profileCardNumber");
 const photoInput=document.getElementById("profilePhotoInput");
 const photoPreview=document.getElementById("profilePhotoPreview");
 const photoFallback=document.getElementById("profilePhotoFallback");
 const removePhoto=document.getElementById("removePhoto");
-const saveStatus=document.getElementById("profileSaveStatus");
+const photoStatus=document.getElementById("profilePhotoStatus");
 const cardStatus=document.getElementById("profileCardStatus");
 const removeCard=document.getElementById("removeCard");
 const cropDialog=document.getElementById("cropDialog");
@@ -115,23 +111,30 @@ else reject(new Error("Compression impossible"));
 
 async function loadProfile(){
 const profile=await ProfileStore.get();
-firstName.value=profile.firstName;
-lastName.value=profile.lastName;
-email.value=profile.email;
 cardNumber.value=profile.cardNumber;
 setPreview(profile.photo);
+}
+
+async function savePhoto(photo){
+const profile=await ProfileStore.get();
+await ProfileStore.saveProfile({
+firstName:profile.firstName,
+lastName:profile.lastName,
+email:profile.email,
+photo
+});
 }
 
 photoInput.addEventListener("change",async()=>{
 const file=photoInput.files?.[0];
 if(!file)return;
 
-saveStatus.textContent="Préparation de la photo…";
+photoStatus.textContent="Préparation de la photo…";
 try{
 await openCropper(file);
-saveStatus.textContent="";
+photoStatus.textContent="";
 }catch(e){
-saveStatus.textContent="Cette photo ne peut pas être utilisée.";
+photoStatus.textContent="Cette photo ne peut pas être utilisée.";
 }
 photoInput.value="";
 });
@@ -175,7 +178,7 @@ drawCrop();
 
 cancelCrop.addEventListener("click",()=>{
 closeCropper();
-saveStatus.textContent="";
+photoStatus.textContent="";
 });
 
 confirmCrop.addEventListener("click",async()=>{
@@ -183,11 +186,13 @@ if(!cropImage)return;
 confirmCrop.disabled=true;
 try{
 drawCrop();
-setPreview(await cropToBlob());
+const croppedPhoto=await cropToBlob();
+setPreview(croppedPhoto);
+await savePhoto(croppedPhoto);
 closeCropper();
-saveStatus.textContent="Photo prête à être enregistrée.";
+photoStatus.textContent="Photo de profil enregistrée sur cet appareil.";
 }catch(e){
-saveStatus.textContent="Cette photo ne peut pas être utilisée.";
+photoStatus.textContent="Cette photo ne peut pas être utilisée.";
 }finally{
 confirmCrop.disabled=false;
 }
@@ -196,30 +201,17 @@ confirmCrop.disabled=false;
 cropDialog.addEventListener("click",event=>{
 if(event.target===cropDialog){
 closeCropper();
-saveStatus.textContent="";
+photoStatus.textContent="";
 }
 });
 
-removePhoto.addEventListener("click",()=>{
+removePhoto.addEventListener("click",async()=>{
 setPreview(null);
-saveStatus.textContent="La photo sera supprimée à l’enregistrement.";
-});
-
-form.addEventListener("submit",async event=>{
-event.preventDefault();
-if(!form.reportValidity())return;
-
-saveStatus.textContent="Enregistrement…";
 try{
-await ProfileStore.saveProfile({
-firstName:firstName.value,
-lastName:lastName.value,
-email:email.value,
-photo:photoBlob
-});
-saveStatus.textContent="Profil enregistré sur cet appareil.";
+await savePhoto(null);
+photoStatus.textContent="Photo supprimée de cet appareil.";
 }catch(e){
-saveStatus.textContent="Impossible d’enregistrer le profil.";
+photoStatus.textContent="Impossible de supprimer la photo.";
 }
 });
 
