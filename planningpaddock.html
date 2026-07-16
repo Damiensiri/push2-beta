@@ -917,33 +917,24 @@ let email=currentViewer?.email||""
 
 if(!name||!email){alert("Compte utilisateur incomplet");return}
 
-// envoi vers Google Form
-fetch("https://docs.google.com/forms/d/e/1FAIpQLScqcDgOy64o6ZyVuLlQrgPbAR60yIoMZzChOANrA_ZzyAD-xg/formResponse",{
+let createdRequest
+try{
+createdRequest=await paddockApi("/api/paddocks/requests",{
 method:"POST",
-mode:"no-cors",
-body:new URLSearchParams({
-"entry.45941897":name,
-"entry.1156384077":selectedDate,
-"entry.502902379":email
+body:JSON.stringify({date:selectedDate})
 })
-})
-
-// stockage local
-let mises = JSON.parse(localStorage.getItem("myMises") || "[]")
-
-mises.push({
-date:selectedDate,
-name:name
-})
-
-localStorage.setItem("myMises", JSON.stringify(mises))
+}catch(error){
+alert(error.message)
+return
+}
 
 AppMailer.sendPaddockRequestConfirmation({
 customer:{
 email:email,
 firstName:name
 },
-date:selectedDate
+date:selectedDate,
+requestId:createdRequest.request.id
 }).catch(error=>{
 console.warn("Confirmation email non envoyée",error)
 })

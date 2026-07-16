@@ -163,6 +163,35 @@ export default{
           confirmationRequested:Boolean(input.confirmationRequested),email:viewer.email},201,cors);
       }
 
+      if(url.pathname==="/api/paddocks/requests"&&request.method==="GET"){
+        const viewer=await authenticatedUser(request,env);
+        if(!viewer)return json({error:"Non autorisé"},401,cors);
+        const result=await env.DB.prepare(`SELECT id,date,status,comment,created_at,updated_at
+          FROM paddock_requests WHERE user_id=? ORDER BY date DESC,id DESC`).bind(viewer.id).all();
+        return json({requests:result.results.map(publicPaddockRequest)},200,cors);
+      }
+
+      if(url.pathname==="/api/paddocks/requests"&&request.method==="POST"){
+        const viewer=await authenticatedUser(request,env);
+        if(!viewer)return json({error:"Non autorisé"},401,cors);
+        const input=await readJson(request);
+        const date=String(input?.date||"");
+        const dateError=validatePaddockRequestDate(date);
+        if(dateError)return json({error:dateError},400,cors);
+        const now=new Date().toISOString();
+        try{
+          const result=await env.DB.prepare(`INSERT INTO paddock_requests(user_id,name,email,date,status,comment,created_at,updated_at)
+            VALUES(?,?,?,?,'pending','',?,?)`).bind(viewer.id,viewer.first_name,viewer.email,date,now,now).run();
+          const created=await env.DB.prepare(`SELECT id,date,status,comment,created_at,updated_at
+            FROM paddock_requests WHERE id=?`).bind(result.meta.last_row_id).first();
+          await notifyRealtime(env,"paddock-requests");
+          return json({request:publicPaddockRequest(created),email:viewer.email},201,cors);
+        }catch(error){
+          if(String(error?.message||error).includes("UNIQUE"))return json({error:"Vous avez déjà une demande pour ce jour"},409,cors);
+          throw error;
+        }
+      }
+
       const paddockReservationMatch=url.pathname.match(/^\/api\/paddocks\/reservations\/(\d+)$/);
       if(paddockReservationMatch&&request.method==="DELETE"){
         const viewer=await authenticatedUser(request,env);
@@ -216,15 +245,35 @@ export default{
         }
 
         if(request.method==="GET"&&url.pathname==="/api/admin/paddocks"){
-          const [reservationResult,hoursResult,restrictionResult]=await Promise.all([
+          const [reservationResult,hoursResult,restrictionResult,requestResult]=await Promise.all([
             env.DB.prepare(`SELECT id,name,email,paddock,date,time,duration FROM paddock_reservations
               WHERE date>=date('now') ORDER BY date,time`).all(),
             env.DB.prepare("SELECT paddock,schedule_json FROM paddock_hours").all(),
-            env.DB.prepare("SELECT date,block_grande_90,block_beudot_90 FROM paddock_restrictions WHERE date>=date('now')").all()
+            env.DB.prepare("SELECT date,block_grande_90,block_beudot_90 FROM paddock_restrictions WHERE date>=date('now')").all(),
+            env.DB.prepare(`SELECT id,user_id,name,email,date,status,comment,created_at,updated_at
+              FROM paddock_requests ORDER BY date DESC,id DESC`).all()
           ]);
           const hours={};for(const row of hoursResult.results)hours[row.paddock]=JSON.parse(row.schedule_json);
           const restrictions={};for(const row of restrictionResult.results)restrictions[row.date]={blockGrande90:Boolean(row.block_grande_90),blockBeudot90:Boolean(row.block_beudot_90)};
-          return json({reservations:reservationResult.results.map(row=>({...row,id:String(row.id),duration:Number(row.duration)})),horaires:hours,restrictions},200,cors);
+          return json({reservations:reservationResult.results.map(row=>({...row,id:String(row.id),duration:Number(row.duration)})),
+            requests:requestResult.results.map(publicPaddockRequest),horaires:hours,restrictions},200,cors);
+        }
+
+        const adminPaddockRequest=url.pathname.match(/^\/api\/admin\/paddocks\/requests\/(\d+)$/);
+        if(request.method==="PATCH"&&adminPaddockRequest){
+          const input=await readJson(request);
+          const status=String(input?.status||"");
+          const comment=String(input?.comment||"").trim();
+          if(!["pending","accepted","refused","completed","cancelled"].includes(status))return json({error:"Statut invalide"},400,cors);
+          if(comment.length>500)return json({error:"Commentaire trop long"},400,cors);
+          const current=await env.DB.prepare("SELECT * FROM paddock_requests WHERE id=?").bind(Number(adminPaddockRequest[1])).first();
+          if(!current)return json({error:"Demande introuvable"},404,cors);
+          const now=new Date().toISOString();
+          await env.DB.prepare("UPDATE paddock_requests SET status=?,comment=?,updated_at=? WHERE id=?")
+            .bind(status,comment,now,current.id).run();
+          const updated=await env.DB.prepare("SELECT * FROM paddock_requests WHERE id=?").bind(current.id).first();
+          await notifyRealtime(env,"paddock-requests");
+          return json({request:publicPaddockRequest(updated),statusChanged:current.status!==status},200,cors);
         }
 
         if(request.method==="POST"&&url.pathname==="/api/admin/paddocks/blockages"){
@@ -774,6 +823,28 @@ function validatePaddockBooking(input){
   if(!/^\d{2}:\d{2}$/.test(time)||timeToMinutes(time)===null)return{error:"Heure invalide"};
   if(![60,90].includes(duration))return{error:"Durée invalide"};
   return{paddock,date,time,duration,startMinutes:timeToMinutes(time)};
+}
+
+function validatePaddockRequestDate(date){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return"Date invalide";
+  const target=new Date(date+"T12:00:00Z");
+  if(Number.isNaN(target.getTime()))return"Date invalide";
+  const day=target.getUTCDay();
+  if(day===0||day===6)return"Demande impossible le week-end";
+  const parts=Object.fromEntries(new Intl.DateTimeFormat("fr-CA",{
+    timeZone:"Europe/Paris",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hourCycle:"h23"
+  }).formatToParts(new Date()).filter(part=>part.type!=="literal").map(part=>[part.type,part.value]));
+  const today=`${parts.year}-${parts.month}-${parts.day}`;
+  if(date<=today)return"La demande doit concerner un prochain jour";
+  const tomorrowDate=new Date(today+"T12:00:00Z");tomorrowDate.setUTCDate(tomorrowDate.getUTCDate()+1);
+  const tomorrow=tomorrowDate.toISOString().slice(0,10);
+  if(date===tomorrow&&(Number(parts.hour)*60+Number(parts.minute))>1200)return"Demande possible uniquement jusqu’à 20h la veille";
+  return"";
+}
+
+function publicPaddockRequest(row){
+  return{id:String(row.id),userId:row.user_id===undefined?undefined:Number(row.user_id),name:row.name,email:row.email,
+    date:row.date,status:row.status,comment:row.comment||"",createdAt:row.created_at,updatedAt:row.updated_at};
 }
 
 function paddockLockStatements(env,{lockKey,date,paddock,startMinutes,duration}){

@@ -220,31 +220,21 @@ reservation.description
 )
 }
 
-/* ===== GOOGLE SHEETS ===== */
+/* ===== DONNÉES BÊTA ===== */
 
-const sheetURL="https://docs.google.com/spreadsheets/d/e/2PACX-1vRxfmZEcNesum_QBxIe2-tEihtnRSEaVC1x8Y_S3N5MEHcV4tJY3X-7i9NdTBQTBRuzDHHW9NViYrrh/pub?gid=1049919550&single=true&output=csv"
+const PADDOCK_API="https://ecurie-notifications-beta.damiensiri-pro.workers.dev"
+const PADDOCK_TOKEN_KEY="ecurie_beta_session"
 const sheetCartesURL="https://docs.google.com/spreadsheets/d/e/2PACX-1vRxfmZEcNesum_QBxIe2-tEihtnRSEaVC1x8Y_S3N5MEHcV4tJY3X-7i9NdTBQTBRuzDHHW9NViYrrh/pub?gid=1776451835&single=true&output=csv"
 
-async function loadSheet(){
-const res=await fetch(sheetURL)
-const text=await res.text()
-const rows=text.split("\n").slice(1)
-rows.reverse()
-
-let demandes=[]
-
-rows.forEach(r=>{
-const c=r.split(",")
-demandes.push({
-nom:c[1],
-date:c[2],
-email:c[3],
-statut:c[4],
-commentaire:c[5]
+async function paddockApi(path,options={}){
+const token=localStorage.getItem(PADDOCK_TOKEN_KEY)||""
+const response=await fetch(PADDOCK_API+path,{
+...options,
+headers:{authorization:"Bearer "+token,...(options.body?{"content-type":"application/json"}:{})}
 })
-})
-
-return demandes
+const data=await response.json().catch(()=>({}))
+if(!response.ok)throw new Error(data.error||"Service paddock indisponible")
+return data
 }
 
 function parseCSV(text){
@@ -375,7 +365,6 @@ paddockCard.innerHTML=`
 /* ===== LOCAL STORAGE ===== */
 
 let myReservations = JSON.parse(localStorage.getItem("myReservations") || "[]")
-let myMises = JSON.parse(localStorage.getItem("myMises") || "[]")
 let calendarReservations = {}
 
 /* ===== LOAD ===== */
@@ -433,22 +422,19 @@ count++
 
 /* ===== DEMANDES ===== */
 
-const sheetData=await loadSheet()
+let paddockRequests=[]
+try{
+paddockRequests=(await paddockApi("/api/paddocks/requests")).requests||[]
+}catch(error){
+console.warn("Demandes paddock indisponibles",error)
+}
 
-for(let i=myMises.length-1;i>=0;i--){
-
-const mise=myMises[i]
+for(const mise of paddockRequests){
 let old=isPast(mise.date)
 
-let statut="En attente"
-let commentaire=""
-
-const match=sheetData.find(d=>d.nom===mise.name && d.date===mise.date)
-
-if(match){
-statut=match.statut || "En attente"
-commentaire=match.commentaire || ""
-}
+const statusLabels={pending:"En attente",accepted:"Accepté",refused:"Refusé",completed:"Réalisé",cancelled:"Annulé"}
+const statut=statusLabels[mise.status]||"En attente"
+const commentaire=mise.comment||""
 
 let statusClass="status-attente"
 if(statut==="Accepté") statusClass="status-accepte"
@@ -510,13 +496,16 @@ document.getElementById("toggleHistory").innerText="Voir l’historique ▼"
 
 load()
 
-setInterval(()=>{load()},120000)
-
 document.addEventListener("visibilitychange",()=>{
 if(!document.hidden) load()
 })
 
+window.addEventListener("pwa-data-changed",event=>{
+if(event.detail?.type==="paddock-requests"||event.detail?.type==="all")load()
+})
+
 </script>
+<script src="assets/js/status-realtime.js?v=20260716-3"></script>
 
 </body>
 </html>
