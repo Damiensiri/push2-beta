@@ -200,6 +200,68 @@ export default{
           }
         }
 
+        if(request.method==="GET"&&url.pathname==="/api/admin/paddocks"){
+          const [reservationResult,hoursResult,restrictionResult]=await Promise.all([
+            env.DB.prepare(`SELECT id,name,email,paddock,date,time,duration FROM paddock_reservations
+              WHERE date>=date('now') ORDER BY date,time`).all(),
+            env.DB.prepare("SELECT paddock,schedule_json FROM paddock_hours").all(),
+            env.DB.prepare("SELECT date,block_grande_90,block_beudot_90 FROM paddock_restrictions WHERE date>=date('now')").all()
+          ]);
+          const hours={};for(const row of hoursResult.results)hours[row.paddock]=JSON.parse(row.schedule_json);
+          const restrictions={};for(const row of restrictionResult.results)restrictions[row.date]={blockGrande90:Boolean(row.block_grande_90),blockBeudot90:Boolean(row.block_beudot_90)};
+          return json({reservations:reservationResult.results.map(row=>({...row,id:String(row.id),duration:Number(row.duration)})),horaires:hours,restrictions},200,cors);
+        }
+
+        if(request.method==="POST"&&url.pathname==="/api/admin/paddocks/blockages"){
+          const input=await readJson(request);
+          const date=String(input?.date||"");const time=String(input?.time||"");
+          const duration=Number(input?.duration);const name=String(input?.name||"Blocage").trim();
+          const paddocks=Array.isArray(input?.paddocks)?[...new Set(input.paddocks.map(String))]:[];
+          if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!/^\d{2}:\d{2}$/.test(time)||timeToMinutes(time)===null)return json({error:"Date ou heure invalide"},400,cors);
+          if(!Number.isInteger(duration)||duration<1||duration>1440)return json({error:"Durée invalide"},400,cors);
+          if(!paddocks.length||paddocks.some(value=>!["maison","grande","beudot"].includes(value)))return json({error:"Paddock invalide"},400,cors);
+          const cleanName=(name.toLowerCase().startsWith("blocage")?name:"Blocage "+name).slice(0,120);
+          const now=new Date().toISOString();
+          await env.DB.batch(paddocks.map(paddock=>env.DB.prepare(`INSERT INTO paddock_reservations(user_id,name,email,paddock,date,time,duration,created_at)
+            VALUES(NULL,?,'',?,?,?,?,?)`).bind(cleanName,paddock,date,time,duration,now)));
+          return json({created:paddocks.length},201,cors);
+        }
+
+        const adminPaddockReservation=url.pathname.match(/^\/api\/admin\/paddocks\/reservations\/(\d+)$/);
+        if(request.method==="DELETE"&&adminPaddockReservation){
+          const result=await env.DB.prepare("DELETE FROM paddock_reservations WHERE id=?")
+            .bind(Number(adminPaddockReservation[1])).run();
+          if(!result.meta.changes)return json({error:"Réservation introuvable"},404,cors);
+          return json({deleted:true},200,cors);
+        }
+
+        if(request.method==="PUT"&&url.pathname==="/api/admin/paddocks/restrictions"){
+          const input=await readJson(request);const date=String(input?.date||"");
+          if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return json({error:"Date invalide"},400,cors);
+          await env.DB.prepare(`INSERT INTO paddock_restrictions(date,block_grande_90,block_beudot_90,updated_at)
+            VALUES(?,?,?,?) ON CONFLICT(date) DO UPDATE SET block_grande_90=excluded.block_grande_90,
+            block_beudot_90=excluded.block_beudot_90,updated_at=excluded.updated_at`)
+            .bind(date,input.blockGrande90?1:0,input.blockBeudot90?1:0,new Date().toISOString()).run();
+          return json({saved:true},200,cors);
+        }
+
+        const adminRestriction=url.pathname.match(/^\/api\/admin\/paddocks\/restrictions\/(\d{4}-\d{2}-\d{2})$/);
+        if(request.method==="DELETE"&&adminRestriction){
+          await env.DB.prepare("DELETE FROM paddock_restrictions WHERE date=?").bind(adminRestriction[1]).run();
+          return json({deleted:true},200,cors);
+        }
+
+        if(request.method==="PUT"&&url.pathname==="/api/admin/paddocks/hours"){
+          const input=await readJson(request);const paddocks=Array.isArray(input?.paddocks)?[...new Set(input.paddocks.map(String))]:[];
+          if(!paddocks.length||paddocks.some(value=>!["maison","grande","beudot"].includes(value)))return json({error:"Paddock invalide"},400,cors);
+          const schedule=validatePaddockHours(input?.schedule);if(schedule.error)return json({error:schedule.error},400,cors);
+          const now=new Date().toISOString();const encoded=JSON.stringify(schedule.value);
+          await env.DB.batch(paddocks.map(paddock=>env.DB.prepare(`INSERT INTO paddock_hours(paddock,schedule_json,updated_at)
+            VALUES(?,?,?) ON CONFLICT(paddock) DO UPDATE SET schedule_json=excluded.schedule_json,updated_at=excluded.updated_at`)
+            .bind(paddock,encoded,now)));
+          return json({saved:true,paddocks},200,cors);
+        }
+
         const userMatch=url.pathname.match(/^\/api\/admin\/users\/(\d+)$/);
         if(request.method==="PATCH"&&userMatch){
           const current=await env.DB.prepare("SELECT * FROM users WHERE id=?").bind(Number(userMatch[1])).first();
@@ -681,6 +743,19 @@ function validatePaddockBooking(input){
   return{paddock,date,time,duration,startMinutes:timeToMinutes(time)};
 }
 
+function validatePaddockHours(input){
+  const days=["dimanche","lundi","mardi","mercredi","jeudi","vendredi","samedi"];
+  if(!input||typeof input!=="object")return{error:"Horaires invalides"};
+  const value={};
+  for(const day of days){
+    const row=input[day];if(!row)return{error:"Les sept jours sont obligatoires"};
+    const open=String(row.open||"");const close=String(row.close||"");
+    if(timeToMinutes(open)===null||timeToMinutes(close)===null)return{error:"Horaire invalide"};
+    value[day]={closed:Boolean(row.closed),open,close};
+  }
+  return{value};
+}
+
 function publicUser(user){
   return{id:Number(user.id),email:user.email,firstName:user.first_name,lastName:user.last_name,
     cardNumber:user.card_number||"",role:user.role,status:user.status,
@@ -816,5 +891,5 @@ export class RealtimeHub{
 export{
   compatibleAlert,validateAlert,parisNow,isPushEnabled,sendRequestedPush,plainTextMessage,
   calculateStatus,publicSpace,publicSchedule,validateSpace,validateSchedules,timeToMinutes,parisClock,
-  normalizeEmail,validatePassword,validateNewUser,hashPassword,verifyPassword,publicUser,validatePaddockBooking
+  normalizeEmail,validatePassword,validateNewUser,hashPassword,verifyPassword,publicUser,validatePaddockBooking,validatePaddockHours
 };

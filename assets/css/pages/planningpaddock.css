@@ -245,6 +245,69 @@ body.planningpaddock-page textarea:focus{
   box-shadow:0 12px 26px rgba(16,56,98,.20),inset 0 1px 0 rgba(255,255,255,.22);
 }
 
+body.planningpaddock-page #confirmationEmailOption{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  margin:14px 0 4px;
+  padding:12px 14px;
+  border:1px solid rgba(255,255,255,.18);
+  border-radius:16px;
+  color:rgba(255,255,255,.9);
+  background:rgba(255,255,255,.10);
+  font-size:12px;
+  line-height:1.35;
+  letter-spacing:.035em;
+  text-transform:none;
+  cursor:pointer;
+}
+
+body.planningpaddock-page #confirmEmail{
+  position:relative;
+  flex:0 0 48px;
+  width:48px;
+  min-height:28px;
+  height:28px;
+  margin:0;
+  padding:0;
+  border:1px solid rgba(255,255,255,.3);
+  border-radius:999px;
+  outline:0;
+  appearance:none;
+  -webkit-appearance:none;
+  background:rgba(7,31,52,.48);
+  box-shadow:inset 0 1px 3px rgba(0,0,0,.22);
+  transition:background .18s ease,border-color .18s ease;
+}
+
+body.planningpaddock-page #confirmEmail::after{
+  content:"";
+  position:absolute;
+  top:3px;
+  left:3px;
+  width:20px;
+  height:20px;
+  border-radius:50%;
+  background:#fff;
+  box-shadow:0 2px 6px rgba(0,0,0,.3);
+  transition:transform .18s ease;
+}
+
+body.planningpaddock-page #confirmEmail:checked{
+  border-color:rgba(72,230,142,.7);
+  background:#269b62;
+}
+
+body.planningpaddock-page #confirmEmail:checked::after{
+  transform:translateX(20px);
+}
+
+#bookingIdentity,#miseEmailNotice{
+  margin:0 0 8px;
+  color:rgba(255,255,255,.82);
+  font-size:14px;
+}
+
 body.planningpaddock-page select{
   padding-right:42px;
   appearance:none;
