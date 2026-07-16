@@ -271,6 +271,20 @@ export default{
         }
 
         const adminPaddockRequest=url.pathname.match(/^\/api\/admin\/paddocks\/requests\/(\d+)$/);
+        if(request.method==="DELETE"&&adminPaddockRequest){
+          const requestId=Number(adminPaddockRequest[1]);
+          const requestRow=await env.DB.prepare("SELECT * FROM paddock_requests WHERE id=?").bind(requestId).first();
+          if(!requestRow)return json({error:"Demande introuvable"},404,cors);
+          const usage=await env.DB.prepare("SELECT * FROM paddock_usages WHERE request_id=?").bind(requestId).first();
+          const statements=[];
+          if(usage?.mode==="card")statements.push(env.DB.prepare(`UPDATE paddock_cards SET remaining=MIN(total,remaining+1),updated_at=?
+            WHERE user_id=?`).bind(new Date().toISOString(),requestRow.user_id));
+          statements.push(env.DB.prepare("DELETE FROM paddock_requests WHERE id=?").bind(requestId));
+          await env.DB.batch(statements);
+          await notifyRealtime(env,"paddock-requests");
+          await notifyRealtime(env,"paddock-accounts");
+          return json({deleted:true,creditRestored:usage?.mode==="card"},200,cors);
+        }
         if(request.method==="PATCH"&&adminPaddockRequest){
           const input=await readJson(request);
           const status=String(input?.status||"");
@@ -336,15 +350,20 @@ export default{
 
         const adminPaddockReservation=url.pathname.match(/^\/api\/admin\/paddocks\/reservations\/(\d+)$/);
         if(request.method==="DELETE"&&adminPaddockReservation){
-          const reservation=await env.DB.prepare("SELECT id,lock_key FROM paddock_reservations WHERE id=?")
+          const reservation=await env.DB.prepare("SELECT * FROM paddock_reservations WHERE id=?")
             .bind(Number(adminPaddockReservation[1])).first();
           if(!reservation)return json({error:"Réservation introuvable"},404,cors);
+          const input=(request.headers.get("content-type")||"").includes("application/json")?await readJson(request):{};
+          const comment=String(input?.comment||"").trim();
+          if(comment.length>500)return json({error:"Commentaire trop long"},400,cors);
           await env.DB.batch([
             env.DB.prepare("DELETE FROM paddock_slot_locks WHERE reservation_key=?").bind(reservation.lock_key),
             env.DB.prepare("DELETE FROM paddock_reservations WHERE id=?").bind(reservation.id)
           ]);
           await notifyRealtime(env,"paddocks");
-          return json({deleted:true},200,cors);
+          let email={requested:false,sent:false};
+          if(reservation.email&&reservation.email.includes("@"))email=await sendPaddockReservationCancellationEmail(env,reservation,comment);
+          return json({deleted:true,email},200,cors);
         }
 
         if(request.method==="PUT"&&url.pathname==="/api/admin/paddocks/restrictions"){
@@ -950,6 +969,20 @@ async function sendPaddockRequestStatusEmail(env,row){
   }catch(error){
     return{requested:true,sent:false,error:String(error?.message||error)};
   }
+}
+
+async function sendPaddockReservationCancellationEmail(env,row,comment){
+  if(!env.MAILER_ENDPOINT)return{requested:true,sent:false,error:"Mailer bêta non configuré"};
+  const payload={type:"paddock_reservation_cancelled",
+    idempotencyKey:`paddock-reservation-cancelled:${row.id}:${new Date().toISOString()}`,
+    customer:{email:row.email,firstName:row.name},
+    reservation:{id:String(row.id),paddock:row.paddock,date:row.date,time:row.time,duration:Number(row.duration),comment}};
+  try{
+    const response=await fetch(env.MAILER_ENDPOINT,{method:"POST",headers:{"content-type":"text/plain;charset=UTF-8"},body:JSON.stringify(payload)});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok||!data.ok)return{requested:true,sent:false,error:data.error||`Mailer HTTP ${response.status}`};
+    return{requested:true,sent:Boolean(data.sent),duplicate:Boolean(data.duplicate)};
+  }catch(error){return{requested:true,sent:false,error:String(error?.message||error)};}
 }
 
 function paddockLockStatements(env,{lockKey,date,paddock,startMinutes,duration}){
