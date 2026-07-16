@@ -7,6 +7,7 @@ ENVIRONMENT = "beta"
 PUSH_ENABLED = "true"
 ONESIGNAL_APP_ID = "186e6f3b-def4-4b8e-8700-650456ff93cc"
 ALLOWED_ORIGIN = "https://damiensiri.github.io,http://127.0.0.1:8000"
+MAILER_ENDPOINT = "https://script.google.com/macros/s/AKfycbx278-X4lrLlua_Jns-UfO04PDWDhk7qOTnsF2BW_VuMjgNnlHIxvsW9fk35HI6nJl-eQ/exec"
 
 [[d1_databases]]
 binding = "DB"

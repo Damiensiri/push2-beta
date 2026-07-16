@@ -273,7 +273,10 @@ export default{
             .bind(status,comment,now,current.id).run();
           const updated=await env.DB.prepare("SELECT * FROM paddock_requests WHERE id=?").bind(current.id).first();
           await notifyRealtime(env,"paddock-requests");
-          return json({request:publicPaddockRequest(updated),statusChanged:current.status!==status},200,cors);
+          const statusChanged=current.status!==status;
+          let email={requested:false,sent:false};
+          if(statusChanged)email=await sendPaddockRequestStatusEmail(env,updated);
+          return json({request:publicPaddockRequest(updated),statusChanged,email},200,cors);
         }
 
         if(request.method==="POST"&&url.pathname==="/api/admin/paddocks/blockages"){
@@ -845,6 +848,24 @@ function validatePaddockRequestDate(date){
 function publicPaddockRequest(row){
   return{id:String(row.id),userId:row.user_id===undefined?undefined:Number(row.user_id),name:row.name,email:row.email,
     date:row.date,status:row.status,comment:row.comment||"",createdAt:row.created_at,updatedAt:row.updated_at};
+}
+
+async function sendPaddockRequestStatusEmail(env,row){
+  if(!env.MAILER_ENDPOINT)return{requested:true,sent:false,error:"Mailer bêta non configuré"};
+  const payload={
+    type:"paddock_request_status",
+    idempotencyKey:`paddock-request-status:${row.id}:${row.status}:${row.updated_at}`,
+    customer:{email:row.email,firstName:row.name},
+    request:{id:String(row.id),date:row.date,status:row.status,comment:row.comment||""}
+  };
+  try{
+    const response=await fetch(env.MAILER_ENDPOINT,{method:"POST",headers:{"content-type":"text/plain;charset=UTF-8"},body:JSON.stringify(payload)});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok||!data.ok)return{requested:true,sent:false,error:data.error||`Mailer HTTP ${response.status}`};
+    return{requested:true,sent:Boolean(data.sent),duplicate:Boolean(data.duplicate)};
+  }catch(error){
+    return{requested:true,sent:false,error:String(error?.message||error)};
+  }
 }
 
 function paddockLockStatements(env,{lockKey,date,paddock,startMinutes,duration}){
