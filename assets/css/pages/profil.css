@@ -87,6 +87,12 @@
   gap:16px;
 }
 
+.account-card #accountLoggedOut,.account-card #accountLoggedIn{display:grid;gap:14px}
+.account-card [hidden]{display:none!important}
+.account-help,.account-warning{margin:0;color:rgba(255,255,255,.72);font-size:12px;line-height:1.55}
+.account-warning{padding:10px 12px;border:1px solid rgba(255,211,99,.38);border-radius:14px;background:rgba(255,190,40,.13);color:#fff0bf}
+.account-logout{width:100%;margin-top:2px}
+
 .profile-field{
   display:grid;
   gap:7px;

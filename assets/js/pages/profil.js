@@ -273,5 +273,7 @@ window.addEventListener("beforeunload",()=>{
 if(photoUrl)URL.revokeObjectURL(photoUrl);
 });
 
+window.addEventListener("profile:account-synced",loadProfile);
+
 loadProfile();
 })();

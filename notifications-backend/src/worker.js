@@ -53,11 +53,123 @@ export default{
         return realtimeStub(env).fetch(request);
       }
 
+      if(request.method==="POST"&&url.pathname==="/api/auth/login"){
+        const input=await readJson(request);
+        const email=normalizeEmail(input?.email);
+        const password=String(input?.password||"");
+        const user=await env.DB.prepare("SELECT * FROM users WHERE email=? COLLATE NOCASE").bind(email).first();
+        if(!user||user.status!=="active"||!await verifyPassword(password,user)){
+          return json({error:"Identifiants incorrects"},401,cors);
+        }
+        const session=await createSession(env,user.id);
+        await env.DB.prepare("UPDATE users SET last_login_at=?,updated_at=? WHERE id=?")
+          .bind(session.createdAt,session.createdAt,user.id).run();
+        return json({token:session.token,expiresAt:session.expiresAt,user:publicUser(user)},200,cors);
+      }
+
+      if(url.pathname==="/api/auth/me"){
+        const session=await authenticatedUser(request,env);
+        if(!session)return json({error:"Non autorisé"},401,cors);
+        if(request.method==="GET")return json({user:publicUser(session)},200,cors);
+        if(request.method==="PATCH"){
+          const input=await readJson(request);
+          const profile=validateUserProfile(input,session);
+          if(profile.error)return json({error:profile.error},400,cors);
+          let passwordFields=null;
+          if(input?.newPassword){
+            if(!await verifyPassword(String(input.currentPassword||""),session)){
+              return json({error:"Mot de passe actuel incorrect"},400,cors);
+            }
+            const passwordError=validatePassword(input.newPassword);
+            if(passwordError)return json({error:passwordError},400,cors);
+            passwordFields=await hashPassword(input.newPassword);
+          }
+          const now=new Date().toISOString();
+          if(passwordFields){
+            await env.DB.prepare(`UPDATE users SET first_name=?,last_name=?,card_number=?,
+              password_hash=?,password_salt=?,password_iterations=?,must_change_password=0,updated_at=? WHERE id=?`)
+              .bind(profile.firstName,profile.lastName,profile.cardNumber,passwordFields.hash,
+                passwordFields.salt,passwordFields.iterations,now,session.id).run();
+          }else{
+            await env.DB.prepare("UPDATE users SET first_name=?,last_name=?,card_number=?,updated_at=? WHERE id=?")
+              .bind(profile.firstName,profile.lastName,profile.cardNumber,now,session.id).run();
+          }
+          const updated=await env.DB.prepare("SELECT * FROM users WHERE id=?").bind(session.id).first();
+          return json({user:publicUser(updated)},200,cors);
+        }
+      }
+
+      if(request.method==="POST"&&url.pathname==="/api/auth/logout"){
+        const token=bearerToken(request);
+        if(token)await env.DB.prepare("UPDATE user_sessions SET revoked_at=? WHERE token_hash=?")
+          .bind(new Date().toISOString(),await sha256(token)).run();
+        return json({loggedOut:true},200,cors);
+      }
+
       if(url.pathname.startsWith("/api/admin/")){
         if(!isAdmin(request,env))return json({error:"Non autorisé"},401,cors);
 
         if(request.method==="GET"&&url.pathname==="/api/admin/operations"){
           return json(await loadOperations(env),200,cors);
+        }
+
+        if(request.method==="GET"&&url.pathname==="/api/admin/users"){
+          const result=await env.DB.prepare(`SELECT id,email,first_name,last_name,card_number,role,status,
+            must_change_password,created_at,updated_at,last_login_at FROM users ORDER BY last_name,first_name`).all();
+          return json(result.results.map(publicUser),200,cors);
+        }
+
+        if(request.method==="POST"&&url.pathname==="/api/admin/users"){
+          const input=await readJson(request);
+          const validated=validateNewUser(input);
+          if(validated.error)return json({error:validated.error},400,cors);
+          const password=String(input.temporaryPassword||"");
+          const passwordError=validatePassword(password);
+          if(passwordError)return json({error:passwordError},400,cors);
+          const encoded=await hashPassword(password);
+          const now=new Date().toISOString();
+          try{
+            const result=await env.DB.prepare(`INSERT INTO users(email,first_name,last_name,card_number,role,status,
+              password_hash,password_salt,password_iterations,must_change_password,created_at,updated_at)
+              VALUES(?,?,?,?,?,'active',?,?,?,1,?,?)`).bind(validated.email,validated.firstName,
+              validated.lastName,validated.cardNumber,validated.role,encoded.hash,encoded.salt,
+              encoded.iterations,now,now).run();
+            const created=await env.DB.prepare("SELECT * FROM users WHERE id=?").bind(result.meta.last_row_id).first();
+            return json({user:publicUser(created)},201,cors);
+          }catch(error){
+            if(String(error?.message||error).includes("UNIQUE"))return json({error:"Cette adresse existe déjà"},409,cors);
+            throw error;
+          }
+        }
+
+        const userMatch=url.pathname.match(/^\/api\/admin\/users\/(\d+)$/);
+        if(request.method==="PATCH"&&userMatch){
+          const current=await env.DB.prepare("SELECT * FROM users WHERE id=?").bind(Number(userMatch[1])).first();
+          if(!current)return json({error:"Utilisateur introuvable"},404,cors);
+          const input=await readJson(request);
+          const status=input.status===undefined?current.status:String(input.status);
+          if(!["active","disabled"].includes(status))return json({error:"Statut invalide"},400,cors);
+          const role=input.role===undefined?current.role:String(input.role);
+          if(!["client","staff","admin"].includes(role))return json({error:"Rôle invalide"},400,cors);
+          const now=new Date().toISOString();
+          if(input.temporaryPassword){
+            const passwordError=validatePassword(input.temporaryPassword);
+            if(passwordError)return json({error:passwordError},400,cors);
+            const encoded=await hashPassword(input.temporaryPassword);
+            await env.DB.batch([
+              env.DB.prepare(`UPDATE users SET status=?,role=?,password_hash=?,password_salt=?,
+                password_iterations=?,must_change_password=1,updated_at=? WHERE id=?`)
+                .bind(status,role,encoded.hash,encoded.salt,encoded.iterations,now,current.id),
+              env.DB.prepare("UPDATE user_sessions SET revoked_at=? WHERE user_id=? AND revoked_at IS NULL").bind(now,current.id)
+            ]);
+          }else{
+            await env.DB.prepare("UPDATE users SET status=?,role=?,updated_at=? WHERE id=?")
+              .bind(status,role,now,current.id).run();
+            if(status==="disabled")await env.DB.prepare("UPDATE user_sessions SET revoked_at=? WHERE user_id=? AND revoked_at IS NULL")
+              .bind(now,current.id).run();
+          }
+          const updated=await env.DB.prepare("SELECT * FROM users WHERE id=?").bind(current.id).first();
+          return json({user:publicUser(updated)},200,cors);
         }
 
         const spaceMatch=url.pathname.match(/^\/api\/admin\/spaces\/([a-z0-9-]+)$/);
@@ -462,6 +574,107 @@ function isAdmin(request,env){
   return value===`Bearer ${String(env.ADMIN_TOKEN).trim()}`;
 }
 
+const PASSWORD_ITERATIONS=210000;
+const SESSION_DURATION_MS=30*24*60*60*1000;
+
+function normalizeEmail(value){
+  return String(value||"").trim().toLowerCase();
+}
+
+function validatePassword(value){
+  const password=String(value||"");
+  if(password.length<12)return"Le mot de passe doit contenir au moins 12 caractères";
+  if(password.length>200)return"Le mot de passe est trop long";
+  return"";
+}
+
+function validateNewUser(input){
+  const email=normalizeEmail(input?.email);
+  const firstName=String(input?.firstName||"").trim();
+  const lastName=String(input?.lastName||"").trim();
+  const cardNumber=String(input?.cardNumber||"").trim();
+  const role=String(input?.role||"client");
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||email.length>160)return{error:"Adresse email invalide"};
+  if(!firstName||firstName.length>60||!lastName||lastName.length>80)return{error:"Prénom ou nom invalide"};
+  if(cardNumber.length>80)return{error:"Numéro de carte trop long"};
+  if(!["client","staff","admin"].includes(role))return{error:"Rôle invalide"};
+  return{email,firstName,lastName,cardNumber,role};
+}
+
+function validateUserProfile(input,current){
+  const firstName=String(input?.firstName??current.first_name).trim();
+  const lastName=String(input?.lastName??current.last_name).trim();
+  const cardNumber=String(input?.cardNumber??current.card_number??"").trim();
+  if(!firstName||firstName.length>60||!lastName||lastName.length>80)return{error:"Prénom ou nom invalide"};
+  if(cardNumber.length>80)return{error:"Numéro de carte trop long"};
+  return{firstName,lastName,cardNumber};
+}
+
+function publicUser(user){
+  return{id:Number(user.id),email:user.email,firstName:user.first_name,lastName:user.last_name,
+    cardNumber:user.card_number||"",role:user.role,status:user.status,
+    mustChangePassword:Boolean(user.must_change_password),createdAt:user.created_at,
+    updatedAt:user.updated_at,lastLoginAt:user.last_login_at||null};
+}
+
+function bytesToBase64(bytes){
+  let value="";
+  for(const byte of bytes)value+=String.fromCharCode(byte);
+  return btoa(value);
+}
+
+function base64ToBytes(value){
+  const decoded=atob(value);
+  return Uint8Array.from(decoded,char=>char.charCodeAt(0));
+}
+
+async function hashPassword(password,saltBytes=crypto.getRandomValues(new Uint8Array(16)),iterations=PASSWORD_ITERATIONS){
+  const material=await crypto.subtle.importKey("raw",new TextEncoder().encode(String(password)),"PBKDF2",false,["deriveBits"]);
+  const bits=await crypto.subtle.deriveBits({name:"PBKDF2",hash:"SHA-256",salt:saltBytes,iterations},material,256);
+  return{hash:bytesToBase64(new Uint8Array(bits)),salt:bytesToBase64(saltBytes),iterations};
+}
+
+async function verifyPassword(password,user){
+  const encoded=await hashPassword(password,base64ToBytes(user.password_salt),Number(user.password_iterations));
+  return timingSafeEqual(encoded.hash,user.password_hash);
+}
+
+function timingSafeEqual(left,right){
+  const a=new TextEncoder().encode(String(left));
+  const b=new TextEncoder().encode(String(right));
+  let difference=a.length^b.length;
+  const length=Math.max(a.length,b.length);
+  for(let index=0;index<length;index++)difference|=(a[index%a.length]||0)^(b[index%b.length]||0);
+  return difference===0;
+}
+
+async function sha256(value){
+  const digest=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(String(value)));
+  return bytesToBase64(new Uint8Array(digest));
+}
+
+function bearerToken(request){
+  const match=(request.headers.get("authorization")||"").match(/^Bearer\s+(.+)$/i);
+  return match?.[1]?.trim()||"";
+}
+
+async function createSession(env,userId){
+  const token=bytesToBase64(crypto.getRandomValues(new Uint8Array(32)));
+  const createdAt=new Date().toISOString();
+  const expiresAt=new Date(Date.now()+SESSION_DURATION_MS).toISOString();
+  await env.DB.prepare("INSERT INTO user_sessions(user_id,token_hash,created_at,expires_at) VALUES(?,?,?,?)")
+    .bind(userId,await sha256(token),createdAt,expiresAt).run();
+  return{token,createdAt,expiresAt};
+}
+
+async function authenticatedUser(request,env){
+  const token=bearerToken(request);
+  if(!token)return null;
+  return env.DB.prepare(`SELECT u.* FROM user_sessions s JOIN users u ON u.id=s.user_id
+    WHERE s.token_hash=? AND s.revoked_at IS NULL AND s.expires_at>? AND u.status='active'`)
+    .bind(await sha256(token),new Date().toISOString()).first();
+}
+
 function corsHeaders(request,env){
   const origin=request.headers.get("origin")||"";
   const origins=String(env.ALLOWED_ORIGIN||"").split(",").map(value=>value.trim());
@@ -531,5 +744,6 @@ export class RealtimeHub{
 
 export{
   compatibleAlert,validateAlert,parisNow,isPushEnabled,sendRequestedPush,plainTextMessage,
-  calculateStatus,publicSpace,publicSchedule,validateSpace,validateSchedules,timeToMinutes,parisClock
+  calculateStatus,publicSpace,publicSchedule,validateSpace,validateSchedules,timeToMinutes,parisClock,
+  normalizeEmail,validatePassword,validateNewUser,hashPassword,verifyPassword,publicUser
 };

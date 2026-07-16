@@ -21,6 +21,30 @@ séparée permet les essais de push sans toucher aux abonnés de production.
 - `POST /api/admin/notifications`
 - `PATCH /api/admin/notifications/:id`
 
+### Migration totale — comptes bêta
+
+Les comptes sont stockés uniquement dans la base D1 `ecurie-notifications-beta`.
+Le Backstage les crée avec un mot de passe temporaire ; l’utilisateur se
+connecte ensuite depuis `profil.html` et doit choisir son propre mot de passe.
+
+- `POST /api/auth/login`
+- `GET /api/auth/me`
+- `PATCH /api/auth/me`
+- `POST /api/auth/logout`
+- `GET /api/admin/users`
+- `POST /api/admin/users`
+- `PATCH /api/admin/users/:id`
+
+Les mots de passe utilisent PBKDF2-SHA-256 avec sel individuel et 210 000
+itérations. Seule l’empreinte SHA-256 des jetons de session est conservée dans
+D1. Désactiver un compte ou réinitialiser son mot de passe révoque ses sessions.
+
+La migration distante, après validation explicite, sera :
+
+```bash
+npx wrangler d1 execute ecurie-notifications-beta --remote --file migrations/0001_users.sql
+```
+
 ## Déploiement ultérieur
 
 Le déploiement nécessite un compte Cloudflare et ne doit être exécuté qu’après

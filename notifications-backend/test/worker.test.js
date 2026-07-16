@@ -2,8 +2,27 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   compatibleAlert,validateAlert,parisNow,isPushEnabled,sendRequestedPush,plainTextMessage,
-  calculateStatus,publicSpace,publicSchedule,validateSpace,validateSchedules,timeToMinutes
+  calculateStatus,publicSpace,publicSchedule,validateSpace,validateSchedules,timeToMinutes,
+  normalizeEmail,validatePassword,validateNewUser,hashPassword,verifyPassword
 } from "../src/worker.js";
+
+test("les comptes utilisateurs normalisent et valident l’identité",()=>{
+  assert.equal(normalizeEmail("  Test@Example.COM "),"test@example.com");
+  assert.equal(validatePassword("trop-court"),"Le mot de passe doit contenir au moins 12 caractères");
+  assert.equal(validateNewUser({email:"invalide",firstName:"A",lastName:"B"}).error,"Adresse email invalide");
+  assert.deepEqual(validateNewUser({
+    email:" Test@Example.COM ",firstName:" Alice ",lastName:" Martin ",role:"client"
+  }),{email:"test@example.com",firstName:"Alice",lastName:"Martin",cardNumber:"",role:"client"});
+});
+
+test("les mots de passe sont salés et vérifiables",async()=>{
+  const encoded=await hashPassword("mot-de-passe-beta-solide");
+  const user={password_hash:encoded.hash,password_salt:encoded.salt,password_iterations:encoded.iterations};
+  assert.equal(await verifyPassword("mot-de-passe-beta-solide",user),true);
+  assert.equal(await verifyPassword("autre-mot-de-passe",user),false);
+  const second=await hashPassword("mot-de-passe-beta-solide");
+  assert.notEqual(second.salt,encoded.salt);
+});
 
 test("le contrat public conserve les neuf champs historiques",()=>{
   const value=compatibleAlert({

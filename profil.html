@@ -35,6 +35,29 @@
 <h1>MON PROFIL</h1>
 </header>
 
+<section class="profile-card profile-form account-card" aria-labelledby="accountTitle">
+<div class="profile-section-title" id="accountTitle">Compte bêta</div>
+<div id="accountLoggedOut">
+<p class="account-help">Connectez le compte créé par l’écurie. Votre profil local restera disponible hors connexion.</p>
+<form id="accountLoginForm" class="profile-form">
+<div class="profile-field"><label for="accountEmail">Adresse mail</label><input id="accountEmail" type="email" autocomplete="username" required></div>
+<div class="profile-field"><label for="accountPassword">Mot de passe</label><input id="accountPassword" type="password" autocomplete="current-password" required></div>
+<button class="profile-primary" type="submit">Se connecter à la bêta</button>
+</form>
+</div>
+<div id="accountLoggedIn" hidden>
+<p id="accountIdentity" class="account-help"></p>
+<form id="accountPasswordForm" class="profile-form" hidden>
+<p class="account-warning">Remplacez le mot de passe temporaire avant de continuer.</p>
+<div class="profile-field"><label for="currentPassword">Mot de passe temporaire</label><input id="currentPassword" type="password" autocomplete="current-password" required></div>
+<div class="profile-field"><label for="newPassword">Nouveau mot de passe</label><input id="newPassword" type="password" minlength="12" maxlength="200" autocomplete="new-password" required></div>
+<button class="profile-primary" type="submit">Enregistrer le nouveau mot de passe</button>
+</form>
+<button id="accountLogout" class="profile-secondary account-logout" type="button">Se déconnecter</button>
+</div>
+<p id="accountStatus" class="profile-save-status" aria-live="polite"></p>
+</section>
+
 <section class="profile-card profile-photo" aria-labelledby="photoTitle">
 <div class="profile-section-title" id="photoTitle">Photo de profil</div>
 <div class="profile-photo__preview">
@@ -122,6 +145,7 @@ Zoom
 
 <script src="assets/js/profile-store.js?v=20260714-194000"></script>
 <script src="assets/js/pages/profil.js?v=20260714-194000"></script>
+<script src="assets/js/account-beta.js?v=20260716-1"></script>
 
 </body>
 </html>
