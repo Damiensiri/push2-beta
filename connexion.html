@@ -4,6 +4,20 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
 <meta name="theme-color" content="#287fbd">
+<link rel="manifest" href="manifest.json?v=20260716-2">
+<link rel="apple-touch-icon" sizes="192x192" href="image/icon-192x192.png?v=20260714-181500">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Ecurie DS">
+<script>
+if("serviceWorker" in navigator){
+window.addEventListener("load",()=>{
+const base=new URL("./",location.href);
+navigator.serviceWorker.register(new URL("OneSignalSDKWorker.js",base).href,{scope:base.pathname})
+.then(registration=>registration.update()).catch(()=>{});
+});
+}
+</script>
 <title>Connexion — Écurie Damien Siri</title>
 <script src="assets/js/app-config.js?v=20260716-1"></script>
 <script src="assets/js/app-layout.js?v=20260716-3"></script>

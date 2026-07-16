@@ -12,10 +12,6 @@ const removePhoto=document.getElementById("removePhoto");
 const saveStatus=document.getElementById("profileSaveStatus");
 const cardStatus=document.getElementById("profileCardStatus");
 const removeCard=document.getElementById("removeCard");
-const resetDialog=document.getElementById("resetDialog");
-const openReset=document.getElementById("openReset");
-const cancelReset=document.getElementById("cancelReset");
-const confirmReset=document.getElementById("confirmReset");
 const cropDialog=document.getElementById("cropDialog");
 const cropCanvas=document.getElementById("cropCanvas");
 const cropZoom=document.getElementById("cropZoom");
@@ -245,28 +241,6 @@ removeCard.addEventListener("click",()=>{
 ProfileStore.removeCardNumber();
 cardForm.reset();
 cardStatus.textContent="Carte paddock supprimée de cet appareil.";
-});
-
-openReset.addEventListener("click",()=>{
-resetDialog.hidden=false;
-});
-
-cancelReset.addEventListener("click",()=>{
-resetDialog.hidden=true;
-});
-
-confirmReset.addEventListener("click",async()=>{
-await ProfileStore.reset();
-form.reset();
-cardForm.reset();
-setPreview(null);
-resetDialog.hidden=true;
-saveStatus.textContent="Profil réinitialisé sur cet appareil.";
-cardStatus.textContent="";
-});
-
-resetDialog.addEventListener("click",event=>{
-if(event.target===resetDialog)resetDialog.hidden=true;
 });
 
 window.addEventListener("beforeunload",()=>{

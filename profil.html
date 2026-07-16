@@ -35,23 +35,6 @@
 <h1>MON PROFIL</h1>
 </header>
 
-<section class="profile-card profile-form account-card" aria-labelledby="accountTitle">
-<div class="account-summary">
-<div class="account-avatar" aria-hidden="true">✓</div>
-<div><div class="profile-section-title" id="accountTitle">Compte connecté</div>
-<h2 id="accountIdentity">Chargement…</h2></div>
-</div>
-<dl class="account-details"><div><dt>Adresse email</dt><dd id="accountEmailDisplay">—</dd></div><div><dt>Accès</dt><dd id="accountRoleDisplay">—</dd></div></dl>
-<form id="accountPasswordForm" class="profile-form" hidden>
-<p class="account-warning">Remplacez le mot de passe temporaire avant de continuer.</p>
-<div class="profile-field"><label for="currentPassword">Mot de passe temporaire</label><input id="currentPassword" type="password" autocomplete="current-password" required></div>
-<div class="profile-field"><label for="newPassword">Nouveau mot de passe</label><input id="newPassword" type="password" minlength="12" maxlength="200" autocomplete="new-password" required></div>
-<button class="profile-primary" type="submit">Enregistrer le nouveau mot de passe</button>
-</form>
-<button id="accountLogout" class="profile-secondary account-logout" type="button">Se déconnecter</button>
-<p id="accountStatus" class="profile-save-status" aria-live="polite"></p>
-</section>
-
 <section class="profile-card profile-photo" aria-labelledby="photoTitle">
 <div class="profile-section-title" id="photoTitle">Photo de profil</div>
 <div class="profile-photo__preview">
@@ -94,7 +77,7 @@ Choisir une photo
 <div class="profile-section-title">Carte paddock</div>
 <div class="profile-field">
 <label for="profileCardNumber">Numéro de carte paddock</label>
-<input id="profileCardNumber" type="text" autocomplete="off" maxlength="80" placeholder="Numéro de carte" required>
+<input id="profileCardNumber" type="text" autocomplete="off" maxlength="80" placeholder="Facultatif">
 </div>
 
 <div class="profile-card-actions">
@@ -104,19 +87,24 @@ Choisir une photo
 <p class="profile-save-status" id="profileCardStatus" aria-live="polite"></p>
 </form>
 
-<button class="profile-danger profile-reset-standalone" id="openReset" type="button">Réinitialiser mon profil</button>
+<section class="profile-card profile-form account-card" aria-labelledby="accountTitle">
+<div class="account-summary">
+<div class="account-avatar" aria-hidden="true">✓</div>
+<div><div class="profile-section-title" id="accountTitle">Compte connecté</div>
+<h2 id="accountIdentity">Chargement…</h2></div>
+</div>
+<dl class="account-details"><div><dt>Adresse email</dt><dd id="accountEmailDisplay">—</dd></div></dl>
+<button id="openPasswordChange" class="profile-secondary account-password-button" type="button">Changer mon mot de passe</button>
+<form id="accountPasswordForm" class="profile-form" hidden>
+<p id="accountPasswordHelp" class="account-warning">Choisissez un nouveau mot de passe.</p>
+<div class="profile-field"><label for="currentPassword">Mot de passe actuel</label><input id="currentPassword" type="password" autocomplete="current-password" required></div>
+<div class="profile-field"><label for="newPassword">Nouveau mot de passe</label><input id="newPassword" type="password" minlength="12" maxlength="200" autocomplete="new-password" required></div>
+<button class="profile-primary" type="submit">Enregistrer le nouveau mot de passe</button>
+</form>
+<button id="accountLogout" class="profile-secondary account-logout" type="button">Se déconnecter</button>
+<p id="accountStatus" class="profile-save-status" aria-live="polite"></p>
+</section>
 
-</div>
-
-<div class="profile-dialog" id="resetDialog" role="dialog" aria-modal="true" aria-labelledby="resetTitle" hidden>
-<div class="profile-dialog__card">
-<h2 id="resetTitle">Réinitialiser le profil ?</h2>
-<p>La photo, le prénom, le nom, l’adresse mail et le numéro de carte seront supprimés de cet appareil.</p>
-<div class="profile-dialog__actions">
-<button class="profile-secondary" id="cancelReset" type="button">Annuler</button>
-<button class="profile-danger" id="confirmReset" type="button">Réinitialiser</button>
-</div>
-</div>
 </div>
 
 <div class="profile-dialog profile-crop-dialog" id="cropDialog" role="dialog" aria-modal="true" aria-labelledby="cropTitle" hidden>
