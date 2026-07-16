@@ -38,13 +38,18 @@
     }
     window.OneSignalDeferred=window.OneSignalDeferred||[];
     window.EcuriePushIdentity={
-      logout(){return new Promise(resolve=>window.OneSignalDeferred.push(async OneSignal=>{
-        try{
-          const subscriptionId=OneSignal.User.PushSubscription.id;
-          if(subscriptionId)await saveSubscription(subscriptionId,"DELETE");
-          await OneSignal.logout();
-        }catch(error){}finally{resolve();}
-      }));}
+      logout(){return new Promise(resolve=>{
+        let finished=false;
+        const finish=()=>{if(!finished){finished=true;resolve();}};
+        setTimeout(finish,2000);
+        window.OneSignalDeferred.push(async OneSignal=>{
+          try{
+            const subscriptionId=OneSignal.User.PushSubscription.id;
+            if(subscriptionId)await saveSubscription(subscriptionId,"DELETE");
+            await OneSignal.logout();
+          }catch(error){}finally{finish();}
+        });
+      });}
     };
     window.OneSignalDeferred.push(async OneSignal=>{
       try{
