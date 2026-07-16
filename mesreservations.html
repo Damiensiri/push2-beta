@@ -51,9 +51,6 @@ Voir l’historique ▼
 
 </div>
 
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-
 <script>
 
 /* ===== ANIMATION ===== */
@@ -70,20 +67,6 @@ p.classList.remove("active")
 p.classList.add("exit")
 setTimeout(()=>{location.href="index.html"},300)
 }
-
-/* ===== FIREBASE ===== */
-
-const firebaseConfig={
-apiKey:"AIzaSy...",
-authDomain:"ecurie-paddock.firebaseapp.com",
-projectId:"ecurie-paddock",
-storageBucket:"ecurie-paddock.firebasestorage.app",
-messagingSenderId:"501153278739",
-appId:"1:501153278739:web:824b4344c381f2a94548e6"
-}
-
-firebase.initializeApp(firebaseConfig)
-const db=firebase.firestore()
 
 /* ===== DATE CHECK ===== */
 
@@ -236,49 +219,6 @@ if(!response.ok)throw new Error(data.error||"Service paddock indisponible")
 return data
 }
 
-function parseCSV(text){
-const rows=[]
-let row=[]
-let value=""
-let quoted=false
-
-for(let i=0;i<text.length;i++){
-const char=text[i]
-
-if(char==='"'){
-if(quoted && text[i+1]==='"'){
-value+='"'
-i++
-}else{
-quoted=!quoted
-}
-}else if(char==="," && !quoted){
-row.push(value)
-value=""
-}else if((char==="\n" || char==="\r") && !quoted){
-if(char==="\r" && text[i+1]==="\n") i++
-row.push(value)
-if(row.some(cell=>cell.trim()!=="")) rows.push(row)
-row=[]
-value=""
-}else{
-value+=char
-}
-}
-
-row.push(value)
-if(row.some(cell=>cell.trim()!=="")) rows.push(row)
-return rows
-}
-
-function normalizeHeader(value){
-return value.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"")
-}
-
-function normalizeCardNumber(value){
-return String(value || "").trim().replace(/^'+/,"").toUpperCase()
-}
-
 function escapeHTML(value){
 return String(value ?? "").replace(/[&<>'"]/g,char=>({
 "&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"
@@ -344,14 +284,11 @@ paddockCard.innerHTML=`
 
 /* ===== LOCAL STORAGE ===== */
 
-let myReservations = JSON.parse(localStorage.getItem("myReservations") || "[]")
 let calendarReservations = {}
 
 /* ===== LOAD ===== */
 
 async function load(){
-
-loadPaddockCard()
 
 const avenir=document.getElementById("avenir")
 const historique=document.getElementById("historique")
@@ -362,14 +299,27 @@ historique.innerHTML=""
 let count=0
 calendarReservations={}
 
+let reservationData=[]
+let paddockRequests=[]
+try{
+const [reservationResponse,requestResponse]=await Promise.all([
+paddockApi("/api/paddocks/reservations"),
+paddockApi("/api/paddocks/requests")
+])
+reservationData=reservationResponse.reservations||[]
+paddockRequests=requestResponse.requests||[]
+}catch(error){
+console.warn("Chargement des réservations impossible",error)
+avenir.innerHTML='<div class="empty">Impossible de charger vos réservations.</div>'
+return
+}
+
+loadPaddockCard()
+
 /* ===== RESERVATIONS ===== */
 
-for(const id of myReservations){
-
-const doc=await db.collection("reservations").doc(id).get()
-if(!doc.exists) continue
-
-const data=doc.data()
+for(const data of reservationData){
+const id=data.id
 let old=isPast(data.date,data.time)
 
 calendarReservations[id]={
@@ -401,13 +351,6 @@ count++
 }
 
 /* ===== DEMANDES ===== */
-
-let paddockRequests=[]
-try{
-paddockRequests=(await paddockApi("/api/paddocks/requests")).requests||[]
-}catch(error){
-console.warn("Demandes paddock indisponibles",error)
-}
 
 for(const mise of paddockRequests){
 let old=isPast(mise.date)
@@ -453,9 +396,12 @@ avenir.innerHTML='<div class="empty">Aucune réservation à venir</div>'
 /* ===== ANNULATION ===== */
 
 async function cancelReservation(id){
-await db.collection("reservations").doc(id).delete()
-myReservations=myReservations.filter(r=>r!==id)
-localStorage.setItem("myReservations",JSON.stringify(myReservations))
+try{
+await paddockApi("/api/paddocks/reservations/"+encodeURIComponent(id),{method:"DELETE"})
+}catch(error){
+alert(error.message)
+return
+}
 load()
 }
 
@@ -481,8 +427,9 @@ if(!document.hidden) load()
 })
 
 window.addEventListener("pwa-data-changed",event=>{
-if(event.detail?.type==="paddock-requests"||event.detail?.type==="all")load()
-if(event.detail?.type==="paddock-accounts")loadPaddockCard()
+const type=event.detail?.type
+if(type==="paddocks"||type==="paddock-requests"||type==="all")load()
+else if(type==="paddock-accounts")loadPaddockCard()
 })
 
 </script>
