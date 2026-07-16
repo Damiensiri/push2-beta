@@ -1,10 +1,10 @@
 window.METEOALARM_VIGILANCE = {
   "department": "Aube",
-  "level": "orange",
-  "label": "Orange",
-  "phenomenon": "Orages · Canicule",
-  "period": "Du 16 juillet à 22:00 au 18 juillet à 00:00",
-  "updatedAt": "16 juillet à 22:01",
+  "level": "yellow",
+  "label": "Jaune",
+  "phenomenon": "Canicule · Orages",
+  "period": "Du 17 juillet à 00:09 au 18 juillet à 00:00",
+  "updatedAt": "17 juillet à 00:10",
   "source": "MeteoAlarm / EUMETNET",
   "sourceUrl": "https://meteoalarm.org"
 };
