@@ -1,117 +1,12 @@
-/* SHEET */
-const SHEET_URL = "https://opensheet.elk.sh/1ka6djXZhsDBbF77OVgH5wjqQwLpMUUPbMl1RD_rssXI/Réponses%20au%20formulaire%201"
-
-/* LOAD */
-let orders = JSON.parse(localStorage.getItem("orders") || "[]")
-orders = purgeOldOrders(orders)
-
-function purgeOldOrders(list){
-const limit = new Date()
-limit.setMonth(limit.getMonth()-6)
-
-const filtered = list.filter(order=>{
-const d = parseOrderDate(order.date)
-return !d || d >= limit
-})
-
-if(filtered.length !== list.length){
-localStorage.setItem("orders", JSON.stringify(filtered))
+const API="https://ecurie-notifications-beta.damiensiri-pro.workers.dev",TOKEN_KEY="ecurie_beta_session"
+const labels={pending:"En attente",validated:"Validée",refused:"Refusée",ready:"Prête",completed:"Terminée",cancelled:"Annulée"}
+const colors={pending:"#aaa",validated:"#2ecc71",refused:"#e74c3c",ready:"#f1c40f",completed:"#2ecc71",cancelled:"#e74c3c"}
+function esc(value){return String(value??"").replace(/[&<>'"]/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"})[char])}
+function money(value){return Number(value).toLocaleString("fr-FR",{maximumFractionDigits:2})}
+async function load(){
+  try{const response=await fetch(API+"/api/orders",{headers:{authorization:"Bearer "+(localStorage.getItem(TOKEN_KEY)||"")}});const data=await response.json();if(!response.ok)throw new Error(data.error||"Service indisponible");const orders=data.orders||[]
+    document.getElementById("orders").innerHTML=orders.length?orders.map(order=>`<div class="order"><div class="date">${new Date(order.createdAt).toLocaleString("fr-FR")}</div>${order.items.map(item=>`<div class="item"><div>${esc(item.name)} x${item.quantity}</div><div>${money(item.lineTotal)} €</div></div>`).join("")}<div class="total">Total : ${money(order.total)} €</div><div class="status" style="color:${colors[order.status]||'#aaa'}">Statut : ${labels[order.status]||esc(order.status)}</div>${order.comment?`<div style="margin-top:10px;font-size:14px;opacity:.9"><strong>Info :</strong> ${esc(order.comment)}</div>`:""}</div>`).join(""):'<div class="empty">Aucune commande pour le moment.</div>'
+  }catch(error){document.getElementById("orders").innerHTML=`<div class="empty">${esc(error.message)}</div>`}
 }
-
-return filtered
-}
-
-function parseOrderDate(value){
-if(!value) return null
-
-const d = new Date(value)
-if(!isNaN(d)) return d
-
-const match = String(value).match(/(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/)
-if(!match) return null
-
-return new Date(
-Number(match[3]),
-Number(match[2])-1,
-Number(match[1]),
-Number(match[4]||0),
-Number(match[5]||0),
-Number(match[6]||0)
-)
-}
-
-fetch(SHEET_URL)
-.then(r=>r.json())
-.then(sheetData=>{
-
-let html=""
-
-if(orders.length === 0){
-
-html=`<div class="empty">Aucune commande pour le moment.</div>`
-
-}else{
-
-orders.reverse().forEach(order=>{
-
-let items=""
-
-order.items.forEach(i=>{
-items+=`
-<div class="item">
-<div>${i.name} x${i.qty}</div>
-<div>${i.price*i.qty} €</div>
-</div>
-`
-})
-
-/* MATCH PAR ID */
-let statut = "En attente"
-let commentaire = ""
-
-let found = sheetData.find(s=>{
-return String(s["ID"]) === String(order.id)
-})
-
-if(found){
-statut = found["Statut"] || "En attente"
-commentaire = found["Commentaire"] || ""
-}
-/* COULEUR */
-let color="#aaa"
-if(statut==="Validée") color="#2ecc71"
-if(statut==="Refusée") color="#e74c3c"
-if(statut==="Prête") color="#f1c40f"
-
-/* HTML */
-html+=`
-<div class="order">
-
-<div class="date">${order.date}</div>
-
-${items}
-
-<div class="total">
-Total : ${order.total} €
-</div>
-
-<div class="status" style="color:${color}">
-Statut : ${statut}
-</div>
-
-${commentaire ? `
-<div style="margin-top:10px;font-size:14px;opacity:.9">
-<strong>Info :</strong> ${commentaire}
-</div>
-` : ""}
-
-</div>
-`
-
-})
-
-}
-
-document.getElementById("orders").innerHTML=html
-
-})
+window.addEventListener("pwa-data-changed",event=>{if(["orders","all"].includes(event.detail?.type))load()})
+load()

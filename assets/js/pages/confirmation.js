@@ -8,10 +8,13 @@ if(order.items){
 
 order.items.forEach(item=>{
 
+const quantity=item.quantity||item.qty||0
+const lineTotal=item.lineTotal??((item.price||0)*quantity)
+
 html+=`
 <div class="item">
-<div>${item.name} x${item.qty}</div>
-<div>${item.price*item.qty} €</div>
+<div>${item.name} x${quantity}</div>
+<div>${lineTotal} €</div>
 </div>
 `
 

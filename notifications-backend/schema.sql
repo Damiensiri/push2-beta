@@ -174,3 +174,22 @@ CREATE TABLE IF NOT EXISTS paddock_usages (
   FOREIGN KEY(request_id) REFERENCES paddock_requests(id) ON DELETE CASCADE
 );
 CREATE INDEX IF NOT EXISTS idx_paddock_usages_user_date ON paddock_usages(user_id,usage_date DESC,id DESC);
+
+CREATE TABLE IF NOT EXISTS catalog_products (
+  id TEXT PRIMARY KEY, category TEXT NOT NULL, name TEXT NOT NULL, description TEXT NOT NULL DEFAULT '',
+  price_cents INTEGER NOT NULL, image_url TEXT NOT NULL DEFAULT '', badge TEXT NOT NULL DEFAULT '',
+  featured INTEGER NOT NULL DEFAULT 0, active INTEGER NOT NULL DEFAULT 1, position INTEGER NOT NULL DEFAULT 0,
+  updated_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS orders (
+  id INTEGER PRIMARY KEY AUTOINCREMENT, public_id TEXT NOT NULL UNIQUE, user_id INTEGER NOT NULL,
+  source TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'pending', comment TEXT NOT NULL DEFAULT '',
+  total_cents INTEGER NOT NULL, billed INTEGER NOT NULL DEFAULT 0, billed_at TEXT,
+  created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+  FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+CREATE TABLE IF NOT EXISTS order_items (
+  id INTEGER PRIMARY KEY AUTOINCREMENT, order_id INTEGER NOT NULL, product_id TEXT NOT NULL,
+  name TEXT NOT NULL, unit_price_cents INTEGER NOT NULL, quantity INTEGER NOT NULL,
+  line_total_cents INTEGER NOT NULL, FOREIGN KEY(order_id) REFERENCES orders(id) ON DELETE CASCADE
+);

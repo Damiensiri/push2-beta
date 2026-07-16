@@ -1,251 +1,52 @@
-const SHEET_URL=document.body.dataset.catalogUrl ||
-"https://opensheet.elk.sh/1ka6djXZhsDBbF77OVgH5wjqQwLpMUUPbMl1RD_rssXI/service"
-
-let cart = JSON.parse(localStorage.getItem("cart") || "[]")
+const API="https://ecurie-notifications-beta.damiensiri-pro.workers.dev"
+const TOKEN_KEY="ecurie_beta_session"
+const category=document.body.dataset.catalogCategory||document.body.dataset.mailSource||"services"
+let cart=JSON.parse(localStorage.getItem("cart")||"[]")
 let products=[]
 
-fetch(SHEET_URL)
-.then(r=>r.json())
-.then(data=>{
-products=data.filter(p=>p.actif==="TRUE").sort((a,b)=>Number(a.rang)-Number(b.rang))
-render()
-updateCart()
-})
+async function api(path,options={}){
+  const response=await fetch(API+path,{...options,headers:{authorization:"Bearer "+(localStorage.getItem(TOKEN_KEY)||""),
+    ...(options.body?{"content-type":"application/json"}:{})}})
+  const data=await response.json().catch(()=>({}))
+  if(!response.ok)throw new Error(data.error||"Service indisponible")
+  return data
+}
+function esc(value){return String(value??"").replace(/[&<>'"]/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"})[char])}
+function money(value){return Number(value).toLocaleString("fr-FR",{minimumFractionDigits:0,maximumFractionDigits:2})}
 
+async function loadCatalog(){
+  try{
+    products=(await api("/api/catalog?category="+encodeURIComponent(category))).products||[]
+    cart=cart.map(item=>{const product=products.find(p=>p.id===item.productId||p.name===item.name);return product?{productId:product.id,name:product.name,price:product.price,qty:item.qty}:item})
+    render();updateCart()
+  }catch(error){document.getElementById("products").innerHTML=`<div class="card"><div class="content">${esc(error.message)}</div></div>`}
+}
+function productMarkup(p,featured=false){return `${featured?`<img src="${esc(p.image)}" alt="">`:``}<div class="${featured?"":"imgBox"}">${featured?"":`<img src="${esc(p.image)}" alt="">${p.badge?`<div class="badge">${esc(p.badge)}</div>`:""}`}</div><div class="${featured?"":"content"}"${featured?' id="featuredContent"':""}><${featured?"h2":"div"}${featured?"":' class="title"'}>${esc(p.name)}</${featured?"h2":"div"}><div class="${featured?"desc":"desc"}">${esc(p.description)}</div><div class="bottom"><div class="price">${money(p.price)} €</div><button class="addBtn" data-id="${esc(p.id)}">Ajouter</button></div></div>`}
 function render(){
-
-products.forEach(p=>{
-
-if(p.featured==="TRUE"){
-
-document.getElementById("featured").innerHTML=`
-<img src="${p.image}">
-<div id="featuredContent">
-<h2>${p.nom}</h2>
-<p>${p.description}</p>
-<b>${p.prix} €</b>
-<br><br>
-<button class="addBtn" data-name="${encodeURIComponent(p.nom)}" data-price="${p.prix}">Ajouter</button>
-</div>
-`
-
-}else{
-
-let card=document.createElement("div")
-card.className="card"
-
-card.innerHTML=`
-<div class="imgBox">
-<img src="${p.image}">
-${p.badge?`<div class="badge">${p.badge}</div>`:""}
-</div>
-<div class="content">
-<div class="title">${p.nom}</div>
-<div class="desc">${p.description}</div>
-<div class="bottom">
-<div class="price">${p.prix} €</div>
-<button class="addBtn" data-name="${encodeURIComponent(p.nom)}" data-price="${p.prix}">Ajouter</button>
-</div>
-</div>
-`
-
-document.getElementById("products").appendChild(card)
-
+  const featured=document.getElementById("featured"),list=document.getElementById("products");featured.innerHTML="";list.innerHTML=""
+  products.forEach(p=>{if(p.featured){featured.innerHTML=productMarkup(p,true)}else{const card=document.createElement("div");card.className="card";card.innerHTML=productMarkup(p);list.appendChild(card)}})
 }
-
-})
-
+document.addEventListener("click",event=>{const button=event.target.closest(".addBtn");if(!button)return;const product=products.find(p=>p.id===button.dataset.id);if(product)addCart(product,button)})
+function addCart(product,button){
+  const original=button.innerText;button.innerText="✓ Ajouté";setTimeout(()=>button.innerText=original,1000)
+  const item=cart.find(value=>value.productId===product.id);if(item)item.qty++;else cart.push({productId:product.id,name:product.name,price:product.price,qty:1})
+  updateCart();document.getElementById("cartBtn").classList.add("pulse");setTimeout(()=>document.getElementById("cartBtn").classList.remove("pulse"),400)
 }
-
-/* CLICK GLOBAL (FIX BOUTON) */
-document.addEventListener("click", function(e){
-if(e.target.classList.contains("addBtn")){
-let btn = e.target
-let name = decodeURIComponent(btn.dataset.name)
-let price = Number(btn.dataset.price)
-addCart(name, price, btn)
-}
-})
-
-/* AJOUT PANIER */
-function addCart(name,price,btn){
-
-let original=btn.innerText
-btn.innerText="✓ Ajouté"
-setTimeout(()=>btn.innerText=original,1000)
-
-let img = btn.closest(".card, #featuredContent")?.querySelector("img")
-
-if(img){
-let rect = img.getBoundingClientRect()
-let cartRect = document.getElementById("cartBtn").getBoundingClientRect()
-
-let fly = img.cloneNode(true)
-fly.classList.add("flyImg")
-
-fly.style.left = rect.left+"px"
-fly.style.top = rect.top+"px"
-fly.style.width = rect.width+"px"
-fly.style.height = rect.height+"px"
-
-document.body.appendChild(fly)
-
-setTimeout(()=>{
-fly.style.left = cartRect.left+"px"
-fly.style.top = cartRect.top+"px"
-fly.style.width = "20px"
-fly.style.height = "20px"
-fly.style.opacity="0.3"
-},10)
-
-setTimeout(()=>fly.remove(),700)
-}
-
-let item=cart.find(i=>i.name===name)
-if(item){item.qty++}else{cart.push({name,price,qty:1})}
-
-updateCart()
-
-let cartBtn=document.getElementById("cartBtn")
-cartBtn.classList.add("pulse")
-setTimeout(()=>cartBtn.classList.remove("pulse"),400)
-}
-
-/* PANIER */
 function updateCart(){
-localStorage.setItem("cart", JSON.stringify(cart))
-
-let count=cart.reduce((a,b)=>a+b.qty,0)
-document.getElementById("count").innerText=count
-
-let html=""
-let total=0
-
-cart.forEach((item,i)=>{
-html+=`
-<div class="cartItem">
-<div>${item.name}<br>${item.price}€</div>
-<div class="qty">
-<button onclick="changeQty(${i},-1)">-</button>
-${item.qty}
-<button onclick="changeQty(${i},1)">+</button>
-</div>
-</div>
-`
-total+=item.price*item.qty
-})
-
-document.getElementById("cartItems").innerHTML=html
-document.getElementById("total").innerText=total
+  localStorage.setItem("cart",JSON.stringify(cart));document.getElementById("count").innerText=cart.reduce((sum,item)=>sum+item.qty,0)
+  let total=0;document.getElementById("cartItems").innerHTML=cart.map((item,index)=>{total+=item.price*item.qty;return `<div class="cartItem"><div>${esc(item.name)}<br>${money(item.price)}€</div><div class="qty"><button onclick="changeQty(${index},-1)">-</button>${item.qty}<button onclick="changeQty(${index},1)">+</button></div></div>`}).join("")
+  document.getElementById("total").innerText=money(total)
 }
-
-function changeQty(i,v){
-cart[i].qty+=v
-if(cart[i].qty<=0){cart.splice(i,1)}
-updateCart()
+function changeQty(index,value){cart[index].qty+=value;if(cart[index].qty<=0)cart.splice(index,1);updateCart()}
+function toggleCart(){document.getElementById("cartPanel").classList.toggle("open")}
+async function checkout(){
+  if(!cart.length)return alert("Panier vide")
+  const button=document.querySelector(".checkoutBtn");button.disabled=true
+  try{
+    const data=await api("/api/orders",{method:"POST",body:JSON.stringify({source:category,items:cart.map(item=>({productId:item.productId,quantity:item.qty}))})})
+    localStorage.setItem("lastOrder",JSON.stringify(data.order));localStorage.removeItem("cart");cart=[];updateCart();location.href="confirmation.html"
+  }catch(error){alert(error.message);button.disabled=false}
 }
-
-function toggleCart(){
-document.getElementById("cartPanel").classList.toggle("open")
-}
-
-/* CHECKOUT */
-function checkout(){
-
-let nom=clientNom.value.trim()
-let prenom=clientPrenom.value.trim()
-let email=clientEmail.value.trim()
-
-if(!nom || !prenom || !email){
-alert("Veuillez remplir Nom, Prénom et Email")
-return
-}
-
-let commande=""
-let total=0
-
-cart.forEach(item=>{
-
-let lineTotal=item.price*item.qty
-
-commande += `${item.name} x${item.qty} = ${lineTotal} €\n`
-
-total += lineTotal
-
-})
-
-let orderId = Date.now()
-let dateISO = new Date().toISOString()
-
-if(window.AppMailer && document.body.dataset.mailSource){
-window.AppMailer.sendOrderConfirmation({
-source:document.body.dataset.mailSource,
-orderId,
-customer:{lastName:nom,firstName:prenom,email},
-total,
-items:cart.map(item=>({
-name:item.name,
-quantity:item.qty,
-lineTotal:item.price*item.qty
-}))
-}).catch(error=>{
-console.warn("Confirmation Apps Script non envoyée",error)
-})
-}
-
-let commandeText = commande
-
-/* 🔥 AJOUT ICI (LOCAL STORAGE) */
-let orders = JSON.parse(localStorage.getItem("orders") || "[]")
-
-orders.push({
-id:orderId,
-date:new Date().toLocaleString(),
-items:[...cart],
-total:total
-})
-
-localStorage.setItem("orders", JSON.stringify(orders))
-
-/* GOOGLE FORM */
-fetch("https://docs.google.com/forms/d/e/1FAIpQLSd7FyCadHVREHz5A_Y3tGIANItJppc-xx2hEtopxd90lU50Hw/formResponse",{
-method:"POST",
-mode:"no-cors",
-body:new URLSearchParams({
-"entry.1196863567":nom,
-"entry.1084486832":prenom,
-"entry.322695866":email,
-"entry.1740027870":commandeText,
-"entry.99574245":total,
-"entry.1184215130":orderId,
-"entry.489600561":dateISO,
-"entry.1098731878":"En attente",
-"entry.484692587":""
-})
-})
-cart = []
-updateCart()
-setTimeout(()=>{
-  
-window.location.href="mes-commandes.html"
-},700)
-
-}
-
-/* SCROLL */
 const featured=document.getElementById("featured")
-
-window.addEventListener("scroll",()=>{
-if(!featured) return
-
-let scroll=window.scrollY
-let scale=1-(scroll/700)
-if(scale<0.85) scale=0.85
-
-featured.style.transform="scale("+scale+")"
-
-let opacity=1-(scroll/500)
-if(opacity<0.35) opacity=0.35
-
-featured.style.opacity=opacity
-})
+window.addEventListener("scroll",()=>{if(!featured)return;featured.style.transform=`scale(${Math.max(.85,1-window.scrollY/700)})`;featured.style.opacity=Math.max(.35,1-window.scrollY/500)})
+loadCatalog()

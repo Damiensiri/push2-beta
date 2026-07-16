@@ -106,6 +106,55 @@ export default{
         return json({loggedOut:true},200,cors);
       }
 
+      if(request.method==="GET"&&url.pathname==="/api/catalog"){
+        const viewer=await authenticatedUser(request,env);
+        if(!viewer)return json({error:"Non autorisé"},401,cors);
+        const category=String(url.searchParams.get("category")||"");
+        if(!["services","soins","laverie"].includes(category))return json({error:"Catalogue invalide"},400,cors);
+        const result=await env.DB.prepare(`SELECT id,category,name,description,price_cents,image_url,badge,featured,position
+          FROM catalog_products WHERE category=? AND active=1 ORDER BY position,id`).bind(category).all();
+        return json({products:result.results.map(publicProduct)},200,{...cors,"cache-control":"private, max-age=30"});
+      }
+
+      if(request.method==="GET"&&url.pathname==="/api/orders"){
+        const viewer=await authenticatedUser(request,env);
+        if(!viewer)return json({error:"Non autorisé"},401,cors);
+        return json({orders:await loadOrders(env,"WHERE o.user_id=?",[viewer.id])},200,cors);
+      }
+
+      if(request.method==="POST"&&url.pathname==="/api/orders"){
+        const viewer=await authenticatedUser(request,env);
+        if(!viewer)return json({error:"Non autorisé"},401,cors);
+        const input=await readJson(request);
+        const source=String(input?.source||"panier");
+        if(!["services","soins","laverie","panier"].includes(source))return json({error:"Origine invalide"},400,cors);
+        const requested=Array.isArray(input?.items)?input.items:[];
+        if(!requested.length||requested.length>50)return json({error:"Panier invalide"},400,cors);
+        const quantities=new Map();
+        for(const item of requested){
+          const id=String(item?.productId||"").trim();const quantity=Number(item?.quantity);
+          if(!id||!Number.isInteger(quantity)||quantity<1||quantity>99)return json({error:"Article invalide"},400,cors);
+          quantities.set(id,(quantities.get(id)||0)+quantity);
+        }
+        const products=await Promise.all([...quantities.keys()].map(id=>env.DB.prepare(
+          "SELECT id,name,price_cents,category FROM catalog_products WHERE id=? AND active=1").bind(id).first()));
+        if(products.some(product=>!product))return json({error:"Un article n’est plus disponible"},409,cors);
+        const items=products.map(product=>({productId:product.id,name:product.name,quantity:quantities.get(product.id),
+          unitPriceCents:Number(product.price_cents),lineTotalCents:Number(product.price_cents)*quantities.get(product.id)}));
+        const totalCents=items.reduce((sum,item)=>sum+item.lineTotalCents,0);
+        const now=new Date().toISOString();const publicId=String(Date.now())+String(Math.floor(Math.random()*900)+100);
+        const result=await env.DB.prepare(`INSERT INTO orders(public_id,user_id,source,status,comment,total_cents,billed,created_at,updated_at)
+          VALUES(?,?,?,'pending','',?,0,?,?)`).bind(publicId,viewer.id,source,totalCents,now,now).run();
+        try{
+          await env.DB.batch(items.map(item=>env.DB.prepare(`INSERT INTO order_items(order_id,product_id,name,unit_price_cents,quantity,line_total_cents)
+            VALUES(?,?,?,?,?,?)`).bind(result.meta.last_row_id,item.productId,item.name,item.unitPriceCents,item.quantity,item.lineTotalCents)));
+        }catch(error){await env.DB.prepare("DELETE FROM orders WHERE id=?").bind(result.meta.last_row_id).run();throw error;}
+        const order=(await loadOrders(env,"WHERE o.id=?",[result.meta.last_row_id]))[0];
+        await notifyRealtime(env,"orders");
+        const email=await sendOrderEmail(env,"order_confirmation",order,viewer);
+        return json({order,email},201,cors);
+      }
+
       if(url.pathname==="/api/paddocks/planning"&&request.method==="GET"){
         const viewer=await authenticatedUser(request,env);
         if(!viewer)return json({error:"Non autorisé"},401,cors);
@@ -237,10 +286,13 @@ export default{
             must_change_password,created_at,updated_at,last_login_at,
             (SELECT total FROM paddock_cards WHERE user_id=users.id) AS paddock_card_total,
             (SELECT remaining FROM paddock_cards WHERE user_id=users.id) AS paddock_card_remaining,
-            (SELECT COUNT(*) FROM paddock_usages WHERE user_id=users.id AND mode='invoice') AS paddock_invoice_count
+            (SELECT COUNT(*) FROM paddock_usages WHERE user_id=users.id AND mode='invoice') AS paddock_invoice_count,
+            (SELECT COALESCE(SUM(total_cents),0) FROM orders WHERE user_id=users.id AND billed=0
+              AND status NOT IN ('refused','cancelled')) AS order_due_cents
             FROM users ORDER BY last_name,first_name`).all();
           return json(result.results.map(row=>({...publicUser(row),paddockCard:row.paddock_card_total===null?null:{
-            total:Number(row.paddock_card_total),remaining:Number(row.paddock_card_remaining)},paddockInvoiceCount:Number(row.paddock_invoice_count)})),200,cors);
+            total:Number(row.paddock_card_total),remaining:Number(row.paddock_card_remaining)},paddockInvoiceCount:Number(row.paddock_invoice_count),
+            orderDue:Number(row.order_due_cents)/100})),200,cors);
         }
 
         if(request.method==="POST"&&url.pathname==="/api/admin/users"){
@@ -264,6 +316,33 @@ export default{
             if(String(error?.message||error).includes("UNIQUE"))return json({error:"Cette adresse existe déjà"},409,cors);
             throw error;
           }
+        }
+
+        if(request.method==="GET"&&url.pathname==="/api/admin/orders"){
+          return json({orders:await loadOrders(env,"",[])},200,cors);
+        }
+
+        const adminOrderMatch=url.pathname.match(/^\/api\/admin\/orders\/(\d+)$/);
+        if(request.method==="PATCH"&&adminOrderMatch){
+          const current=(await loadOrders(env,"WHERE o.id=?",[Number(adminOrderMatch[1])]))[0];
+          if(!current)return json({error:"Commande introuvable"},404,cors);
+          const input=await readJson(request);
+          const status=input.status===undefined?current.status:String(input.status);
+          const comment=input.comment===undefined?current.comment:String(input.comment).trim();
+          const billed=input.billed===undefined?current.billed:Boolean(input.billed);
+          if(!["pending","validated","refused","ready","completed","cancelled"].includes(status))return json({error:"Statut invalide"},400,cors);
+          if(comment.length>500)return json({error:"Commentaire trop long"},400,cors);
+          const now=new Date().toISOString();
+          await env.DB.prepare(`UPDATE orders SET status=?,comment=?,billed=?,billed_at=?,updated_at=? WHERE id=?`)
+            .bind(status,comment,billed?1:0,billed?(current.billedAt||now):null,now,current.id).run();
+          const updated=(await loadOrders(env,"WHERE o.id=?",[current.id]))[0];
+          await notifyRealtime(env,"orders");
+          let email={requested:false,sent:false};
+          if(status!==current.status){
+            const user=await env.DB.prepare("SELECT * FROM users WHERE id=?").bind(updated.userId).first();
+            email=await sendOrderEmail(env,"order_status",updated,user);
+          }
+          return json({order:updated,email},200,cors);
         }
 
         if(request.method==="GET"&&url.pathname==="/api/admin/paddocks"){
@@ -412,7 +491,10 @@ export default{
         if(request.method==="GET"&&userDetailsMatch){
           const user=await env.DB.prepare("SELECT * FROM users WHERE id=?").bind(Number(userDetailsMatch[1])).first();
           if(!user)return json({error:"Utilisateur introuvable"},404,cors);
-          return json({user:publicUser(user),...await loadPaddockAccount(env,user.id)},200,cors);
+          const orders=await loadOrders(env,"WHERE o.user_id=?",[user.id]);
+          return json({user:publicUser(user),...await loadPaddockAccount(env,user.id),orders,
+            orderDue:orders.filter(order=>!order.billed&&!['refused','cancelled'].includes(order.status))
+              .reduce((sum,order)=>sum+order.total,0)},200,cors);
         }
 
         const userCardMatch=url.pathname.match(/^\/api\/admin\/users\/(\d+)\/paddock-card$/);
@@ -953,6 +1035,41 @@ function validatePaddockRequestDate(date){
 function publicPaddockRequest(row){
   return{id:String(row.id),userId:row.user_id===undefined?undefined:Number(row.user_id),name:row.name,email:row.email,
     date:row.date,status:row.status,comment:row.comment||"",createdAt:row.created_at,updatedAt:row.updated_at};
+}
+
+function publicProduct(row){
+  return{id:row.id,category:row.category,name:row.name,description:row.description||"",price:Number(row.price_cents)/100,
+    image:row.image_url||"",badge:row.badge||"",featured:Boolean(row.featured),position:Number(row.position)};
+}
+
+async function loadOrders(env,whereClause,bindings){
+  const statement=env.DB.prepare(`SELECT o.id,o.public_id,o.user_id,o.source,o.status,o.comment,o.total_cents,o.billed,
+    o.billed_at,o.created_at,o.updated_at,u.first_name,u.last_name,u.email
+    FROM orders o JOIN users u ON u.id=o.user_id ${whereClause} ORDER BY o.created_at DESC,o.id DESC`);
+  const result=(bindings.length?await statement.bind(...bindings).all():await statement.all()).results;
+  return Promise.all(result.map(async row=>{
+    const itemResult=await env.DB.prepare(`SELECT product_id,name,unit_price_cents,quantity,line_total_cents
+      FROM order_items WHERE order_id=? ORDER BY id`).bind(row.id).all();
+    return{id:Number(row.id),publicId:row.public_id,userId:Number(row.user_id),source:row.source,status:row.status,
+      comment:row.comment||"",total:Number(row.total_cents)/100,billed:Boolean(row.billed),billedAt:row.billed_at||null,
+      createdAt:row.created_at,updatedAt:row.updated_at,customer:{firstName:row.first_name,lastName:row.last_name,email:row.email},
+      items:itemResult.results.map(item=>({productId:item.product_id,name:item.name,price:Number(item.unit_price_cents)/100,
+        quantity:Number(item.quantity),lineTotal:Number(item.line_total_cents)/100}))};
+  }));
+}
+
+async function sendOrderEmail(env,type,order,user){
+  if(!env.MAILER_ENDPOINT)return{requested:true,sent:false,error:"Mailer bêta non configuré"};
+  const payload={type,idempotencyKey:`${type}:${order.publicId}:${order.status}:${order.updatedAt}`,
+    customer:{email:user.email,firstName:user.first_name||user.firstName,lastName:user.last_name||user.lastName},
+    order:{id:order.publicId,source:order.source,total:order.total,status:order.status,comment:order.comment||"",
+      items:order.items.map(item=>({name:item.name,quantity:item.quantity,lineTotal:item.lineTotal}))}};
+  try{
+    const response=await fetch(env.MAILER_ENDPOINT,{method:"POST",headers:{"content-type":"text/plain;charset=UTF-8"},body:JSON.stringify(payload)});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok||!data.ok)return{requested:true,sent:false,error:data.error||`Mailer HTTP ${response.status}`};
+    return{requested:true,sent:Boolean(data.sent),duplicate:Boolean(data.duplicate)};
+  }catch(error){return{requested:true,sent:false,error:String(error?.message||error)};}
 }
 
 async function loadPaddockAccount(env,userId){
