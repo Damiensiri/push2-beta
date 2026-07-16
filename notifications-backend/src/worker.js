@@ -213,12 +213,20 @@ export default{
         if(!viewer)return json({error:"Non autorisé"},401,cors);
         if(request.method==="PUT"||request.method==="DELETE"){
           const input=await readJson(request);const subscriptionId=String(input?.subscriptionId||"").trim();
+          const installationId=String(input?.installationId||"").trim();
           if(!isValidPushSubscriptionId(subscriptionId))return json({error:"Abonnement push invalide"},400,cors);
+          if(request.method==="PUT"&&!isValidPushInstallationId(installationId))return json({error:"Installation push invalide"},400,cors);
           if(request.method==="PUT"){
             const now=new Date().toISOString();
-            await env.DB.prepare(`INSERT INTO user_push_subscriptions(subscription_id,user_id,created_at,updated_at)
-              VALUES(?,?,?,?) ON CONFLICT(subscription_id) DO UPDATE SET user_id=excluded.user_id,updated_at=excluded.updated_at`)
-              .bind(subscriptionId,viewer.id,now,now).run();
+            await env.DB.batch([
+              env.DB.prepare("DELETE FROM user_push_subscriptions WHERE user_id=? AND installation_id IS NULL").bind(viewer.id),
+              env.DB.prepare("DELETE FROM user_push_subscriptions WHERE user_id=? AND installation_id=? AND subscription_id<>?")
+                .bind(viewer.id,installationId,subscriptionId),
+              env.DB.prepare(`INSERT INTO user_push_subscriptions(subscription_id,user_id,installation_id,created_at,updated_at)
+                VALUES(?,?,?,?,?) ON CONFLICT(subscription_id) DO UPDATE SET user_id=excluded.user_id,
+                installation_id=excluded.installation_id,updated_at=excluded.updated_at`)
+                .bind(subscriptionId,viewer.id,installationId,now,now)
+            ]);
             return json({registered:true},200,cors);
           }
           await env.DB.prepare("DELETE FROM user_push_subscriptions WHERE subscription_id=? AND user_id=?")
@@ -1179,6 +1187,10 @@ function isValidPushSubscriptionId(value){
   return /^[A-Za-z0-9-]{20,100}$/.test(String(value||""));
 }
 
+function isValidPushInstallationId(value){
+  return /^[A-Za-z0-9-]{20,100}$/.test(String(value||""));
+}
+
 async function processPaddockPushReminders(env,now=new Date()){
   if(!isPushEnabled(env))return{processed:0,sent:0,disabled:true};
   const parisDate=new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Paris",year:"numeric",month:"2-digit",day:"2-digit"}).format(now);
@@ -1221,8 +1233,8 @@ async function sendPaddockReminderPush(env,reservation,type,subscriptionIds){
         headings:{fr:title,en:title},contents:{fr:message,en:message},url:"https://damiensiri.github.io/push2-beta/mesreservations.html"
       })});
     const data=await response.json().catch(()=>({}));
-    if(!response.ok||data.errors||!data.id)return{sent:false,error:data.errors||"Aucun appareil push actif"};
-    return{sent:true,id:data.id};
+    if(!response.ok||data.errors)return{sent:false,error:data.errors||`HTTP ${response.status}`};
+    return{sent:true,id:data.id||null};
   }catch(error){return{sent:false,error:String(error?.message||error)};}
 }
 
@@ -1649,5 +1661,5 @@ export{
   compatibleAlert,validateAlert,parisNow,isPushEnabled,sendRequestedPush,plainTextMessage,
   calculateStatus,publicSpace,publicSchedule,validateSpace,validateSchedules,timeToMinutes,parisClock,
   normalizeEmail,validatePassword,validateNewUser,hashPassword,verifyPassword,publicUser,validatePaddockBooking,validatePaddockHours,
-  parisLocalMinute,reservationLocalMinute,duePaddockReminderTypes,isValidPushSubscriptionId,processPaddockPushReminders
+  parisLocalMinute,reservationLocalMinute,duePaddockReminderTypes,isValidPushSubscriptionId,isValidPushInstallationId,processPaddockPushReminders
 };

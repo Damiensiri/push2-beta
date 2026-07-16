@@ -147,6 +147,7 @@ CREATE INDEX IF NOT EXISTS idx_paddock_push_reminders_sent
 CREATE TABLE IF NOT EXISTS user_push_subscriptions (
   subscription_id TEXT PRIMARY KEY,
   user_id INTEGER NOT NULL,
+  installation_id TEXT,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
   FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -154,6 +155,10 @@ CREATE TABLE IF NOT EXISTS user_push_subscriptions (
 
 CREATE INDEX IF NOT EXISTS idx_user_push_subscriptions_user
   ON user_push_subscriptions(user_id);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_user_push_subscriptions_installation
+  ON user_push_subscriptions(user_id,installation_id)
+  WHERE installation_id IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS admin_push_subscriptions (
   subscription_id TEXT PRIMARY KEY,

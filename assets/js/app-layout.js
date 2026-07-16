@@ -25,12 +25,15 @@
   function initializePushIdentity(user){
     if(!user?.id)return;
     const endpoint="https://ecurie-notifications-beta.damiensiri-pro.workers.dev/api/push/subscription";
+    const installationKey="ecurie_beta_push_installation";
+    let installationId=localStorage.getItem(installationKey)||"";
+    if(!installationId){installationId=crypto.randomUUID();localStorage.setItem(installationKey,installationId);}
     async function saveSubscription(subscriptionId,method="PUT"){
       if(!subscriptionId)return;
       const token=localStorage.getItem("ecurie_beta_session")||"";
       if(!token)return;
       const response=await fetch(endpoint,{method,headers:{authorization:"Bearer "+token,"content-type":"application/json"},
-        body:JSON.stringify({subscriptionId}),cache:"no-store"});
+        body:JSON.stringify({subscriptionId,installationId}),cache:"no-store"});
       if(!response.ok)throw new Error("Enregistrement push refusé");
     }
     window.OneSignalDeferred=window.OneSignalDeferred||[];
