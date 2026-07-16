@@ -7,6 +7,8 @@ const status=document.getElementById("accountStatus");
 const openPasswordChange=document.getElementById("openPasswordChange");
 const passwordHelp=document.getElementById("accountPasswordHelp");
 const cardContent=document.getElementById("profileCardContent");
+const emailForm=document.getElementById("accountEmailForm");
+const openEmailChange=document.getElementById("openEmailChange");
 
 async function request(path,options={}){
 const token=localStorage.getItem(TOKEN_KEY)||"";
@@ -100,6 +102,21 @@ openPasswordChange.addEventListener("click",()=>{
 passwordForm.hidden=!passwordForm.hidden;
 openPasswordChange.textContent=passwordForm.hidden?"Changer mon mot de passe":"Annuler";
 if(!passwordForm.hidden)document.getElementById("currentPassword").focus();
+});
+
+openEmailChange.addEventListener("click",()=>{
+emailForm.hidden=!emailForm.hidden;
+openEmailChange.textContent=emailForm.hidden?"Changer mon adresse email":"Annuler";
+if(!emailForm.hidden){document.getElementById("newEmail").value=document.getElementById("accountEmailDisplay").textContent;document.getElementById("newEmail").focus();}
+});
+
+emailForm.addEventListener("submit",async event=>{
+event.preventDefault();status.textContent="Modification de l’adresse…";
+try{
+const data=await request("/api/auth/me",{method:"PATCH",body:JSON.stringify({newEmail:document.getElementById("newEmail").value,currentPassword:document.getElementById("emailCurrentPassword").value})});
+await showUser(data.user);localStorage.removeItem(TOKEN_KEY);status.textContent="Adresse modifiée. Reconnexion nécessaire…";
+setTimeout(()=>location.replace("connexion.html"),900);
+}catch(error){status.textContent=error.message;}
 });
 
 document.getElementById("accountLogout").addEventListener("click",async()=>{

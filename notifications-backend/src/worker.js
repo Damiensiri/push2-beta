@@ -107,27 +107,41 @@ export default{
           const input=await readJson(request);
           const profile=validateUserProfile(input,session);
           if(profile.error)return json({error:profile.error},400,cors);
+          const email=input?.newEmail===undefined?session.email:normalizeEmail(input.newEmail);
+          if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||email.length>160)return json({error:"Adresse email invalide"},400,cors);
+          const emailChanged=email!==normalizeEmail(session.email);
           let passwordFields=null;
-          if(input?.newPassword){
+          if(input?.newPassword||emailChanged){
             if(!await verifyPassword(String(input.currentPassword||""),session)){
               return json({error:"Mot de passe actuel incorrect"},400,cors);
             }
+          }
+          if(input?.newPassword){
             const passwordError=validatePassword(input.newPassword);
             if(passwordError)return json({error:passwordError},400,cors);
             passwordFields=await hashPassword(input.newPassword);
           }
           const now=new Date().toISOString();
-          if(passwordFields){
-            await env.DB.prepare(`UPDATE users SET first_name=?,last_name=?,card_number=?,
-              password_hash=?,password_salt=?,password_iterations=?,must_change_password=0,updated_at=? WHERE id=?`)
-              .bind(profile.firstName,profile.lastName,profile.cardNumber,passwordFields.hash,
-                passwordFields.salt,passwordFields.iterations,now,session.id).run();
-          }else{
-            await env.DB.prepare("UPDATE users SET first_name=?,last_name=?,card_number=?,updated_at=? WHERE id=?")
-              .bind(profile.firstName,profile.lastName,profile.cardNumber,now,session.id).run();
+          try{
+            const update=passwordFields
+              ?env.DB.prepare(`UPDATE users SET email=?,first_name=?,last_name=?,card_number=?,password_hash=?,password_salt=?,
+                password_iterations=?,must_change_password=0,updated_at=? WHERE id=?`).bind(email,profile.firstName,profile.lastName,
+                  profile.cardNumber,passwordFields.hash,passwordFields.salt,passwordFields.iterations,now,session.id)
+              :env.DB.prepare("UPDATE users SET email=?,first_name=?,last_name=?,card_number=?,updated_at=? WHERE id=?")
+                .bind(email,profile.firstName,profile.lastName,profile.cardNumber,now,session.id);
+            if(emailChanged)await env.DB.batch([
+              update,
+              env.DB.prepare("UPDATE paddock_reservations SET email=? WHERE user_id=?").bind(email,session.id),
+              env.DB.prepare("UPDATE paddock_requests SET email=? WHERE user_id=?").bind(email,session.id),
+              env.DB.prepare("UPDATE user_sessions SET revoked_at=? WHERE user_id=? AND revoked_at IS NULL").bind(now,session.id)
+            ]);
+            else await update.run();
+          }catch(error){
+            if(String(error?.message||error).includes("UNIQUE"))return json({error:"Cette adresse email est déjà utilisée"},409,cors);
+            throw error;
           }
           const updated=await env.DB.prepare("SELECT * FROM users WHERE id=?").bind(session.id).first();
-          return json({user:publicUser(updated)},200,cors);
+          return json({user:publicUser(updated),reauthRequired:emailChanged},200,cors);
         }
       }
 
@@ -699,10 +713,22 @@ export default{
         }
 
         if(request.method==="DELETE"&&userMatch){
-          const current=await env.DB.prepare("SELECT id,approval_status FROM users WHERE id=?").bind(Number(userMatch[1])).first();
+          const current=await env.DB.prepare("SELECT id,email,first_name,last_name FROM users WHERE id=?").bind(Number(userMatch[1])).first();
           if(!current)return json({error:"Utilisateur introuvable"},404,cors);
-          if(current.approval_status!=="pending")return json({error:"Seules les demandes en attente peuvent être refusées"},400,cors);
-          await env.DB.prepare("DELETE FROM users WHERE id=?").bind(current.id).run();
+          await env.DB.batch([
+            env.DB.prepare("DELETE FROM order_items WHERE order_id IN (SELECT id FROM orders WHERE user_id=?)").bind(current.id),
+            env.DB.prepare("DELETE FROM orders WHERE user_id=?").bind(current.id),
+            env.DB.prepare("DELETE FROM paddock_usages WHERE user_id=?").bind(current.id),
+            env.DB.prepare("DELETE FROM paddock_cards WHERE user_id=?").bind(current.id),
+            env.DB.prepare("DELETE FROM paddock_requests WHERE user_id=?").bind(current.id),
+            env.DB.prepare("DELETE FROM user_sessions WHERE user_id=?").bind(current.id),
+            env.DB.prepare("DELETE FROM paddock_slot_locks WHERE reservation_key IN (SELECT lock_key FROM paddock_reservations WHERE user_id=?)").bind(current.id),
+            env.DB.prepare("DELETE FROM paddock_reservations WHERE user_id=?").bind(current.id),
+            env.DB.prepare("DELETE FROM users WHERE id=?").bind(current.id)
+          ]);
+          await env.PRODUCT_IMAGES.delete(`profiles/${current.id}.jpg`);
+          await notifyRealtime(env,"paddocks");
+          await notifyRealtime(env,"paddock-accounts");
           return json({deleted:true},200,cors);
         }
 

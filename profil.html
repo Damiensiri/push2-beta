@@ -53,6 +53,12 @@
 </div>
 <p id="profilePhotoStatus" class="profile-save-status" aria-live="polite"></p>
 <dl class="account-details"><div><dt>Adresse email</dt><dd id="accountEmailDisplay">—</dd></div></dl>
+<button id="openEmailChange" class="profile-secondary account-password-button" type="button">Changer mon adresse email</button>
+<form id="accountEmailForm" class="profile-form" hidden>
+<div class="profile-field"><label for="newEmail">Nouvelle adresse email</label><input id="newEmail" type="email" maxlength="160" autocomplete="email" required></div>
+<div class="profile-field"><label for="emailCurrentPassword">Mot de passe actuel</label><input id="emailCurrentPassword" type="password" autocomplete="current-password" required></div>
+<button class="profile-primary" type="submit">Enregistrer la nouvelle adresse</button>
+</form>
 <button id="openPasswordChange" class="profile-secondary account-password-button" type="button">Changer mon mot de passe</button>
 <form id="accountPasswordForm" class="profile-form" hidden>
 <p id="accountPasswordHelp" class="account-warning">Choisissez un nouveau mot de passe.</p>
@@ -93,7 +99,7 @@ Zoom
 
 <script src="assets/js/profile-store.js?v=20260714-194000"></script>
 <script src="assets/js/pages/profil.js?v=20260716-3"></script>
-<script src="assets/js/account-beta.js?v=20260716-3"></script>
+<script src="assets/js/account-beta.js?v=20260716-4"></script>
 
 </body>
 </html>
