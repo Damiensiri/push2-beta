@@ -43,6 +43,7 @@ navigator.serviceWorker.register(new URL("OneSignalSDKWorker.js",base).href,{sco
     <form id="loginForm" class="login-form">
       <label>Adresse email<input id="loginEmail" type="email" inputmode="email" autocomplete="username" required></label>
       <label>Mot de passe<input id="loginPassword" type="password" autocomplete="current-password" required></label>
+      <button id="showForgot" class="auth-text-button" type="button">Mot de passe oublié ?</button>
       <button id="loginSubmit" type="submit">Se connecter</button>
       <p id="loginStatus" class="login-status" role="status"></p>
     </form>
@@ -58,8 +59,22 @@ navigator.serviceWorker.register(new URL("OneSignalSDKWorker.js",base).href,{sco
       <button id="registerSubmit" type="submit">Envoyer ma demande</button>
       <p id="registerStatus" class="login-status" role="status"></p>
     </form>
+    <form id="forgotForm" class="login-form" hidden>
+      <p class="login-help">Indiquez votre adresse email. Si le compte est actif, vous recevrez un lien valable 30 minutes.</p>
+      <label>Adresse email<input id="forgotEmail" type="email" maxlength="160" inputmode="email" autocomplete="email" required></label>
+      <button id="forgotSubmit" type="submit">Recevoir le lien</button>
+      <button class="auth-text-button" data-back-login type="button">Retour à la connexion</button>
+      <p id="forgotStatus" class="login-status" role="status"></p>
+    </form>
+    <form id="resetForm" class="login-form" hidden>
+      <p class="login-help">Choisissez votre nouveau mot de passe.</p>
+      <label>Nouveau mot de passe<input id="resetPassword" type="password" minlength="12" maxlength="200" autocomplete="new-password" required></label>
+      <label>Confirmer le mot de passe<input id="resetPasswordConfirm" type="password" minlength="12" maxlength="200" autocomplete="new-password" required></label>
+      <button id="resetSubmit" type="submit">Enregistrer le nouveau mot de passe</button>
+      <p id="resetStatus" class="login-status" role="status"></p>
+    </form>
   </section>
 </main>
-<script src="assets/js/connexion-beta.js?v=20260716-2"></script>
+<script src="assets/js/connexion-beta.js?v=20260716-3"></script>
 </body>
 </html>

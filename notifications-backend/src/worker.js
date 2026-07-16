@@ -99,6 +99,41 @@ export default{
         }
       }
 
+      if(request.method==="POST"&&url.pathname==="/api/auth/password-reset/request"){
+        const input=await readJson(request);const email=normalizeEmail(input?.email);
+        const user=await env.DB.prepare("SELECT * FROM users WHERE email=? COLLATE NOCASE AND status='active' AND approval_status='approved'").bind(email).first();
+        if(user){
+          const recent=await env.DB.prepare("SELECT id FROM password_reset_tokens WHERE user_id=? AND created_at>? ORDER BY id DESC LIMIT 1")
+            .bind(user.id,new Date(Date.now()-5*60*1000).toISOString()).first();
+          if(!recent){
+            const token=crypto.randomUUID()+crypto.randomUUID();const createdAt=new Date().toISOString();
+            const expiresAt=new Date(Date.now()+30*60*1000).toISOString();
+            await env.DB.prepare("INSERT INTO password_reset_tokens(user_id,token_hash,created_at,expires_at) VALUES(?,?,?,?)")
+              .bind(user.id,await sha256(token),createdAt,expiresAt).run();
+            await sendPasswordResetEmail(env,user,token,expiresAt);
+          }
+        }
+        return json({requested:true,message:"Si cette adresse correspond à un compte actif, un lien vient d’être envoyé."},200,cors);
+      }
+
+      if(request.method==="POST"&&url.pathname==="/api/auth/password-reset/confirm"){
+        const input=await readJson(request);const token=String(input?.token||"");
+        if(token.length<40||token.length>200)return json({error:"Lien de réinitialisation invalide ou expiré"},400,cors);
+        const passwordError=validatePassword(input?.newPassword);if(passwordError)return json({error:passwordError},400,cors);
+        const reset=await env.DB.prepare(`SELECT t.id,t.user_id FROM password_reset_tokens t JOIN users u ON u.id=t.user_id
+          WHERE t.token_hash=? AND t.used_at IS NULL AND t.expires_at>? AND u.status='active' LIMIT 1`)
+          .bind(await sha256(token),new Date().toISOString()).first();
+        if(!reset)return json({error:"Lien de réinitialisation invalide ou expiré"},400,cors);
+        const encoded=await hashPassword(input.newPassword);const now=new Date().toISOString();
+        await env.DB.batch([
+          env.DB.prepare(`UPDATE users SET password_hash=?,password_salt=?,password_iterations=?,must_change_password=0,updated_at=? WHERE id=?`)
+            .bind(encoded.hash,encoded.salt,encoded.iterations,now,reset.user_id),
+          env.DB.prepare("UPDATE password_reset_tokens SET used_at=? WHERE id=? AND used_at IS NULL").bind(now,reset.id),
+          env.DB.prepare("UPDATE user_sessions SET revoked_at=? WHERE user_id=? AND revoked_at IS NULL").bind(now,reset.user_id)
+        ]);
+        return json({reset:true},200,cors);
+      }
+
       if(url.pathname==="/api/auth/me"){
         const session=await authenticatedUser(request,env);
         if(!session)return json({error:"Non autorisé"},401,cors);
@@ -1304,6 +1339,19 @@ async function sendAccountApprovedEmail(env,user,approvedAt){
   const payload={type:"account_approved",idempotencyKey:`account-approved:${user.id}:${approvedAt}`,
     customer:{email:user.email,firstName:user.first_name,lastName:user.last_name},
     account:{id:String(user.id),loginUrl:"https://damiensiri.github.io/push2-beta/connexion.html"}};
+  try{
+    const response=await fetch(env.MAILER_ENDPOINT,{method:"POST",headers:{"content-type":"text/plain;charset=UTF-8"},body:JSON.stringify(payload)});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok||!data.ok)return{requested:true,sent:false,error:data.error||`Mailer HTTP ${response.status}`};
+    return{requested:true,sent:Boolean(data.sent),duplicate:Boolean(data.duplicate)};
+  }catch(error){return{requested:true,sent:false,error:String(error?.message||error)};}
+}
+
+async function sendPasswordResetEmail(env,user,token,expiresAt){
+  if(!env.MAILER_ENDPOINT)return{requested:true,sent:false,error:"Mailer bêta non configuré"};
+  const resetUrl=`https://damiensiri.github.io/push2-beta/connexion.html?reset=${encodeURIComponent(token)}`;
+  const payload={type:"password_reset",idempotencyKey:`password-reset:${user.id}:${expiresAt}`,
+    customer:{email:user.email,firstName:user.first_name,lastName:user.last_name},reset:{url:resetUrl,expiresAt}};
   try{
     const response=await fetch(env.MAILER_ENDPOINT,{method:"POST",headers:{"content-type":"text/plain;charset=UTF-8"},body:JSON.stringify(payload)});
     const data=await response.json().catch(()=>({}));
