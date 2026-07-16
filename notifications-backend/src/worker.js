@@ -131,7 +131,8 @@ export default{
         const viewer=await authenticatedUser(request,env);
         if(!viewer)return json({error:"Non autorisé"},401,cors);
         const result=await env.DB.prepare(`SELECT id,name,paddock,date,time,duration,created_at
-          FROM paddock_reservations WHERE user_id=? ORDER BY date DESC,time DESC,id DESC`).bind(viewer.id).all();
+          FROM paddock_reservations WHERE user_id=? AND date>=date('now','-3 days')
+          ORDER BY date DESC,time DESC,id DESC`).bind(viewer.id).all();
         return json({reservations:result.results.map(row=>({id:String(row.id),name:row.name,paddock:row.paddock,
           date:row.date,time:row.time,duration:Number(row.duration),createdAt:row.created_at}))},200,cors);
       }
@@ -176,7 +177,8 @@ export default{
         const viewer=await authenticatedUser(request,env);
         if(!viewer)return json({error:"Non autorisé"},401,cors);
         const result=await env.DB.prepare(`SELECT id,date,status,comment,created_at,updated_at
-          FROM paddock_requests WHERE user_id=? ORDER BY date DESC,id DESC`).bind(viewer.id).all();
+          FROM paddock_requests WHERE user_id=? AND date>=date('now','-3 days')
+          ORDER BY date DESC,id DESC`).bind(viewer.id).all();
         return json({requests:result.results.map(publicPaddockRequest)},200,cors);
       }
 
