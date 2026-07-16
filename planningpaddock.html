@@ -109,14 +109,12 @@
 
 <div id="stepDetails" class="stepShell locked">
 <div class="stepHead">
-<div class="stepTitle"><span class="stepNumber">4</span><span>Coordonnées</span></div>
+<div class="stepTitle"><span class="stepNumber">4</span><span>Confirmation</span></div>
 </div>
 <div class="stepBody">
-<label>Prénom</label>
-<input id="name" autocomplete="given-name">
-
-<label id="emailLabel">Email (optionnel)</label>
-<input id="email" type="email" autocomplete="email">
+<p id="bookingIdentity"></p>
+<label id="confirmationEmailOption"><input id="confirmEmail" type="checkbox"> Recevoir une confirmation par email</label>
+<p id="miseEmailNotice" hidden></p>
 </div>
 </div>
 
@@ -127,23 +125,24 @@
 </div>
 </div>
 
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="assets/js/app-mailer.js?v=20260714-194000"></script>
 
 <script>
 
-const firebaseConfig={
-apiKey:"AIzaSyBn6Hgu-xvsWqpwJ-i4lZyI0QjKMBvOeXA",
-authDomain:"ecurie-paddock.firebaseapp.com",
-projectId:"ecurie-paddock",
-storageBucket:"ecurie-paddock.firebasestorage.app",
-messagingSenderId:"501153278739",
-appId:"1:501153278739:web:824b4344c381f2a94548e6"
-}
+const PADDOCK_API="https://ecurie-notifications-beta.damiensiri-pro.workers.dev"
+const PADDOCK_TOKEN_KEY="ecurie_beta_session"
+let currentViewer=null
 
-firebase.initializeApp(firebaseConfig)
-const db=firebase.firestore()
+async function paddockApi(path,options={}){
+const token=localStorage.getItem(PADDOCK_TOKEN_KEY)||""
+const response=await fetch(PADDOCK_API+path,{
+...options,
+headers:{authorization:"Bearer "+token,...(options.body?{"content-type":"application/json"}:{})}
+})
+const data=await response.json().catch(()=>({}))
+if(!response.ok)throw new Error(data.error||"Service paddock indisponible")
+return data
+}
 function showSheet(title,text){
 
 document.getElementById("sheetTitle").innerText = title
@@ -167,53 +166,22 @@ let reservationsLoaded=false
 let horairesLoaded=false
 
 let adminMode=false
-let tapCount=0
 
 const title=document.getElementById("title")
-
-title.addEventListener("click",()=>{
-
-tapCount++
-
-if(tapCount>=5){
-
-if(!adminMode){
-
-const pass=prompt("Mot de passe admin")
-
-if(pass==="0359140"){
-adminMode=true
-title.innerHTML="RÉSERVATION 🔧"
-generate()
-}
-
-}else{
-
-adminMode=false
-title.innerHTML="RÉSERVATION"
-generate()
-
-}
-
-tapCount=0
-
-}
-
-setTimeout(()=>{tapCount=0},1200)
-
-})
 
 let myReservations=JSON.parse(localStorage.getItem("myReservations")||"[]")
 
 const durationSelect=document.getElementById("duration")
 const paddockSelect=document.getElementById("paddock")
-const emailInput=document.getElementById("email")
-const emailLabel=document.getElementById("emailLabel")
+const confirmEmail=document.getElementById("confirmEmail")
+const confirmationEmailOption=document.getElementById("confirmationEmailOption")
+const miseEmailNotice=document.getElementById("miseEmailNotice")
 
 function updateEmailRequirement(){
 const mise=document.getElementById("type").value==="mise"
-emailInput.required=mise
-emailLabel.innerText=mise?"Email (obligatoire)":"Email (optionnel)"
+confirmationEmailOption.hidden=mise
+miseEmailNotice.hidden=!mise
+miseEmailNotice.textContent=mise&&currentViewer?"La confirmation sera envoyée à "+currentViewer.email:""
 }
 
 function showStep(id){
@@ -441,50 +409,24 @@ generate()
 
 durationSelect.addEventListener("change",updatePaddocks)
 
-function loadDataRealtime(){
-
-db.collection("reservations").onSnapshot(snapshot=>{
-
-reservations = []
-
-snapshot.forEach(doc=>{
-let data = doc.data()
-data.id = doc.id
-reservations.push(data)
-})
-
+async function loadDataRealtime(){
+try{
+const data=await paddockApi("/api/paddocks/planning")
+reservations=data.reservations||[]
+horaires=data.horaires||{}
+restrictions=data.restrictions||{}
+currentViewer=data.viewer
+adminMode=currentViewer?.role==="admin"
+title.innerHTML=adminMode?"RÉSERVATION 🔧":"RÉSERVATION"
+document.getElementById("bookingIdentity").textContent=currentViewer?"Réservation au nom de "+currentViewer.firstName:""
 reservationsLoaded=true
-renderTodayAvailability()
-generate()
-
-})
-
-db.collection("horaires").onSnapshot(snapshot=>{
-
-horaires = {}
-
-snapshot.forEach(doc=>{
-horaires[doc.id] = doc.data()
-})
-
 horairesLoaded=true
+updateEmailRequirement()
 renderTodayAvailability()
 generate()
-
-})
-
-db.collection("restrictions").onSnapshot(snapshot=>{
-
-restrictions = {}
-
-snapshot.forEach(doc=>{
-restrictions[doc.id] = doc.data()
-})
-
-generate()
-
-})
-
+}catch(error){
+console.warn("Chargement paddock impossible",error)
+}
 }
 
 function buildDays(){
@@ -780,7 +722,7 @@ if(slotStartMinutes < resEnd && slotEnd > resStart){
     reserverName = r.name
     conflictReservation = r
 
-    if(myReservations.includes(r.id)){
+    if(r.mine){
         mine = true
         docId = r.id
     }
@@ -962,18 +904,10 @@ alert("Demande possible uniquement jusqu'à 20h la veille")
 return
 }
 
-let name=document.getElementById("name").value.trim()
-let email=document.getElementById("email").value.trim()
+let name=currentViewer?.firstName||""
+let email=currentViewer?.email||""
 
-if(!name){
-alert("Prénom obligatoire")
-return
-}
-
-if(!email || !email.includes("@")){
-alert("Email obligatoire pour une demande de mise au paddock")
-return
-}
+if(!name||!email){alert("Compte utilisateur incomplet");return}
 
 // envoi vers Google Form
 fetch("https://docs.google.com/forms/d/e/1FAIpQLScqcDgOy64o6ZyVuLlQrgPbAR60yIoMZzChOANrA_ZzyAD-xg/formResponse",{
@@ -1015,12 +949,9 @@ return
 
 }
 
-let name=document.getElementById("name").value.trim()
+let name=currentViewer?.firstName||""
 
-if(!name){
-alert("Prénom obligatoire")
-return
-}
+if(!name){alert("Compte utilisateur incomplet");return}
 
 if(!selected){
 alert("Choisissez un créneau")
@@ -1091,24 +1022,31 @@ if(conflit){
 
 // Puis seulement ici :
 
-const doc = await db.collection("reservations").add({
-
-name:name,
-email:document.getElementById("email").value,
+let created
+try{
+created=await paddockApi("/api/paddocks/reservations",{
+method:"POST",
+body:JSON.stringify({
 paddock:selected.paddock,
 date:selected.date,
 time:selected.time,
-duration:selected.duration
-
+duration:selected.duration,
+confirmationRequested:confirmEmail.checked
 })
+})
+}catch(error){
+alert(error.message)
+await loadDataRealtime()
+return
+}
 
-let email = document.getElementById("email").value.trim()
+let email=currentViewer.email
 
 // 👉 envoi client uniquement si email
-if(email && email.includes("@")){
+if(confirmEmail.checked && email && email.includes("@")){
 
 AppMailer.sendPaddockReservationConfirmation({
-reservationId:doc.id,
+reservationId:created.reservation.id,
 customer:{
 email:email,
 firstName:name
@@ -1123,7 +1061,7 @@ console.warn("Confirmation email non envoyée",error)
 }
 
 // 👉 TOUJOURS exécuté (important)
-myReservations.push(doc.id)
+myReservations.push(created.reservation.id)
 
 localStorage.setItem("myReservations",JSON.stringify(myReservations))
 
@@ -1143,7 +1081,12 @@ if(!confirm("⚠️ Confirmer l'annulation de cette réservation ?")){
 return
 }
 
-await db.collection("reservations").doc(id).delete()
+try{
+await paddockApi("/api/paddocks/reservations/"+encodeURIComponent(id),{method:"DELETE"})
+}catch(error){
+alert(error.message)
+return
+}
 
 myReservations = myReservations.filter(r => r !== id)
 
@@ -1163,6 +1106,7 @@ updateEmailRequirement()
 buildDays()
 updatePaddocks()
 loadDataRealtime()
+setInterval(loadDataRealtime,5000)
 setInterval(renderTodayAvailability,60000)
 
 })
@@ -1175,8 +1119,6 @@ resetAfterPaddockChange()
 }
   
 </script>
-<script src="assets/js/profile-store.js?v=20260714-194000"></script>
-<script src="assets/js/pages/planningpaddock-profile.js?v=20260714-194000"></script>
 <div id="confirmSheet">
 
 <div class="sheetContent">

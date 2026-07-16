@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {
   compatibleAlert,validateAlert,parisNow,isPushEnabled,sendRequestedPush,plainTextMessage,
   calculateStatus,publicSpace,publicSchedule,validateSpace,validateSchedules,timeToMinutes,
-  normalizeEmail,validatePassword,validateNewUser,hashPassword,verifyPassword
+  normalizeEmail,validatePassword,validateNewUser,hashPassword,verifyPassword,validatePaddockBooking
 } from "../src/worker.js";
 
 test("les comptes utilisateurs normalisent et valident l’identité",()=>{
@@ -13,6 +13,14 @@ test("les comptes utilisateurs normalisent et valident l’identité",()=>{
   assert.deepEqual(validateNewUser({
     email:" Test@Example.COM ",firstName:" Alice ",lastName:" Martin ",role:"client"
   }),{email:"test@example.com",firstName:"Alice",lastName:"Martin",cardNumber:"",role:"client"});
+});
+
+test("les créneaux paddock sont validés côté Worker",()=>{
+  assert.deepEqual(validatePaddockBooking({paddock:"grande",date:"2026-07-17",time:"09:30",duration:90}),{
+    paddock:"grande",date:"2026-07-17",time:"09:30",duration:90,startMinutes:570
+  });
+  assert.equal(validatePaddockBooking({paddock:"inconnu",date:"2026-07-17",time:"09:30",duration:90}).error,"Paddock invalide");
+  assert.equal(validatePaddockBooking({paddock:"grande",date:"2026-07-17",time:"09:30",duration:45}).error,"Durée invalide");
 });
 
 test("les mots de passe sont salés et vérifiables",async()=>{

@@ -106,6 +106,64 @@ export default{
         return json({loggedOut:true},200,cors);
       }
 
+      if(url.pathname==="/api/paddocks/planning"&&request.method==="GET"){
+        const viewer=await authenticatedUser(request,env);
+        if(!viewer)return json({error:"Non autorisé"},401,cors);
+        const [reservationResult,hoursResult,restrictionResult]=await Promise.all([
+          env.DB.prepare(`SELECT id,user_id,name,paddock,date,time,duration FROM paddock_reservations
+            WHERE date>=date('now') ORDER BY date,time`).all(),
+          env.DB.prepare("SELECT paddock,schedule_json FROM paddock_hours").all(),
+          env.DB.prepare("SELECT date,block_grande_90,block_beudot_90 FROM paddock_restrictions WHERE date>=date('now')").all()
+        ]);
+        const hours={};
+        for(const row of hoursResult.results)hours[row.paddock]=JSON.parse(row.schedule_json);
+        const restrictions={};
+        for(const row of restrictionResult.results)restrictions[row.date]={blockGrande90:Boolean(row.block_grande_90),blockBeudot90:Boolean(row.block_beudot_90)};
+        return json({
+          reservations:reservationResult.results.map(row=>({id:String(row.id),name:row.name,paddock:row.paddock,
+            date:row.date,time:row.time,duration:Number(row.duration),mine:Number(row.user_id)===Number(viewer.id)})),
+          horaires:hours,restrictions,
+          viewer:{firstName:viewer.first_name,email:viewer.email,role:viewer.role}
+        },200,cors);
+      }
+
+      if(url.pathname==="/api/paddocks/reservations"&&request.method==="POST"){
+        const viewer=await authenticatedUser(request,env);
+        if(!viewer)return json({error:"Non autorisé"},401,cors);
+        const input=await readJson(request);
+        const booking=validatePaddockBooking(input);
+        if(booking.error)return json({error:booking.error},400,cors);
+        const conflict=await env.DB.prepare(`SELECT id FROM paddock_reservations WHERE date=? AND paddock=?
+          AND (? < (CAST(substr(time,1,2) AS INTEGER)*60+CAST(substr(time,4,2) AS INTEGER)+duration))
+          AND (?+? > (CAST(substr(time,1,2) AS INTEGER)*60+CAST(substr(time,4,2) AS INTEGER))) LIMIT 1`)
+          .bind(booking.date,booking.paddock,booking.startMinutes,booking.startMinutes,booking.duration).first();
+        if(conflict)return json({error:"Ce créneau vient d’être réservé"},409,cors);
+        if(viewer.role==="client"){
+          const existing=await env.DB.prepare("SELECT id FROM paddock_reservations WHERE user_id=? AND date=? LIMIT 1")
+            .bind(viewer.id,booking.date).first();
+          if(existing)return json({error:"Vous avez déjà une réservation ce jour"},409,cors);
+        }
+        const now=new Date().toISOString();
+        const result=await env.DB.prepare(`INSERT INTO paddock_reservations(user_id,name,email,paddock,date,time,duration,created_at)
+          VALUES(?,?,?,?,?,?,?,?)`).bind(viewer.id,viewer.first_name,viewer.email,booking.paddock,
+          booking.date,booking.time,booking.duration,now).run();
+        return json({reservation:{id:String(result.meta.last_row_id),name:viewer.first_name,paddock:booking.paddock,
+          date:booking.date,time:booking.time,duration:booking.duration,mine:true},
+          confirmationRequested:Boolean(input.confirmationRequested),email:viewer.email},201,cors);
+      }
+
+      const paddockReservationMatch=url.pathname.match(/^\/api\/paddocks\/reservations\/(\d+)$/);
+      if(paddockReservationMatch&&request.method==="DELETE"){
+        const viewer=await authenticatedUser(request,env);
+        if(!viewer)return json({error:"Non autorisé"},401,cors);
+        const reservation=await env.DB.prepare("SELECT id,user_id FROM paddock_reservations WHERE id=?")
+          .bind(Number(paddockReservationMatch[1])).first();
+        if(!reservation)return json({error:"Réservation introuvable"},404,cors);
+        if(viewer.role!=="admin"&&Number(reservation.user_id)!==Number(viewer.id))return json({error:"Action interdite"},403,cors);
+        await env.DB.prepare("DELETE FROM paddock_reservations WHERE id=?").bind(reservation.id).run();
+        return json({deleted:true},200,cors);
+      }
+
       if(url.pathname.startsWith("/api/admin/")){
         if(!isAdmin(request,env))return json({error:"Non autorisé"},401,cors);
 
@@ -611,6 +669,18 @@ function validateUserProfile(input,current){
   return{firstName,lastName,cardNumber};
 }
 
+function validatePaddockBooking(input){
+  const paddock=String(input?.paddock||"");
+  const date=String(input?.date||"");
+  const time=String(input?.time||"");
+  const duration=Number(input?.duration);
+  if(!["maison","grande","beudot"].includes(paddock))return{error:"Paddock invalide"};
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return{error:"Date invalide"};
+  if(!/^\d{2}:\d{2}$/.test(time)||timeToMinutes(time)===null)return{error:"Heure invalide"};
+  if(![60,90].includes(duration))return{error:"Durée invalide"};
+  return{paddock,date,time,duration,startMinutes:timeToMinutes(time)};
+}
+
 function publicUser(user){
   return{id:Number(user.id),email:user.email,firstName:user.first_name,lastName:user.last_name,
     cardNumber:user.card_number||"",role:user.role,status:user.status,
@@ -746,5 +816,5 @@ export class RealtimeHub{
 export{
   compatibleAlert,validateAlert,parisNow,isPushEnabled,sendRequestedPush,plainTextMessage,
   calculateStatus,publicSpace,publicSchedule,validateSpace,validateSchedules,timeToMinutes,parisClock,
-  normalizeEmail,validatePassword,validateNewUser,hashPassword,verifyPassword,publicUser
+  normalizeEmail,validatePassword,validateNewUser,hashPassword,verifyPassword,publicUser,validatePaddockBooking
 };
