@@ -574,7 +574,8 @@ function isAdmin(request,env){
   return value===`Bearer ${String(env.ADMIN_TOKEN).trim()}`;
 }
 
-const PASSWORD_ITERATIONS=210000;
+// Limite actuellement acceptée par Web Crypto dans Cloudflare Workers.
+const PASSWORD_ITERATIONS=100000;
 const SESSION_DURATION_MS=30*24*60*60*1000;
 
 function normalizeEmail(value){

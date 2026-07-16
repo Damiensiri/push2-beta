@@ -35,7 +35,7 @@ connecte ensuite depuis `profil.html` et doit choisir son propre mot de passe.
 - `POST /api/admin/users`
 - `PATCH /api/admin/users/:id`
 
-Les mots de passe utilisent PBKDF2-SHA-256 avec sel individuel et 210 000
+Les mots de passe utilisent PBKDF2-SHA-256 avec sel individuel et 100 000
 itérations. Seule l’empreinte SHA-256 des jetons de session est conservée dans
 D1. Désactiver un compte ou réinitialiser son mot de passe révoque ses sessions.
 
