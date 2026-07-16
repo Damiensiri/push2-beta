@@ -329,7 +329,10 @@ export default{
         }
 
         if(request.method==="POST"&&url.pathname==="/api/admin/catalog"){
-          const input=await readJson(request);const product=validateCatalogProduct(input,true);
+          const input=await readJson(request);
+          const last=await env.DB.prepare("SELECT COALESCE(MAX(position),0) AS position FROM catalog_products WHERE category=?")
+            .bind(String(input?.category||"")).first();
+          const product=validateCatalogProduct({...input,position:Number(last?.position||0)+1},true);
           if(product.error)return json({error:product.error},400,cors);
           const now=new Date().toISOString();
           try{
@@ -341,6 +344,20 @@ export default{
             .bind(product.category,product.id).run();
           await notifyRealtime(env,"catalog");
           return json({created:true,id:product.id},201,cors);
+        }
+
+        if(request.method==="POST"&&url.pathname==="/api/admin/catalog/reorder"){
+          const input=await readJson(request);const category=String(input?.category||"");
+          const ids=Array.isArray(input?.ids)?input.ids.map(String):[];
+          if(!["services","soins","laverie"].includes(category)||!ids.length||new Set(ids).size!==ids.length||
+            ids.some(id=>!/^[A-Za-z0-9_-]{1,40}$/.test(id)))return json({error:"Ordre invalide"},400,cors);
+          const rows=await env.DB.prepare("SELECT id FROM catalog_products WHERE category=? ORDER BY position,id").bind(category).all();
+          const expected=rows.results.map(row=>row.id);
+          if(expected.length!==ids.length||expected.some(id=>!ids.includes(id)))return json({error:"Liste d’articles incomplète"},400,cors);
+          const now=new Date().toISOString();
+          await env.DB.batch(ids.map((id,index)=>env.DB.prepare("UPDATE catalog_products SET position=?,updated_at=? WHERE id=? AND category=?")
+            .bind(index+1,now,id,category)));
+          await notifyRealtime(env,"catalog");return json({saved:true},200,cors);
         }
 
         const adminCatalogMatch=url.pathname.match(/^\/api\/admin\/catalog\/([A-Za-z0-9_-]+)$/);
