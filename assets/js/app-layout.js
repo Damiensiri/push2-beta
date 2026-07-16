@@ -48,7 +48,7 @@
     };
     window.OneSignalDeferred.push(async OneSignal=>{
       try{
-        await OneSignal.init({appId:"186e6f3b-def4-4b8e-8700-650456ff93cc",notifyButton:{enable:false},
+        await OneSignal.init({appId:"186e6f3b-def4-4b8e-8700-650456ff93cc",notifyButton:{enable:false},welcomeNotification:{disable:true},
           serviceWorkerPath:"push2-beta/OneSignalSDKWorker.js",serviceWorkerParam:{scope:"/push2-beta/"},
           promptOptions:{slidedown:{prompts:[{type:"push",autoPrompt:true,text:{actionMessage:"Souhaitez-vous recevoir les notifications de l’écurie ?",acceptButton:"Autoriser",cancelButton:"Plus tard"}}]}}});
         await OneSignal.login(`beta-user-${user.id}`);
