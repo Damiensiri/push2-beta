@@ -14,6 +14,10 @@ binding = "DB"
 database_name = "ecurie-notifications-beta"
 database_id = "c88d9f28-f645-4c61-abd2-3ddebcbc0cab"
 
+[[r2_buckets]]
+binding = "PRODUCT_IMAGES"
+bucket_name = "ecurie-products-beta"
+
 [[durable_objects.bindings]]
 name = "REALTIME_HUB"
 class_name = "RealtimeHub"

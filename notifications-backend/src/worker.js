@@ -53,6 +53,15 @@ export default{
         return realtimeStub(env).fetch(request);
       }
 
+      const catalogImageMatch=url.pathname.match(/^\/api\/catalog\/images\/([A-Za-z0-9._-]+)$/);
+      if(request.method==="GET"&&catalogImageMatch){
+        const object=await env.PRODUCT_IMAGES.get(catalogImageMatch[1]);
+        if(!object)return json({error:"Image introuvable"},404,cors);
+        const headers={...cors,"content-type":object.httpMetadata?.contentType||"image/webp",
+          "cache-control":"public, max-age=31536000, immutable","etag":object.httpEtag};
+        return new Response(object.body,{headers});
+      }
+
       if(request.method==="POST"&&url.pathname==="/api/auth/login"){
         const input=await readJson(request);
         const email=normalizeEmail(input?.email);
@@ -326,6 +335,17 @@ export default{
           const result=await env.DB.prepare(`SELECT id,category,name,description,price_cents,image_url,badge,featured,active,position,updated_at
             FROM catalog_products ORDER BY category,position,id`).all();
           return json({products:result.results.map(row=>({...publicProduct(row),active:Boolean(row.active),updatedAt:row.updated_at}))},200,cors);
+        }
+
+        if(request.method==="POST"&&url.pathname==="/api/admin/catalog/image"){
+          const contentType=String(request.headers.get("content-type")||"").split(";")[0].toLowerCase();
+          if(!["image/jpeg","image/png","image/webp"].includes(contentType))return json({error:"Format d’image invalide"},400,cors);
+          const data=await request.arrayBuffer();
+          if(!data.byteLength||data.byteLength>5*1024*1024)return json({error:"Image trop volumineuse (5 Mo maximum)"},413,cors);
+          const extension=contentType==="image/png"?"png":contentType==="image/jpeg"?"jpg":"webp";
+          const key=`catalog-${crypto.randomUUID()}.${extension}`;
+          await env.PRODUCT_IMAGES.put(key,data,{httpMetadata:{contentType}});
+          return json({url:`${url.origin}/api/catalog/images/${key}`},201,cors);
         }
 
         if(request.method==="POST"&&url.pathname==="/api/admin/catalog"){
@@ -1112,6 +1132,7 @@ function validateCatalogProduct(input,requireId){
   if((requireId||id)&&!/^[A-Za-z0-9_-]{1,40}$/.test(id))return{error:"Identifiant invalide"};
   if(!["services","soins","laverie"].includes(category))return{error:"Catégorie invalide"};
   if(!name||name.length>120||description.length>1000||badge.length>80||image.length>1000)return{error:"Contenu de l’article invalide"};
+  if(image&&!/^https:\/\//i.test(image))return{error:"Adresse d’image invalide"};
   if(!Number.isFinite(price)||price<0||price>100000)return{error:"Prix invalide"};
   if(!Number.isInteger(position)||position<0||position>9999)return{error:"Ordre invalide"};
   return{id,category,name,description,priceCents:Math.round(price*100),image,badge,position,featured,active};
