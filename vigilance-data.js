@@ -3,8 +3,8 @@ window.METEOALARM_VIGILANCE = {
   "level": "orange",
   "label": "Orange",
   "phenomenon": "Orages · Canicule",
-  "period": "Du 16 juillet à 16:04 au 18 juillet à 00:00",
-  "updatedAt": "16 juillet à 16:05",
+  "period": "Du 16 juillet à 22:00 au 18 juillet à 00:00",
+  "updatedAt": "16 juillet à 22:01",
   "source": "MeteoAlarm / EUMETNET",
   "sourceUrl": "https://meteoalarm.org"
 };
