@@ -328,6 +328,16 @@ return
 
 loadPaddockCard()
 
+reservationData.sort((a,b)=>{
+const aEnd=getReservationEndDateTime(a.date,a.time,a.duration)
+const bEnd=getReservationEndDateTime(b.date,b.time,b.duration)
+const aPast=aEnd<=new Date()
+const bPast=bEnd<=new Date()
+if(aPast!==bPast) return aPast?1:-1
+if(aPast) return bEnd-aEnd
+return getReservationDateTime(a.date,a.time)-getReservationDateTime(b.date,b.time)
+})
+
 /* ===== RESERVATIONS ===== */
 
 for(const data of reservationData){
