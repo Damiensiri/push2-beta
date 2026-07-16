@@ -468,7 +468,7 @@ function corsHeaders(request,env){
   const allowed=origins.includes(origin)?origin:"";
   return{
     "access-control-allow-origin":allowed,
-    "access-control-allow-methods":"GET,POST,PATCH,DELETE,OPTIONS",
+    "access-control-allow-methods":"GET,POST,PUT,PATCH,DELETE,OPTIONS",
     "access-control-allow-headers":"authorization,content-type",
     "vary":"Origin"
   };
