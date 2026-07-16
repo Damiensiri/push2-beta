@@ -171,6 +171,12 @@ export default{
         return json({requests:result.results.map(publicPaddockRequest)},200,cors);
       }
 
+      if(url.pathname==="/api/paddocks/card"&&request.method==="GET"){
+        const viewer=await authenticatedUser(request,env);
+        if(!viewer)return json({error:"Non autorisé"},401,cors);
+        return json(await loadPaddockAccount(env,viewer.id),200,cors);
+      }
+
       if(url.pathname==="/api/paddocks/requests"&&request.method==="POST"){
         const viewer=await authenticatedUser(request,env);
         if(!viewer)return json({error:"Non autorisé"},401,cors);
@@ -217,8 +223,13 @@ export default{
 
         if(request.method==="GET"&&url.pathname==="/api/admin/users"){
           const result=await env.DB.prepare(`SELECT id,email,first_name,last_name,card_number,role,status,
-            must_change_password,created_at,updated_at,last_login_at FROM users ORDER BY last_name,first_name`).all();
-          return json(result.results.map(publicUser),200,cors);
+            must_change_password,created_at,updated_at,last_login_at,
+            (SELECT total FROM paddock_cards WHERE user_id=users.id) AS paddock_card_total,
+            (SELECT remaining FROM paddock_cards WHERE user_id=users.id) AS paddock_card_remaining,
+            (SELECT COUNT(*) FROM paddock_usages WHERE user_id=users.id AND mode='invoice') AS paddock_invoice_count
+            FROM users ORDER BY last_name,first_name`).all();
+          return json(result.results.map(row=>({...publicUser(row),paddockCard:row.paddock_card_total===null?null:{
+            total:Number(row.paddock_card_total),remaining:Number(row.paddock_card_remaining)},paddockInvoiceCount:Number(row.paddock_invoice_count)})),200,cors);
         }
 
         if(request.method==="POST"&&url.pathname==="/api/admin/users"){
@@ -269,8 +280,27 @@ export default{
           const current=await env.DB.prepare("SELECT * FROM paddock_requests WHERE id=?").bind(Number(adminPaddockRequest[1])).first();
           if(!current)return json({error:"Demande introuvable"},404,cors);
           const now=new Date().toISOString();
-          await env.DB.prepare("UPDATE paddock_requests SET status=?,comment=?,updated_at=? WHERE id=?")
-            .bind(status,comment,now,current.id).run();
+          if(current.status!=="completed"&&status==="completed"){
+            const existingUsage=await env.DB.prepare("SELECT id FROM paddock_usages WHERE request_id=?").bind(current.id).first();
+            if(!existingUsage){
+              const card=await env.DB.prepare("SELECT remaining FROM paddock_cards WHERE user_id=?").bind(current.user_id).first();
+              const mode=card&&Number(card.remaining)>0?"card":"invoice";
+              const statements=[
+                env.DB.prepare("UPDATE paddock_requests SET status=?,comment=?,updated_at=? WHERE id=?").bind(status,comment,now,current.id),
+                env.DB.prepare(`INSERT INTO paddock_usages(user_id,request_id,usage_date,mode,created_at)
+                  VALUES(?,?,?,?,?)`).bind(current.user_id,current.id,current.date,mode,now)
+              ];
+              if(mode==="card")statements.push(env.DB.prepare(`UPDATE paddock_cards SET remaining=remaining-1,updated_at=?
+                WHERE user_id=? AND remaining>0`).bind(now,current.user_id));
+              await env.DB.batch(statements);
+            }else{
+              await env.DB.prepare("UPDATE paddock_requests SET status=?,comment=?,updated_at=? WHERE id=?")
+                .bind(status,comment,now,current.id).run();
+            }
+          }else{
+            await env.DB.prepare("UPDATE paddock_requests SET status=?,comment=?,updated_at=? WHERE id=?")
+              .bind(status,comment,now,current.id).run();
+          }
           const updated=await env.DB.prepare("SELECT * FROM paddock_requests WHERE id=?").bind(current.id).first();
           await notifyRealtime(env,"paddock-requests");
           const statusChanged=current.status!==status;
@@ -348,6 +378,47 @@ export default{
         }
 
         const userMatch=url.pathname.match(/^\/api\/admin\/users\/(\d+)$/);
+        const userDetailsMatch=url.pathname.match(/^\/api\/admin\/users\/(\d+)\/details$/);
+        if(request.method==="GET"&&userDetailsMatch){
+          const user=await env.DB.prepare("SELECT * FROM users WHERE id=?").bind(Number(userDetailsMatch[1])).first();
+          if(!user)return json({error:"Utilisateur introuvable"},404,cors);
+          return json({user:publicUser(user),...await loadPaddockAccount(env,user.id)},200,cors);
+        }
+
+        const userCardMatch=url.pathname.match(/^\/api\/admin\/users\/(\d+)\/paddock-card$/);
+        if(request.method==="PUT"&&userCardMatch){
+          const userId=Number(userCardMatch[1]);
+          const user=await env.DB.prepare("SELECT id FROM users WHERE id=?").bind(userId).first();
+          if(!user)return json({error:"Utilisateur introuvable"},404,cors);
+          const input=await readJson(request);const total=Number(input?.total);const remaining=Number(input?.remaining);
+          if(!Number.isInteger(total)||total<1||total>999||!Number.isInteger(remaining)||remaining<0||remaining>total)
+            return json({error:"Valeurs de carte invalides"},400,cors);
+          const now=new Date().toISOString();
+          await env.DB.prepare(`INSERT INTO paddock_cards(user_id,total,remaining,created_at,updated_at) VALUES(?,?,?,?,?)
+            ON CONFLICT(user_id) DO UPDATE SET total=excluded.total,remaining=excluded.remaining,updated_at=excluded.updated_at`)
+            .bind(userId,total,remaining,now,now).run();
+          await notifyRealtime(env,"paddock-accounts");
+          return json(await loadPaddockAccount(env,userId),200,cors);
+        }
+        if(request.method==="DELETE"&&userCardMatch){
+          await env.DB.prepare("DELETE FROM paddock_cards WHERE user_id=?").bind(Number(userCardMatch[1])).run();
+          await notifyRealtime(env,"paddock-accounts");
+          return json({deleted:true},200,cors);
+        }
+
+        const usageMatch=url.pathname.match(/^\/api\/admin\/users\/(\d+)\/paddock-usages\/(\d+)$/);
+        if(request.method==="DELETE"&&usageMatch){
+          const userId=Number(usageMatch[1]);const usageId=Number(usageMatch[2]);
+          const usage=await env.DB.prepare("SELECT * FROM paddock_usages WHERE id=? AND user_id=?").bind(usageId,userId).first();
+          if(!usage)return json({error:"Consommation introuvable"},404,cors);
+          const statements=[env.DB.prepare("DELETE FROM paddock_usages WHERE id=?").bind(usageId)];
+          if(usage.mode==="card")statements.push(env.DB.prepare(`UPDATE paddock_cards SET remaining=MIN(total,remaining+1),updated_at=?
+            WHERE user_id=?`).bind(new Date().toISOString(),userId));
+          await env.DB.batch(statements);
+          await notifyRealtime(env,"paddock-accounts");
+          return json({deleted:true,creditRestored:usage.mode==="card"},200,cors);
+        }
+
         if(request.method==="PATCH"&&userMatch){
           const current=await env.DB.prepare("SELECT * FROM users WHERE id=?").bind(Number(userMatch[1])).first();
           if(!current)return json({error:"Utilisateur introuvable"},404,cors);
@@ -848,6 +919,19 @@ function validatePaddockRequestDate(date){
 function publicPaddockRequest(row){
   return{id:String(row.id),userId:row.user_id===undefined?undefined:Number(row.user_id),name:row.name,email:row.email,
     date:row.date,status:row.status,comment:row.comment||"",createdAt:row.created_at,updatedAt:row.updated_at};
+}
+
+async function loadPaddockAccount(env,userId){
+  const [card,usageResult]=await Promise.all([
+    env.DB.prepare("SELECT total,remaining,created_at,updated_at FROM paddock_cards WHERE user_id=?").bind(userId).first(),
+    env.DB.prepare(`SELECT id,request_id,usage_date,mode,created_at FROM paddock_usages
+      WHERE user_id=? ORDER BY usage_date DESC,id DESC`).bind(userId).all()
+  ]);
+  return{
+    card:card?{total:Number(card.total),remaining:Number(card.remaining),createdAt:card.created_at,updatedAt:card.updated_at}:null,
+    usages:usageResult.results.map(row=>({id:String(row.id),requestId:String(row.request_id),date:row.usage_date,
+      mode:row.mode,createdAt:row.created_at}))
+  };
 }
 
 async function sendPaddockRequestStatusEmail(env,row){

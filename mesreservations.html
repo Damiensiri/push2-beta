@@ -224,7 +224,6 @@ reservation.description
 
 const PADDOCK_API="https://ecurie-notifications-beta.damiensiri-pro.workers.dev"
 const PADDOCK_TOKEN_KEY="ecurie_beta_session"
-const sheetCartesURL="https://docs.google.com/spreadsheets/d/e/2PACX-1vRxfmZEcNesum_QBxIe2-tEihtnRSEaVC1x8Y_S3N5MEHcV4tJY3X-7i9NdTBQTBRuzDHHW9NViYrrh/pub?gid=1776451835&single=true&output=csv"
 
 async function paddockApi(path,options={}){
 const token=localStorage.getItem(PADDOCK_TOKEN_KEY)||""
@@ -286,31 +285,10 @@ return String(value ?? "").replace(/[&<>'"]/g,char=>({
 })[char])
 }
 
-async function loadCardsSheet(){
-const res=await fetch(sheetCartesURL,{cache:"no-store"})
-if(!res.ok) throw new Error("Impossible de charger les cartes")
-
-const rows=parseCSV(await res.text())
-if(rows.length===0) return []
-
-const headers=rows[0].map(normalizeHeader)
-return rows.slice(1).map(row=>Object.fromEntries(
-headers.map((header,index)=>[header,(row[index] || "").trim()])
-))
-}
-
 /* ===== CARTE DE MISES ===== */
 
 async function loadPaddockCard(){
 const paddockCard=document.getElementById("paddockCard")
-const savedNumber=normalizeCardNumber(localStorage.getItem("paddockCardNumber"))
-
-if(!savedNumber){
-paddockCard.hidden=true
-paddockCard.innerHTML=""
-return
-}
-
 paddockCard.hidden=false
 paddockCard.innerHTML=`
 <div class="card">
@@ -319,37 +297,39 @@ paddockCard.innerHTML=`
 </div>`
 
 try{
-const cards=await loadCardsSheet()
-const card=cards.find(item=>normalizeCardNumber(item.numero)===savedNumber)
+const account=await paddockApi("/api/paddocks/card")
+const card=account.card
+const invoiceUsages=(account.usages||[]).filter(item=>item.mode==="invoice")
 
 if(!card){
 paddockCard.innerHTML=`
 <div class="card">
 <h3>🐴 Ma carte de mises au paddock</h3>
-<p><strong>Numéro :</strong> ${escapeHTML(savedNumber)}</p>
-<p class="card-message">Carte introuvable. Vérifiez votre numéro ou contactez l’accueil.</p>
+<p class="card-message">Aucune carte active.</p>
+${invoiceUsages.length?`<p><strong>À facturer :</strong> ${invoiceUsages.map(item=>`🌿 ${formatDateFR(item.date)}`).join(" · ")}</p>`:""}
 </div>`
 return
 }
 
-const remaining=Math.max(0,Number(String(card.restant).replace(",",".")) || 0)
-const total=Math.max(0,Number(String(card.total).replace(",",".")) || 0)
+const remaining=Math.max(0,Number(card.remaining)||0)
+const total=Math.max(0,Number(card.total)||0)
 const progress=total > 0 ? Math.min(100,Math.max(0,(remaining / total) * 100)) : 0
-const lastUse=card.derniere_mise || "Aucune mise enregistrée"
+const lastCardUse=(account.usages||[]).find(item=>item.mode==="card")
+const lastUse=lastCardUse?formatDateFR(lastCardUse.date):"Aucune mise enregistrée"
 const progressColor=remaining >= 5 ? "progress-green" : remaining >= 2 ? "progress-orange" : "progress-red"
 const remainingDisplay=remaining === 0
 ? '<span class="card-complete">Carte complète</span>'
-: `${escapeHTML(card.restant || "0")} / ${escapeHTML(card.total || "0")}`
+: `${escapeHTML(remaining)} / ${escapeHTML(total)}`
 
 paddockCard.innerHTML=`
 <div class="card">
 <h3>🐴 Ma carte de mises au paddock</h3>
-<p><strong>Numéro :</strong> ${escapeHTML(card.numero || savedNumber)}</p>
 <p><strong>Mises restantes :</strong> ${remainingDisplay}</p>
 <div class="progress" role="progressbar" aria-label="Mises restantes" aria-valuemin="0" aria-valuemax="${escapeHTML(total)}" aria-valuenow="${escapeHTML(remaining)}">
 <div class="progress-bar ${progressColor}" style="width:${progress}%"></div>
 </div>
 <p><strong>Dernière mise :</strong> ${escapeHTML(lastUse)}</p>
+${invoiceUsages.length?`<p><strong>À facturer :</strong> ${invoiceUsages.map(item=>`🌿 ${formatDateFR(item.date)}`).join(" · ")}</p>`:""}
 </div>`
 }catch(error){
 console.error(error)
@@ -502,6 +482,7 @@ if(!document.hidden) load()
 
 window.addEventListener("pwa-data-changed",event=>{
 if(event.detail?.type==="paddock-requests"||event.detail?.type==="all")load()
+if(event.detail?.type==="paddock-accounts")loadPaddockCard()
 })
 
 </script>
