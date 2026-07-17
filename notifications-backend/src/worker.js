@@ -1204,34 +1204,58 @@ async function processPaddockPushReminders(env,now=new Date()){
     if(!subscriptionIds.length)continue;
     for(const type of duePaddockReminderTypes(reservation,currentMinute)){
       const claimedAt=new Date().toISOString();
-      const claim=await env.DB.prepare(`INSERT OR IGNORE INTO paddock_push_reminders(reservation_id,reminder_type,claimed_at)
-        VALUES(?,?,?)`).bind(reservation.id,type,claimedAt).run();
-      if(!claim.meta.changes)continue;
-      const push=await sendPaddockReminderPush(env,reservation,type,subscriptionIds);
+      const deliveryKey=crypto.randomUUID();
+      const claim=await env.DB.prepare(`INSERT OR IGNORE INTO paddock_push_reminders
+        (reservation_id,reminder_type,claimed_at,attempt_count,delivery_key) VALUES(?,?,?,1,?)`)
+        .bind(reservation.id,type,claimedAt,deliveryKey).run();
+      let acquired=Boolean(claim.meta.changes);
+      if(!acquired){
+        const staleBefore=new Date(Date.now()-45_000).toISOString();
+        const retry=await env.DB.prepare(`UPDATE paddock_push_reminders
+          SET claimed_at=?,attempt_count=attempt_count+1,last_error=NULL
+          WHERE reservation_id=? AND reminder_type=? AND sent_at IS NULL AND claimed_at<?`)
+          .bind(claimedAt,reservation.id,type,staleBefore).run();
+        acquired=Boolean(retry.meta.changes);
+      }
+      if(!acquired)continue;
+      const reminder=await env.DB.prepare(`SELECT delivery_key FROM paddock_push_reminders
+        WHERE reservation_id=? AND reminder_type=?`).bind(reservation.id,type).first();
+      const stableDeliveryKey=reminder?.delivery_key||deliveryKey;
+      if(!reminder?.delivery_key){
+        await env.DB.prepare(`UPDATE paddock_push_reminders SET delivery_key=?
+          WHERE reservation_id=? AND reminder_type=? AND delivery_key IS NULL`)
+          .bind(stableDeliveryKey,reservation.id,type).run();
+      }
+      const push=await sendPaddockReminderPush(env,reservation,type,subscriptionIds,stableDeliveryKey);
       if(push.sent){
-        await env.DB.prepare("UPDATE paddock_push_reminders SET sent_at=?,onesignal_notification_id=? WHERE reservation_id=? AND reminder_type=?")
+        await env.DB.prepare(`UPDATE paddock_push_reminders
+          SET sent_at=?,onesignal_notification_id=?,last_error=NULL WHERE reservation_id=? AND reminder_type=?`)
           .bind(new Date().toISOString(),push.id||null,reservation.id,type).run();sent++;
       }else{
-        await env.DB.prepare("DELETE FROM paddock_push_reminders WHERE reservation_id=? AND reminder_type=? AND sent_at IS NULL")
-          .bind(reservation.id,type).run();
+        await env.DB.prepare(`UPDATE paddock_push_reminders SET last_error=?
+          WHERE reservation_id=? AND reminder_type=? AND sent_at IS NULL`)
+          .bind(String(push.error||"Échec OneSignal").slice(0,500),reservation.id,type).run();
       }
     }
   }
   return{processed:result.results.length,sent};
 }
 
-async function sendPaddockReminderPush(env,reservation,type,subscriptionIds){
+async function sendPaddockReminderPush(env,reservation,type,subscriptionIds,deliveryKey){
   const paddock=({maison:"Maison",grande:"Grande voie",beudot:"Beudot"})[reservation.paddock]||reservation.paddock;
   const title=type==="start_1h"?"Rappel de votre réservation paddock":"Fin de votre réservation paddock";
   const message=type==="start_1h"
     ?`Votre réservation au paddock ${paddock} commence dans 1 heure, à ${reservation.time}.`
     :`Votre réservation au paddock ${paddock} se termine dans 5 minutes. Merci de libérer le paddock.`;
   try{
-    const response=await fetch("https://api.onesignal.com/notifications",{method:"POST",headers:{
+    const controller=new AbortController();
+    const timeout=setTimeout(()=>controller.abort(),10_000);
+    let response;
+    try{response=await fetch("https://api.onesignal.com/notifications",{method:"POST",signal:controller.signal,headers:{
       "authorization":`Key ${env.ONESIGNAL_REST_API_KEY}`,"content-type":"application/json; charset=utf-8"},body:JSON.stringify({
-        app_id:env.ONESIGNAL_APP_ID,include_subscription_ids:subscriptionIds,
+        app_id:env.ONESIGNAL_APP_ID,include_subscription_ids:subscriptionIds,idempotency_key:deliveryKey,
         headings:{fr:title,en:title},contents:{fr:message,en:message},url:"https://damiensiri.github.io/push2-beta/mesreservations.html"
-      })});
+      })});}finally{clearTimeout(timeout);}
     const data=await response.json().catch(()=>({}));
     if(!response.ok||data.errors)return{sent:false,error:data.errors||`HTTP ${response.status}`};
     return{sent:true,id:data.id||null};

@@ -137,6 +137,9 @@ CREATE TABLE IF NOT EXISTS paddock_push_reminders (
   claimed_at TEXT NOT NULL,
   sent_at TEXT,
   onesignal_notification_id TEXT,
+  attempt_count INTEGER NOT NULL DEFAULT 0,
+  last_error TEXT,
+  delivery_key TEXT,
   UNIQUE(reservation_id,reminder_type),
   FOREIGN KEY(reservation_id) REFERENCES paddock_reservations(id) ON DELETE CASCADE
 );
