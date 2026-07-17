@@ -3,8 +3,8 @@
   "level": "yellow",
   "label": "Jaune",
   "phenomenon": "Orages",
-  "period": "Du 17 juillet à 16:00 au 18 juillet à 00:00",
-  "updatedAt": "17 juillet à 16:00",
+  "period": "Du 17 juillet à 22:00 au 18 juillet à 00:00",
+  "updatedAt": "17 juillet à 22:00",
   "source": "MeteoAlarm / EUMETNET",
   "sourceUrl": "https://meteoalarm.org"
 }
