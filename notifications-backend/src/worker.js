@@ -481,6 +481,34 @@ export default{
           return json({orders:await loadOrders(env,"",[])},200,cors);
         }
 
+        if(request.method==="GET"&&url.pathname==="/api/admin/billing"){
+          const [usageResult,orders]=await Promise.all([
+            env.DB.prepare(`SELECT pu.id,pu.user_id,pu.request_id,pu.usage_date,pu.created_at,
+              u.first_name,u.last_name,u.email
+              FROM paddock_usages pu JOIN users u ON u.id=pu.user_id
+              WHERE pu.mode='invoice'
+              ORDER BY u.last_name,u.first_name,pu.usage_date,pu.id`).all(),
+            loadOrders(env,"WHERE o.billed=0 AND o.status NOT IN ('refused','cancelled')",[])
+          ]);
+          const customers=new Map();
+          const ensureCustomer=(userId,customer)=>{
+            const key=Number(userId);
+            if(!customers.has(key))customers.set(key,{userId:key,customer,paddockUsages:[],orders:[],orderDue:0});
+            return customers.get(key);
+          };
+          for(const row of usageResult.results){
+            ensureCustomer(row.user_id,{firstName:row.first_name,lastName:row.last_name,email:row.email}).paddockUsages.push({
+              id:String(row.id),requestId:String(row.request_id),date:row.usage_date,createdAt:row.created_at
+            });
+          }
+          for(const order of orders){
+            const customer=ensureCustomer(order.userId,order.customer);customer.orders.push(order);customer.orderDue+=order.total;
+          }
+          return json({customers:[...customers.values()].sort((a,b)=>
+            `${a.customer.lastName} ${a.customer.firstName}`.localeCompare(`${b.customer.lastName} ${b.customer.firstName}`,"fr")
+          )},200,cors);
+        }
+
         if(request.method==="GET"&&url.pathname==="/api/admin/catalog"){
           const result=await env.DB.prepare(`SELECT id,category,name,description,price_cents,image_url,badge,featured,active,position,updated_at
             FROM catalog_products ORDER BY category,position,id`).all();
