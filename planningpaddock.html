@@ -160,6 +160,7 @@ document.getElementById("confirmSheet").classList.remove("show")
 let reservations=[]
 let horaires={}
 let restrictions={}
+let requestExceptions={}
 let selectedDate=null
 let selected=null
 let reservationsLoaded=false
@@ -364,6 +365,7 @@ document.getElementById("mainButton").innerText=mise?"Demander":"Réserver"
 
 if(mise){
 
+buildDays()
 showStep("stepDay")
 
 }else if(reservation){
@@ -416,12 +418,13 @@ durationSelect.addEventListener("change",updatePaddocks)
 async function loadDataRealtime(){
 try{
 const data=await paddockApi("/api/paddocks/planning")
-const nextSignature=JSON.stringify([data.reservations||[],data.horaires||{},data.restrictions||{}])
+const nextSignature=JSON.stringify([data.reservations||[],data.horaires||{},data.restrictions||{},data.requestExceptions||{}])
 const planningChanged=nextSignature!==lastPlanningSignature
 lastPlanningSignature=nextSignature
 reservations=data.reservations||[]
 horaires=data.horaires||{}
 restrictions=data.restrictions||{}
+requestExceptions=data.requestExceptions||{}
 currentViewer=data.viewer
 adminMode=currentViewer?.role==="admin"
 title.innerHTML=adminMode?"RÉSERVATION 🔧":"RÉSERVATION"
@@ -429,6 +432,7 @@ document.getElementById("bookingIdentity").textContent=currentViewer?"Réservati
 reservationsLoaded=true
 horairesLoaded=true
 updateEmailRequirement()
+if(!selectedDate)buildDays()
 if(!planningChanged)return
 renderTodayAvailability()
 generate()
@@ -454,9 +458,15 @@ btn.className="dayBtn"
 
 btn.innerText=label+" "+d.getDate()
 
+const dateKey=localDateKey(d)
+const requestError=document.getElementById("type").value==="mise"?requestDateError(dateKey):""
+if(requestError){btn.classList.add("disabled");btn.title=requestError}
+
 btn.onclick=()=>{
 
-selectedDate=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")
+if(requestError){alert(requestError);return}
+
+selectedDate=dateKey
 selected=null
 
 document.querySelectorAll(".dayBtn").forEach(b=>b.classList.remove("active"))
@@ -522,6 +532,18 @@ return date.getFullYear()+"-"+
        String(date.getMonth()+1).padStart(2,"0")+"-"+
        String(date.getDate()).padStart(2,"0")
 
+}
+
+function requestDateError(date,now=new Date()){
+const exception=requestExceptions[date]
+if(exception&&!exception.open)return exception.comment||"Les demandes sont exceptionnellement fermées pour cette date"
+const target=new Date(date+"T12:00:00")
+if(target.getDay()===0&&!exception?.open)return"Demande impossible le dimanche"
+const today=localDateKey(now)
+if(date<=today)return"La demande doit concerner un prochain jour"
+const tomorrow=new Date(now.getFullYear(),now.getMonth(),now.getDate()+1)
+if(date===localDateKey(tomorrow)&&(now.getHours()*60+now.getMinutes())>1200)return"Demande possible uniquement jusqu’à 20h la veille"
+return""
 }
 
 function firstFreeSlotToday(paddock,now){
@@ -893,22 +915,9 @@ alert("Choisissez un jour")
 return
 }
 
-const d=new Date(selectedDate)
-const day=d.getDay()
-
-if(day===0 || day===6){
-alert("Demande impossible le week-end")
-return
-}
-
-const now=new Date()
-const veille=new Date(d)
-
-veille.setDate(veille.getDate()-1)
-veille.setHours(20,0,0,0)
-
-if(now>veille){
-alert("Demande possible uniquement jusqu'à 20h la veille")
+const dateError=requestDateError(selectedDate)
+if(dateError){
+alert(dateError)
 return
 }
 

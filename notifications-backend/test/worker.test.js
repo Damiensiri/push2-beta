@@ -4,7 +4,7 @@ import {
   compatibleAlert,validateAlert,parisNow,isPushEnabled,sendRequestedPush,plainTextMessage,
   calculateStatus,publicSpace,publicSchedule,validateSpace,validateSchedules,timeToMinutes,
   normalizeEmail,validatePassword,validateNewUser,hashPassword,verifyPassword,validatePaddockBooking,
-  reservationLocalMinute,duePaddockReminderTypes
+  reservationLocalMinute,duePaddockReminderTypes,validatePaddockRequestDate
 } from "../src/worker.js";
 
 test("les comptes utilisateurs normalisent et valident l’identité",()=>{
@@ -24,6 +24,21 @@ test("les créneaux paddock sont validés côté Worker",()=>{
   assert.equal(validatePaddockBooking({paddock:"grande",date:"2026-07-17",time:"09:30",duration:45}).error,"Durée invalide");
   assert.equal(validatePaddockBooking({paddock:"maison",date:"2026-07-17",time:"09:30",duration:90}).error,
     "Les réservations de 1 h 30 sont réservées à Grande voie et Beudot");
+});
+
+test("les demandes Liberté sont ouvertes du lundi au samedi avec délai la veille",()=>{
+  const fridayAt19=new Date("2026-07-17T17:00:00.000Z");
+  const fridayAt21=new Date("2026-07-17T19:00:00.000Z");
+  assert.equal(validatePaddockRequestDate("2026-07-18",{now:fridayAt19}),"");
+  assert.equal(validatePaddockRequestDate("2026-07-18",{now:fridayAt21}),"Demande possible uniquement jusqu’à 20h la veille");
+  assert.equal(validatePaddockRequestDate("2026-07-19",{now:fridayAt19}),"Demande impossible le dimanche");
+});
+
+test("les exceptions Liberté ouvrent ou ferment une date",()=>{
+  const now=new Date("2026-07-17T10:00:00.000Z");
+  assert.equal(validatePaddockRequestDate("2026-07-19",{now,exception:{open:true,comment:"Ouverture concours"}}),"");
+  assert.equal(validatePaddockRequestDate("2026-07-20",{now,exception:{open:false,comment:"Fermeture exceptionnelle"}}),"Fermeture exceptionnelle");
+  assert.equal(validatePaddockRequestDate("2026-07-17",{now,allowToday:true,ignoreDeadline:true}),"");
 });
 
 test("les rappels paddock sont calculés une seule fois aux bons instants",()=>{

@@ -207,6 +207,14 @@ CREATE TABLE IF NOT EXISTS paddock_requests (
 CREATE INDEX IF NOT EXISTS idx_paddock_requests_date_status ON paddock_requests(date,status);
 CREATE INDEX IF NOT EXISTS idx_paddock_requests_user_date ON paddock_requests(user_id,date DESC);
 
+CREATE TABLE IF NOT EXISTS paddock_request_exceptions (
+  date TEXT PRIMARY KEY,
+  is_open INTEGER NOT NULL CHECK(is_open IN (0,1)),
+  comment TEXT NOT NULL DEFAULT '',
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_paddock_request_exceptions_date ON paddock_request_exceptions(date);
+
 CREATE TABLE IF NOT EXISTS paddock_cards (
   user_id INTEGER PRIMARY KEY,
   total INTEGER NOT NULL CHECK(total BETWEEN 1 AND 999),

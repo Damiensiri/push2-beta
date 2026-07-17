@@ -295,20 +295,23 @@ export default{
       if(url.pathname==="/api/paddocks/planning"&&request.method==="GET"){
         const viewer=await authenticatedUser(request,env);
         if(!viewer)return json({error:"Non autorisé"},401,cors);
-        const [reservationResult,hoursResult,restrictionResult]=await Promise.all([
+        const [reservationResult,hoursResult,restrictionResult,requestExceptionResult]=await Promise.all([
           env.DB.prepare(`SELECT id,user_id,name,paddock,date,time,duration FROM paddock_reservations
             WHERE date>=date('now') ORDER BY date,time`).all(),
           env.DB.prepare("SELECT paddock,schedule_json FROM paddock_hours").all(),
-          env.DB.prepare("SELECT date,block_grande_90,block_beudot_90 FROM paddock_restrictions WHERE date>=date('now')").all()
+          env.DB.prepare("SELECT date,block_grande_90,block_beudot_90 FROM paddock_restrictions WHERE date>=date('now')").all(),
+          env.DB.prepare("SELECT date,is_open,comment FROM paddock_request_exceptions WHERE date>=date('now')").all()
         ]);
         const hours={};
         for(const row of hoursResult.results)hours[row.paddock]=JSON.parse(row.schedule_json);
         const restrictions={};
         for(const row of restrictionResult.results)restrictions[row.date]={blockGrande90:Boolean(row.block_grande_90),blockBeudot90:Boolean(row.block_beudot_90)};
+        const requestExceptions={};
+        for(const row of requestExceptionResult.results)requestExceptions[row.date]={open:Boolean(row.is_open),comment:row.comment||""};
         return json({
           reservations:reservationResult.results.map(row=>({id:String(row.id),name:row.name,paddock:row.paddock,
             date:row.date,time:row.time,duration:Number(row.duration),mine:Number(row.user_id)===Number(viewer.id)})),
-          horaires:hours,restrictions,
+          horaires:hours,restrictions,requestExceptions,
           viewer:{firstName:viewer.first_name,email:viewer.email,role:viewer.role}
         },200,cors);
       }
@@ -382,7 +385,8 @@ export default{
         if(!viewer)return json({error:"Non autorisé"},401,cors);
         const input=await readJson(request);
         const date=String(input?.date||"");
-        const dateError=validatePaddockRequestDate(date);
+        const requestException=await env.DB.prepare("SELECT is_open,comment FROM paddock_request_exceptions WHERE date=?").bind(date).first();
+        const dateError=validatePaddockRequestDate(date,{exception:requestException&&{open:Boolean(requestException.is_open),comment:requestException.comment||""}});
         if(dateError)return json({error:dateError},400,cors);
         const now=new Date().toISOString();
         try{
@@ -391,7 +395,7 @@ export default{
           const created=await env.DB.prepare(`SELECT id,date,status,comment,created_at,updated_at
             FROM paddock_requests WHERE id=?`).bind(result.meta.last_row_id).first();
           await notifyRealtime(env,"paddock-requests");
-          await sendAdminEventPush(env,"Nouvelle demande de mise au paddock",`${viewer.first_name} — ${date}`,"paddocks.html");
+          await sendAdminEventPush(env,"Nouvelle demande de mise au paddock",`${viewer.first_name} — ${date}`,"liberte.html");
           return json({request:publicPaddockRequest(created),email:viewer.email},201,cors);
         }catch(error){
           if(String(error?.message||error).includes("UNIQUE"))return json({error:"Vous avez déjà une demande pour ce jour"},409,cors);
@@ -571,6 +575,65 @@ export default{
             email=await sendOrderEmail(env,"order_status",updated,user);
           }
           return json({order:updated,email},200,cors);
+        }
+
+        if(request.method==="GET"&&url.pathname==="/api/admin/liberte"){
+          const [requestResult,exceptionResult,userResult]=await Promise.all([
+            env.DB.prepare(`SELECT id,user_id,name,email,date,status,comment,created_at,updated_at
+              FROM paddock_requests ORDER BY date DESC,id DESC`).all(),
+            env.DB.prepare(`SELECT date,is_open,comment,updated_at FROM paddock_request_exceptions
+              ORDER BY date DESC`).all(),
+            env.DB.prepare(`SELECT id,email,first_name,last_name,role,status,approval_status
+              FROM users WHERE status='active' AND COALESCE(approval_status,'approved')='approved'
+              ORDER BY last_name,first_name`).all()
+          ]);
+          return json({
+            requests:requestResult.results.map(publicPaddockRequest),
+            exceptions:exceptionResult.results.map(row=>({date:row.date,open:Boolean(row.is_open),comment:row.comment||"",updatedAt:row.updated_at})),
+            users:userResult.results.map(publicUser)
+          },200,cors);
+        }
+
+        if(request.method==="POST"&&url.pathname==="/api/admin/liberte/requests"){
+          const input=await readJson(request);const userId=Number(input?.userId);const date=String(input?.date||"");
+          if(!Number.isInteger(userId)||userId<1)return json({error:"Client invalide"},400,cors);
+          const user=await env.DB.prepare(`SELECT * FROM users WHERE id=? AND status='active'
+            AND COALESCE(approval_status,'approved')='approved'`).bind(userId).first();
+          if(!user)return json({error:"Client actif introuvable"},404,cors);
+          const requestException=await env.DB.prepare("SELECT is_open,comment FROM paddock_request_exceptions WHERE date=?").bind(date).first();
+          const dateError=validatePaddockRequestDate(date,{exception:requestException&&{open:Boolean(requestException.is_open),comment:requestException.comment||""},ignoreDeadline:true,allowToday:true});
+          if(dateError)return json({error:dateError},400,cors);
+          const now=new Date().toISOString();
+          try{
+            const result=await env.DB.prepare(`INSERT INTO paddock_requests(user_id,name,email,date,status,comment,created_at,updated_at)
+              VALUES(?,?,?,?,'pending','',?,?)`).bind(user.id,user.first_name,user.email,date,now,now).run();
+            const created=await env.DB.prepare("SELECT * FROM paddock_requests WHERE id=?").bind(result.meta.last_row_id).first();
+            await notifyRealtime(env,"paddock-requests");
+            const email=await sendPaddockRequestConfirmationEmail(env,created);
+            return json({request:publicPaddockRequest(created),email},201,cors);
+          }catch(error){
+            if(String(error?.message||error).includes("UNIQUE"))return json({error:"Ce client a déjà une demande pour ce jour"},409,cors);
+            throw error;
+          }
+        }
+
+        if(request.method==="PUT"&&url.pathname==="/api/admin/liberte/exceptions"){
+          const input=await readJson(request);const date=String(input?.date||"");const comment=String(input?.comment||"").trim();
+          if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||Number.isNaN(new Date(date+"T12:00:00Z").getTime()))return json({error:"Date invalide"},400,cors);
+          if(comment.length>500)return json({error:"Commentaire trop long"},400,cors);
+          const now=new Date().toISOString();
+          await env.DB.prepare(`INSERT INTO paddock_request_exceptions(date,is_open,comment,updated_at) VALUES(?,?,?,?)
+            ON CONFLICT(date) DO UPDATE SET is_open=excluded.is_open,comment=excluded.comment,updated_at=excluded.updated_at`)
+            .bind(date,input?.open?1:0,comment,now).run();
+          await notifyRealtime(env,"paddock-request-exceptions");
+          return json({exception:{date,open:Boolean(input?.open),comment,updatedAt:now}},200,cors);
+        }
+
+        const liberteException=url.pathname.match(/^\/api\/admin\/liberte\/exceptions\/(\d{4}-\d{2}-\d{2})$/);
+        if(request.method==="DELETE"&&liberteException){
+          await env.DB.prepare("DELETE FROM paddock_request_exceptions WHERE date=?").bind(liberteException[1]).run();
+          await notifyRealtime(env,"paddock-request-exceptions");
+          return json({deleted:true},200,cors);
         }
 
         if(request.method==="GET"&&url.pathname==="/api/admin/paddocks"){
@@ -1423,20 +1486,21 @@ async function paddockBookingPolicyError(env,booking){
   return"";
 }
 
-function validatePaddockRequestDate(date){
+function validatePaddockRequestDate(date,{now=new Date(),exception=null,ignoreDeadline=false,allowToday=false}={}){
   if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return"Date invalide";
   const target=new Date(date+"T12:00:00Z");
   if(Number.isNaN(target.getTime()))return"Date invalide";
   const day=target.getUTCDay();
-  if(day===0||day===6)return"Demande impossible le week-end";
+  if(exception&&!exception.open)return exception.comment||"Les demandes sont exceptionnellement fermées pour cette date";
+  if(day===0&&!exception?.open)return"Demande impossible le dimanche";
   const parts=Object.fromEntries(new Intl.DateTimeFormat("fr-CA",{
     timeZone:"Europe/Paris",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hourCycle:"h23"
-  }).formatToParts(new Date()).filter(part=>part.type!=="literal").map(part=>[part.type,part.value]));
+  }).formatToParts(now).filter(part=>part.type!=="literal").map(part=>[part.type,part.value]));
   const today=`${parts.year}-${parts.month}-${parts.day}`;
-  if(date<=today)return"La demande doit concerner un prochain jour";
+  if(date<today||(!allowToday&&date===today))return"La demande doit concerner un prochain jour";
   const tomorrowDate=new Date(today+"T12:00:00Z");tomorrowDate.setUTCDate(tomorrowDate.getUTCDate()+1);
   const tomorrow=tomorrowDate.toISOString().slice(0,10);
-  if(date===tomorrow&&(Number(parts.hour)*60+Number(parts.minute))>1200)return"Demande possible uniquement jusqu’à 20h la veille";
+  if(!ignoreDeadline&&date===tomorrow&&(Number(parts.hour)*60+Number(parts.minute))>1200)return"Demande possible uniquement jusqu’à 20h la veille";
   return"";
 }
 
@@ -1505,6 +1569,18 @@ async function loadPaddockAccount(env,userId){
     usages:usageResult.results.map(row=>({id:String(row.id),requestId:String(row.request_id),date:row.usage_date,
       mode:row.mode,createdAt:row.created_at}))
   };
+}
+
+async function sendPaddockRequestConfirmationEmail(env,row){
+  if(!env.MAILER_ENDPOINT)return{requested:true,sent:false,error:"Mailer bêta non configuré"};
+  const payload={type:"paddock_request_confirmation",idempotencyKey:`paddock-request:${row.id}`,
+    customer:{email:row.email,firstName:row.name},request:{id:String(row.id),date:row.date}};
+  try{
+    const response=await fetch(env.MAILER_ENDPOINT,{method:"POST",headers:{"content-type":"text/plain;charset=UTF-8"},body:JSON.stringify(payload)});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok||!data.ok)return{requested:true,sent:false,error:data.error||`Mailer HTTP ${response.status}`};
+    return{requested:true,sent:Boolean(data.sent),duplicate:Boolean(data.duplicate)};
+  }catch(error){return{requested:true,sent:false,error:String(error?.message||error)};}
 }
 
 async function sendPaddockRequestStatusEmail(env,row){
@@ -1756,5 +1832,6 @@ export{
   compatibleAlert,validateAlert,parisNow,isPushEnabled,sendRequestedPush,plainTextMessage,
   calculateStatus,publicSpace,publicSchedule,validateSpace,validateSchedules,timeToMinutes,parisClock,
   normalizeEmail,validatePassword,validateNewUser,hashPassword,verifyPassword,publicUser,validatePaddockBooking,validatePaddockHours,
-  parisLocalMinute,reservationLocalMinute,duePaddockReminderTypes,isValidPushSubscriptionId,isValidPushInstallationId,processPaddockPushReminders
+  parisLocalMinute,reservationLocalMinute,duePaddockReminderTypes,isValidPushSubscriptionId,isValidPushInstallationId,processPaddockPushReminders,
+  validatePaddockRequestDate
 };
