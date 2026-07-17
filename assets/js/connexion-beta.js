@@ -28,7 +28,8 @@ document.querySelectorAll("[data-back-login]").forEach(button=>button.addEventLi
 
 async function validateExistingSession(){
 const token=localStorage.getItem(TOKEN_KEY);
-if(!token)return;
+if(!token){document.documentElement.style.visibility="";return;}
+document.documentElement.style.visibility="hidden";
 try{
 const response=await fetch(API+"/api/auth/me",{headers:{authorization:"Bearer "+token},cache:"no-store"});
 if(response.ok){location.replace("index.html");return;}
@@ -77,4 +78,7 @@ try{const response=await fetch(API+"/api/auth/password-reset/confirm",{method:"P
 
 if(resetToken)setMode("reset");
 validateExistingSession();
+window.addEventListener("pageshow",event=>{
+if(event.persisted||localStorage.getItem(TOKEN_KEY))validateExistingSession();
+});
 })();
