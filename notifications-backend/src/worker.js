@@ -329,6 +329,8 @@ export default{
         const input=await readJson(request);
         const booking=validatePaddockBooking(input);
         if(booking.error)return json({error:booking.error},400,cors);
+        const policyError=await paddockBookingPolicyError(env,booking);
+        if(policyError)return json({error:policyError},409,cors);
         const conflict=await env.DB.prepare(`SELECT id FROM paddock_reservations WHERE date=? AND paddock=?
           AND (? < (CAST(substr(time,1,2) AS INTEGER)*60+CAST(substr(time,4,2) AS INTEGER)+duration))
           AND (?+? > (CAST(substr(time,1,2) AS INTEGER)*60+CAST(substr(time,4,2) AS INTEGER))) LIMIT 1`)
@@ -584,6 +586,51 @@ export default{
           const restrictions={};for(const row of restrictionResult.results)restrictions[row.date]={blockGrande90:Boolean(row.block_grande_90),blockBeudot90:Boolean(row.block_beudot_90)};
           return json({reservations:reservationResult.results.map(row=>({...row,id:String(row.id),duration:Number(row.duration)})),
             requests:requestResult.results.map(publicPaddockRequest),horaires:hours,restrictions},200,cors);
+        }
+
+        if(request.method==="POST"&&url.pathname==="/api/admin/paddocks/reservations"){
+          const input=await readJson(request);
+          const booking=validatePaddockBooking(input);
+          if(booking.error)return json({error:booking.error},400,cors);
+          const userId=Number(input?.userId);
+          if(!Number.isInteger(userId)||userId<1)return json({error:"Client invalide"},400,cors);
+          const user=await env.DB.prepare(`SELECT * FROM users WHERE id=? AND status='active'
+            AND COALESCE(approval_status,'approved')='approved'`).bind(userId).first();
+          if(!user)return json({error:"Client actif introuvable"},404,cors);
+          const policyError=await paddockBookingPolicyError(env,booking);
+          if(policyError)return json({error:policyError},409,cors);
+          const conflict=await env.DB.prepare(`SELECT id FROM paddock_reservations WHERE date=? AND paddock=?
+            AND (? < (CAST(substr(time,1,2) AS INTEGER)*60+CAST(substr(time,4,2) AS INTEGER)+duration))
+            AND (?+? > (CAST(substr(time,1,2) AS INTEGER)*60+CAST(substr(time,4,2) AS INTEGER))) LIMIT 1`)
+            .bind(booking.date,booking.paddock,booking.startMinutes,booking.startMinutes,booking.duration).first();
+          if(conflict)return json({error:"Ce créneau est déjà occupé"},409,cors);
+          if(user.role==="client"){
+            const existing=await env.DB.prepare("SELECT id FROM paddock_reservations WHERE user_id=? AND date=? LIMIT 1")
+              .bind(user.id,booking.date).first();
+            if(existing)return json({error:"Ce client a déjà une réservation ce jour"},409,cors);
+          }
+          const now=new Date().toISOString();const lockKey=crypto.randomUUID();
+          try{
+            await env.DB.batch([
+              env.DB.prepare(`INSERT INTO paddock_reservations(lock_key,user_id,name,email,paddock,date,time,duration,created_at)
+                VALUES(?,?,?,?,?,?,?,?,?)`).bind(lockKey,user.id,user.first_name,user.email,booking.paddock,
+                booking.date,booking.time,booking.duration,now),
+              ...paddockLockStatements(env,{lockKey,date:booking.date,paddock:booking.paddock,
+                startMinutes:booking.startMinutes,duration:booking.duration})
+            ]);
+          }catch(error){
+            if(String(error?.message||error).includes("UNIQUE"))return json({error:"Ce créneau est déjà occupé"},409,cors);
+            throw error;
+          }
+          const created=await env.DB.prepare("SELECT id FROM paddock_reservations WHERE lock_key=?").bind(lockKey).first();
+          await notifyRealtime(env,"paddocks");
+          const email=await sendPaddockReservationConfirmationEmail(env,{
+            id:created.id,name:user.first_name,email:user.email,paddock:booking.paddock,
+            date:booking.date,time:booking.time,duration:booking.duration
+          });
+          await sendAdminEventPush(env,"Nouvelle réservation paddock",`${user.first_name} — ${booking.date} à ${booking.time}`,"paddocks.html");
+          return json({reservation:{id:String(created.id),userId:Number(user.id),name:user.first_name,paddock:booking.paddock,
+            date:booking.date,time:booking.time,duration:booking.duration},email},201,cors);
         }
 
         const adminPaddockRequest=url.pathname.match(/^\/api\/admin\/paddocks\/requests\/(\d+)$/);
@@ -1363,7 +1410,17 @@ function validatePaddockBooking(input){
   if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return{error:"Date invalide"};
   if(!/^\d{2}:\d{2}$/.test(time)||timeToMinutes(time)===null)return{error:"Heure invalide"};
   if(![60,90].includes(duration))return{error:"Durée invalide"};
+  if(duration===90&&paddock==="maison")return{error:"Les réservations de 1 h 30 sont réservées à Grande voie et Beudot"};
   return{paddock,date,time,duration,startMinutes:timeToMinutes(time)};
+}
+
+async function paddockBookingPolicyError(env,booking){
+  if(booking.duration!==90)return"";
+  const restriction=await env.DB.prepare(`SELECT block_grande_90,block_beudot_90
+    FROM paddock_restrictions WHERE date=?`).bind(booking.date).first();
+  if(booking.paddock==="grande"&&restriction?.block_grande_90)return"Les réservations de 1 h 30 sont indisponibles à Grande voie ce jour";
+  if(booking.paddock==="beudot"&&restriction?.block_beudot_90)return"Les réservations de 1 h 30 sont indisponibles à Beudot ce jour";
+  return"";
 }
 
 function validatePaddockRequestDate(date){
@@ -1474,6 +1531,20 @@ async function sendPaddockReservationCancellationEmail(env,row,comment){
     idempotencyKey:`paddock-reservation-cancelled:${row.id}:${new Date().toISOString()}`,
     customer:{email:row.email,firstName:row.name},
     reservation:{id:String(row.id),paddock:row.paddock,date:row.date,time:row.time,duration:Number(row.duration),comment}};
+  try{
+    const response=await fetch(env.MAILER_ENDPOINT,{method:"POST",headers:{"content-type":"text/plain;charset=UTF-8"},body:JSON.stringify(payload)});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok||!data.ok)return{requested:true,sent:false,error:data.error||`Mailer HTTP ${response.status}`};
+    return{requested:true,sent:Boolean(data.sent),duplicate:Boolean(data.duplicate)};
+  }catch(error){return{requested:true,sent:false,error:String(error?.message||error)};}
+}
+
+async function sendPaddockReservationConfirmationEmail(env,row){
+  if(!env.MAILER_ENDPOINT)return{requested:true,sent:false,error:"Mailer bêta non configuré"};
+  const payload={type:"paddock_reservation_confirmation",
+    idempotencyKey:`paddock-reservation:${row.id}`,
+    customer:{email:row.email,firstName:row.name},
+    reservation:{id:String(row.id),paddock:row.paddock,date:row.date,time:row.time,duration:Number(row.duration)}};
   try{
     const response=await fetch(env.MAILER_ENDPOINT,{method:"POST",headers:{"content-type":"text/plain;charset=UTF-8"},body:JSON.stringify(payload)});
     const data=await response.json().catch(()=>({}));

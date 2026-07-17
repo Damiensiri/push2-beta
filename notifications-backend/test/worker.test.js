@@ -22,6 +22,8 @@ test("les créneaux paddock sont validés côté Worker",()=>{
   });
   assert.equal(validatePaddockBooking({paddock:"inconnu",date:"2026-07-17",time:"09:30",duration:90}).error,"Paddock invalide");
   assert.equal(validatePaddockBooking({paddock:"grande",date:"2026-07-17",time:"09:30",duration:45}).error,"Durée invalide");
+  assert.equal(validatePaddockBooking({paddock:"maison",date:"2026-07-17",time:"09:30",duration:90}).error,
+    "Les réservations de 1 h 30 sont réservées à Grande voie et Beudot");
 });
 
 test("les rappels paddock sont calculés une seule fois aux bons instants",()=>{
