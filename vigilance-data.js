@@ -1,10 +1,10 @@
 window.METEOALARM_VIGILANCE = {
   "department": "Aube",
-  "level": "yellow",
-  "label": "Jaune",
-  "phenomenon": "Orages",
-  "period": "Du 17 juillet à 22:00 au 18 juillet à 00:00",
-  "updatedAt": "17 juillet à 22:00",
+  "level": "green",
+  "label": "Vert",
+  "phenomenon": "Aucun phénomène dangereux signalé pour l'Aube.",
+  "period": "Aucune alerte active",
+  "updatedAt": "Vérification automatique active",
   "source": "MeteoAlarm / EUMETNET",
   "sourceUrl": "https://meteoalarm.org"
 };
