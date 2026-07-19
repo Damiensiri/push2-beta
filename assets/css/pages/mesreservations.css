@@ -117,6 +117,7 @@ body.mesreservations-page .card-number-form button{
   color:#ffd166;
   font-weight:700;
 }
+.paddock-card-legend{margin:10px 0 0;text-align:right;font-size:.72rem;opacity:.72}
 
 .card-message{
   line-height:1.5;

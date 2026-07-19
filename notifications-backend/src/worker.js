@@ -377,7 +377,45 @@ export default{
       if(url.pathname==="/api/paddocks/card"&&request.method==="GET"){
         const viewer=await authenticatedUser(request,env);
         if(!viewer)return json({error:"Non autorisé"},401,cors);
-        return json(await loadPaddockAccount(env,viewer.id),200,cors);
+        const account=await loadPaddockAccount(env,viewer.id);
+        const offer=await env.DB.prepare("SELECT name,description,price_cents,units,active FROM paddock_card_product WHERE id=1").first();
+        const pending=await env.DB.prepare(`SELECT o.id FROM orders o JOIN order_items oi ON oi.order_id=o.id
+          WHERE o.user_id=? AND o.billed=0 AND o.status NOT IN ('refused','cancelled') AND oi.product_id='paddock-card' LIMIT 1`).bind(viewer.id).first();
+        return json({...account,offer:offer?{name:offer.name,description:offer.description||"",price:Number(offer.price_cents)/100,
+          units:Number(offer.units),active:Boolean(offer.active)}:null,cardRequestPending:Boolean(pending)},200,cors);
+      }
+
+      if(url.pathname==="/api/paddocks/card/request"&&request.method==="POST"){
+        const viewer=await authenticatedUser(request,env);
+        if(!viewer)return json({error:"Non autorisé"},401,cors);
+        const [offer,card,pending,usageResult]=await Promise.all([
+          env.DB.prepare("SELECT * FROM paddock_card_product WHERE id=1 AND active=1").first(),
+          env.DB.prepare("SELECT remaining FROM paddock_cards WHERE user_id=?").bind(viewer.id).first(),
+          env.DB.prepare(`SELECT o.id FROM orders o JOIN order_items oi ON oi.order_id=o.id
+            WHERE o.user_id=? AND o.billed=0 AND o.status NOT IN ('refused','cancelled') AND oi.product_id='paddock-card' LIMIT 1`).bind(viewer.id).first(),
+          env.DB.prepare("SELECT id FROM paddock_usages WHERE user_id=? AND mode='invoice' ORDER BY usage_date,id").bind(viewer.id).all()
+        ]);
+        if(!offer)return json({error:"Aucune carte n’est disponible actuellement"},409,cors);
+        if(card&&Number(card.remaining)>0)return json({error:"Votre carte actuelle possède encore des mises"},409,cors);
+        if(pending)return json({error:"Une carte est déjà en attente de facturation"},409,cors);
+        const units=Number(offer.units),absorbed=Math.min(units,usageResult.results.length),remaining=Math.max(0,units-absorbed);
+        const now=new Date().toISOString(),publicId=`C${Date.now()}${Math.floor(Math.random()*900)+100}`;
+        const statements=[
+          env.DB.prepare(`INSERT INTO paddock_cards(user_id,total,remaining,created_at,updated_at) VALUES(?,?,?,?,?)
+            ON CONFLICT(user_id) DO UPDATE SET total=excluded.total,remaining=excluded.remaining,created_at=excluded.created_at,updated_at=excluded.updated_at`)
+            .bind(viewer.id,units,remaining,now,now),
+          env.DB.prepare(`INSERT INTO orders(public_id,user_id,source,status,comment,total_cents,billed,created_at,updated_at)
+            VALUES(?,?,?,'validated',?,?,0,?,?)`).bind(publicId,viewer.id,"panier",offer.description||"",Number(offer.price_cents),now,now),
+          env.DB.prepare(`INSERT INTO order_items(order_id,product_id,name,unit_price_cents,quantity,line_total_cents)
+            SELECT id,'paddock-card',?,?,1,? FROM orders WHERE public_id=?`).bind(offer.name,Number(offer.price_cents),Number(offer.price_cents),publicId)
+        ];
+        for(const usage of usageResult.results.slice(0,absorbed))statements.push(env.DB.prepare("UPDATE paddock_usages SET mode='card' WHERE id=? AND user_id=? AND mode='invoice'").bind(usage.id,viewer.id));
+        await env.DB.batch(statements);
+        const order=(await loadOrders(env,"WHERE o.public_id=?",[publicId]))[0];
+        await notifyRealtime(env,"paddock-accounts");await notifyRealtime(env,"orders");
+        const email=await sendOrderEmail(env,"order_confirmation",order,viewer);
+        await sendAdminEventPush(env,"Nouvelle carte paddock",`${viewer.first_name} — ${units} mises, ${(Number(offer.price_cents)/100).toFixed(2).replace(".",",")} €`,"billing.html");
+        return json({card:{total:units,remaining},absorbed,surplus:Math.max(0,usageResult.results.length-units),order,email},201,cors);
       }
 
       if(url.pathname==="/api/paddocks/requests"&&request.method==="POST"){
@@ -513,6 +551,23 @@ export default{
           const result=await env.DB.prepare(`SELECT id,category,name,description,price_cents,image_url,badge,featured,active,position,updated_at
             FROM catalog_products ORDER BY category,position,id`).all();
           return json({products:result.results.map(row=>({...publicProduct(row),active:Boolean(row.active),updatedAt:row.updated_at}))},200,cors);
+        }
+
+        if(request.method==="GET"&&url.pathname==="/api/admin/card-product"){
+          const row=await env.DB.prepare("SELECT name,description,price_cents,units,active,updated_at FROM paddock_card_product WHERE id=1").first();
+          return json({product:row?{name:row.name,description:row.description||"",price:Number(row.price_cents)/100,units:Number(row.units),active:Boolean(row.active),updatedAt:row.updated_at}:null},200,cors);
+        }
+        if(request.method==="PUT"&&url.pathname==="/api/admin/card-product"){
+          const input=await readJson(request),name=String(input?.name||"").trim(),description=String(input?.description||"").trim();
+          const price=Number(input?.price),units=Number(input?.units),active=Boolean(input?.active);
+          if(!name||name.length>120||description.length>1000)return json({error:"Contenu de carte invalide"},400,cors);
+          if(!Number.isFinite(price)||price<0||price>100000)return json({error:"Prix invalide"},400,cors);
+          if(!Number.isInteger(units)||units<1||units>999)return json({error:"Nombre de mises invalide"},400,cors);
+          const now=new Date().toISOString();
+          await env.DB.prepare(`INSERT INTO paddock_card_product(id,name,description,price_cents,units,active,updated_at) VALUES(1,?,?,?,?,?,?)
+            ON CONFLICT(id) DO UPDATE SET name=excluded.name,description=excluded.description,price_cents=excluded.price_cents,
+            units=excluded.units,active=excluded.active,updated_at=excluded.updated_at`).bind(name,description,Math.round(price*100),units,active?1:0,now).run();
+          return json({saved:true},200,cors);
         }
 
         if(request.method==="POST"&&url.pathname==="/api/admin/catalog/image"){

@@ -254,3 +254,8 @@ CREATE TABLE IF NOT EXISTS order_items (
   name TEXT NOT NULL, unit_price_cents INTEGER NOT NULL, quantity INTEGER NOT NULL,
   line_total_cents INTEGER NOT NULL, FOREIGN KEY(order_id) REFERENCES orders(id) ON DELETE CASCADE
 );
+CREATE TABLE IF NOT EXISTS paddock_card_product (
+  id INTEGER PRIMARY KEY CHECK(id=1), name TEXT NOT NULL, description TEXT NOT NULL DEFAULT '',
+  price_cents INTEGER NOT NULL, units INTEGER NOT NULL, active INTEGER NOT NULL DEFAULT 1,
+  updated_at TEXT NOT NULL
+);

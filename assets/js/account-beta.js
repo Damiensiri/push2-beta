@@ -64,23 +64,37 @@ async function showPaddockCard(){
 try{
 const account=await request("/api/paddocks/card");
 const card=account.card;
+const offer=account.offer;
+const canRequest=offer?.active&&(!card||Number(card.remaining)===0)&&!account.cardRequestPending;
+const requestButton=canRequest?`<button type="button" class="profile-primary profile-card-request">Demander ${offer.name} · ${offer.units} mises · ${Number(offer.price).toLocaleString("fr-FR",{minimumFractionDigits:2})} €</button>`:"";
 if(!card){
-cardContent.innerHTML='<p class="profile-card-message">Faire une demande de carte auprès de Damien</p>';
+cardContent.innerHTML=`<p class="profile-card-message">${account.cardRequestPending?"Votre demande de carte est en attente de facturation.":"Aucune carte active."}</p>${requestButton}`;
+bindCardRequest(account);
 return;
 }
 const remaining=Math.max(0,Number(card.remaining)||0);
 const total=Math.max(0,Number(card.total)||0);
 const progress=total>0?Math.min(100,Math.max(0,(remaining/total)*100)):0;
 const progressColor=remaining>=5?"profile-progress-green":remaining>=2?"profile-progress-orange":"profile-progress-red";
-const balance=remaining===0?'<span class="profile-card-complete">Carte complète</span>':`${remaining} / ${total}`;
+const balance=remaining===0?'<span class="profile-card-complete">Carte épuisée</span>':`${remaining} / ${total}`;
 cardContent.innerHTML=`
 <p class="profile-card-balance"><strong>Mises restantes :</strong> ${balance}</p>
 <div class="profile-card-progress" role="progressbar" aria-label="Mises restantes" aria-valuemin="0" aria-valuemax="${total}" aria-valuenow="${remaining}">
 <div class="${progressColor}" style="width:${progress}%"></div>
-</div>`;
+</div>${account.cardRequestPending?'<p class="profile-card-message">Votre nouvelle carte est en attente de facturation.</p>':requestButton}`;
+bindCardRequest(account);
 }catch(error){
 cardContent.innerHTML='<p class="profile-card-message">Impossible d’actualiser la carte pour le moment.</p>';
 }
+}
+
+function bindCardRequest(account){
+const button=cardContent.querySelector(".profile-card-request");if(!button)return;
+button.addEventListener("click",async()=>{const offer=account.offer,invoiceCount=(account.usages||[]).filter(item=>item.mode==="invoice").length;
+if(!confirm(`Demander ${offer.name} de ${offer.units} mises pour ${Number(offer.price).toLocaleString("fr-FR",{minimumFractionDigits:2})} € ?${invoiceCount?`\n\n${Math.min(invoiceCount,offer.units)} mise(s) à l’unité seront déduites de la nouvelle carte.`:""}`))return;
+button.disabled=true;status.textContent="Activation de la carte…";
+try{const result=await request("/api/paddocks/card/request",{method:"POST"});status.textContent=`Carte activée : ${result.card.remaining} mise(s) restante(s). Un e-mail de confirmation a été envoyé.`;await showPaddockCard()}catch(error){status.textContent=error.message;button.disabled=false}
+});
 }
 
 async function showUser(user){

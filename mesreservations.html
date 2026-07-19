@@ -19,7 +19,7 @@
 <link rel="stylesheet" href="assets/css/themes/christmas.css?v=20260714-194000">
 <link rel="stylesheet" href="assets/css/themes/winter.css?v=20260714-194000">
 <link rel="stylesheet" href="assets/css/themes/spring.css?v=20260714-194000">
-<link rel="stylesheet" href="assets/css/pages/mesreservations.css?v=20260714-194000">
+<link rel="stylesheet" href="assets/css/pages/mesreservations.css?v=20260719-2">
 </head>
 
 <body class="app-page mesreservations-page">
@@ -263,6 +263,7 @@ paddockCard.innerHTML=`
 <h3>🐴 Ma carte de mises au paddock</h3>
 <p class="card-message">Aucune carte active.</p>
 ${invoiceUsages.length?`<p><strong>À facturer :</strong> ${invoiceUsages.map(item=>`🌿 ${formatDateFR(item.date)}`).join(" · ")}</p>`:""}
+<p class="paddock-card-legend">🌿 Mise au paddock à l’unité</p>
 </div>`
 return
 }
@@ -286,6 +287,7 @@ paddockCard.innerHTML=`
 </div>
 <p><strong>Dernière mise :</strong> ${escapeHTML(lastUse)}</p>
 ${invoiceUsages.length?`<p><strong>À facturer :</strong> ${invoiceUsages.map(item=>`🌿 ${formatDateFR(item.date)}`).join(" · ")}</p>`:""}
+<p class="paddock-card-legend">🌿 Mise au paddock à l’unité</p>
 </div>`
 }catch(error){
 console.error(error)
