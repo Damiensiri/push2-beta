@@ -118,6 +118,7 @@ body.mesreservations-page .card-number-form button{
   font-weight:700;
 }
 .paddock-card-legend{margin:10px 0 0;text-align:right;font-size:.72rem;opacity:.72}
+.paddock-card-renew{display:block;margin-top:14px;padding:12px 14px;border-radius:14px;background:linear-gradient(135deg,#4cc3ff,#277fc1);color:#fff;text-align:center;text-decoration:none;font-weight:800}
 
 .card-message{
   line-height:1.5;

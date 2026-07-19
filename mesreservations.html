@@ -19,7 +19,7 @@
 <link rel="stylesheet" href="assets/css/themes/christmas.css?v=20260714-194000">
 <link rel="stylesheet" href="assets/css/themes/winter.css?v=20260714-194000">
 <link rel="stylesheet" href="assets/css/themes/spring.css?v=20260714-194000">
-<link rel="stylesheet" href="assets/css/pages/mesreservations.css?v=20260719-2">
+<link rel="stylesheet" href="assets/css/pages/mesreservations.css?v=20260719-3">
 </head>
 
 <body class="app-page mesreservations-page">
@@ -275,8 +275,9 @@ const lastCompletedUse=(account.usages||[])[0]
 const lastUse=lastCompletedUse?formatShortDateFR(lastCompletedUse.date):"Aucune mise enregistrée"
 const progressColor=remaining >= 5 ? "progress-green" : remaining >= 2 ? "progress-orange" : "progress-red"
 const remainingDisplay=remaining === 0
-? '<span class="card-complete">Carte complète</span>'
+? '<span class="card-complete">Carte épuisée</span>'
 : `${escapeHTML(remaining)} / ${escapeHTML(total)}`
+const renewCardLink=remaining===0?'<a class="paddock-card-renew" href="profil.html">Demander une nouvelle carte</a>':""
 
 paddockCard.innerHTML=`
 <div class="card">
@@ -287,6 +288,7 @@ paddockCard.innerHTML=`
 </div>
 <p><strong>Dernière mise :</strong> ${escapeHTML(lastUse)}</p>
 ${invoiceUsages.length?`<p><strong>À facturer :</strong> ${invoiceUsages.map(item=>`🌿 ${formatDateFR(item.date)}`).join(" · ")}</p>`:""}
+${renewCardLink}
 <p class="paddock-card-legend">🌿 Mise au paddock à l’unité</p>
 </div>`
 }catch(error){
