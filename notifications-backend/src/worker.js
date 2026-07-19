@@ -557,6 +557,27 @@ export default{
           }catch(error){if(String(error?.message||error).includes("UNIQUE"))return json({error:"Cette demande est déjà liée au planning"},409,cors);throw error;}
         }
 
+        if(request.method==="POST"&&url.pathname==="/api/admin/planning/reorder"){
+          const input=await readJson(request);const week=validWeekStart(input?.weekStart);
+          if(!week)return json({error:"Semaine invalide"},400,cors);
+          if(Array.isArray(input?.horseIds)){
+            const horseIds=input.horseIds.map(Number);
+            if(horseIds.some(id=>!Number.isInteger(id)||id<1)||new Set(horseIds).size!==horseIds.length)return json({error:"Ordre des chevaux invalide"},400,cors);
+            const statements=horseIds.map((id,position)=>env.DB.prepare(`UPDATE planning_week_horses SET position=?
+              WHERE week_start=? AND horse_id=?`).bind(position,week,id));
+            if(statements.length)await env.DB.batch(statements);
+          }
+          if(input?.task){
+            const taskId=Number(input.task.id),horseId=Number(input.task.horseId),dayIndex=Number(input.task.dayIndex),position=Number(input.task.position||0);
+            if(!Number.isInteger(taskId)||!Number.isInteger(horseId)||!Number.isInteger(dayIndex)||dayIndex<0||dayIndex>6||!Number.isInteger(position)||position<0)return json({error:"Déplacement de tâche invalide"},400,cors);
+            const membership=await env.DB.prepare("SELECT 1 ok FROM planning_week_horses WHERE week_start=? AND horse_id=?").bind(week,horseId).first();
+            if(!membership)return json({error:"Cheval absent de cette semaine"},409,cors);
+            await env.DB.prepare("UPDATE planning_tasks SET horse_id=?,day_index=?,position=?,updated_at=? WHERE id=? AND week_start=?")
+              .bind(horseId,dayIndex,position,new Date().toISOString(),taskId,week).run();
+          }
+          await notifyRealtime(env,"planning");return json(await loadPlanning(env,week),200,cors);
+        }
+
         const adminTask=url.pathname.match(/^\/api\/admin\/planning\/tasks\/(\d+)$/);
         if(adminTask&&request.method==="DELETE"){
           await env.DB.prepare("DELETE FROM planning_tasks WHERE id=?").bind(Number(adminTask[1])).run();
@@ -566,6 +587,22 @@ export default{
           const current=await env.DB.prepare("SELECT * FROM planning_tasks WHERE id=?").bind(Number(adminTask[1])).first();
           if(!current)return json({error:"Tâche introuvable"},404,cors);
           const input=await readJson(request);
+          const edits=["horseId","dayIndex","type","description","paddock","startsAt","endsAt","requestId"].some(key=>input[key]!==undefined);
+          if(edits){
+            const validated=validatePlanningTask({weekStart:current.week_start,horseId:input.horseId??current.horse_id,
+              dayIndex:input.dayIndex??current.day_index,type:input.type??current.type,description:input.description??current.description,
+              paddock:input.paddock??current.paddock,startsAt:input.startsAt??current.starts_at,endsAt:input.endsAt??current.ends_at,
+              requestId:input.requestId===undefined?current.request_id:input.requestId});
+            if(validated.error)return json({error:validated.error},400,cors);
+            if(validated.requestId&&Number(validated.requestId)!==Number(current.request_id)){
+              const linked=await env.DB.prepare("SELECT id FROM paddock_requests WHERE id=? AND status='accepted'").bind(validated.requestId).first();
+              if(!linked)return json({error:"Seule une demande acceptée peut être liée au planning"},409,cors);
+            }
+            try{await env.DB.prepare(`UPDATE planning_tasks SET horse_id=?,day_index=?,type=?,description=?,paddock=?,starts_at=?,ends_at=?,request_id=?,updated_at=? WHERE id=?`)
+              .bind(validated.horseId,validated.dayIndex,validated.type,validated.description,validated.paddock,validated.startsAt,
+                validated.endsAt,validated.requestId,new Date().toISOString(),current.id).run();}
+            catch(error){if(String(error?.message||error).includes("UNIQUE"))return json({error:"Cette demande est déjà liée au planning"},409,cors);throw error;}
+          }
           if(input.completed===false){await env.DB.prepare("UPDATE planning_tasks SET completed_at=NULL,completed_by=NULL,updated_at=? WHERE id=?").bind(new Date().toISOString(),current.id).run();}
           else if(input.completed===true&&!current.completed_at){if(current.request_id)await completePaddockRequest(env,Number(current.request_id),"Réalisée depuis le planning");const now=new Date().toISOString();await env.DB.prepare("UPDATE planning_tasks SET completed_at=?,completed_by='backstage',updated_at=? WHERE id=?").bind(now,now,current.id).run();}
           await notifyRealtime(env,"planning");const updated=await env.DB.prepare("SELECT * FROM planning_tasks WHERE id=?").bind(current.id).first();return json({task:publicPlanningTask(updated)},200,cors);
