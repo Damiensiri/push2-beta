@@ -509,7 +509,7 @@ export default{
           if(!week)return json({error:"Semaine invalide"},400,cors);
           const planning=await loadPlanning(env,week);
           const requests=await env.DB.prepare(`SELECT id,user_id,name,email,date,status,comment FROM paddock_requests
-            WHERE date>=? AND date<=date(?, '+6 days') AND status IN ('pending','accepted') ORDER BY date,name`).bind(week,week).all();
+            WHERE date>=? AND date<=date(?, '+6 days') AND status='accepted' ORDER BY date,name`).bind(week,week).all();
           return json({...planning,requests:requests.results.map(publicPaddockRequest)},200,cors);
         }
 
@@ -549,7 +549,7 @@ export default{
           const membership=await env.DB.prepare("SELECT 1 ok FROM planning_week_horses WHERE week_start=? AND horse_id=?")
             .bind(validated.weekStart,validated.horseId).first();
           if(!membership)return json({error:"Cheval absent de cette semaine"},409,cors);
-          if(validated.requestId){const linked=await env.DB.prepare("SELECT id FROM paddock_requests WHERE id=?").bind(validated.requestId).first();if(!linked)return json({error:"Demande introuvable"},404,cors);}
+          if(validated.requestId){const linked=await env.DB.prepare("SELECT id FROM paddock_requests WHERE id=? AND status='accepted'").bind(validated.requestId).first();if(!linked)return json({error:"Seule une demande acceptée peut être liée au planning"},409,cors);}
           const now=new Date().toISOString();
           try{const result=await env.DB.prepare(`INSERT INTO planning_tasks(week_start,horse_id,day_index,type,description,paddock,starts_at,ends_at,request_id,position,created_at,updated_at)
             VALUES(?,?,?,?,?,?,?,?,?,0,?,?)`).bind(validated.weekStart,validated.horseId,validated.dayIndex,validated.type,validated.description,validated.paddock,validated.startsAt,validated.endsAt,validated.requestId,now,now).run();
@@ -1634,18 +1634,21 @@ function publicPlanningTask(row){
 }
 
 async function loadPlanning(env,week){
-  const [horseResult,taskResult,reservationResult,hoursResult]=await Promise.all([
+  const [horseResult,taskResult,reservationResult,hoursResult,requestResult]=await Promise.all([
     env.DB.prepare(`SELECT h.id,h.name,wh.position FROM planning_week_horses wh JOIN planning_horses h ON h.id=wh.horse_id
       WHERE wh.week_start=? AND h.active=1 ORDER BY wh.position,h.name`).bind(week).all(),
     env.DB.prepare(`SELECT * FROM planning_tasks WHERE week_start=? ORDER BY day_index,horse_id,position,id`).bind(week).all(),
     env.DB.prepare(`SELECT id,name,paddock,date,time,duration FROM paddock_reservations
       WHERE date>=? AND date<=date(?, '+6 days') ORDER BY date,time,paddock,id`).bind(week,week).all(),
-    env.DB.prepare("SELECT paddock,schedule_json FROM paddock_hours").all()
+    env.DB.prepare("SELECT paddock,schedule_json FROM paddock_hours").all(),
+    env.DB.prepare(`SELECT id,date,name FROM paddock_requests WHERE date>=? AND date<=date(?, '+6 days')
+      AND status='accepted' ORDER BY date,name,id`).bind(week,week).all()
   ]);
   const paddockHours={};for(const row of hoursResult.results)paddockHours[row.paddock]=JSON.parse(row.schedule_json);
   return{weekStart:week,horses:horseResult.results.map(row=>({id:Number(row.id),name:row.name,position:Number(row.position)})),
     tasks:taskResult.results.map(publicPlanningTask),paddockReservations:reservationResult.results.map(row=>({id:String(row.id),
-      name:row.name,paddock:row.paddock,date:row.date,time:row.time,duration:Number(row.duration)})),paddockHours};
+      name:row.name,paddock:row.paddock,date:row.date,time:row.time,duration:Number(row.duration)})),paddockHours,
+    paddockRequests:requestResult.results.map(row=>({id:String(row.id),date:row.date,name:row.name}))};
 }
 
 function validatePlanningTask(input){
