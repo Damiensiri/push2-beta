@@ -56,6 +56,32 @@ export default{
         return realtimeStub(env).fetch(request);
       }
 
+      if(url.pathname==="/api/planning"&&request.method==="GET"){
+        const device=await kioskDevice(request,env);
+        if(!device)return json({error:"Tablette non autorisée"},401,cors);
+        const week=validWeekStart(url.searchParams.get("week"));
+        if(!week)return json({error:"Semaine invalide"},400,cors);
+        await env.DB.prepare("UPDATE planning_kiosk_devices SET last_seen_at=?,updated_at=? WHERE id=?")
+          .bind(new Date().toISOString(),new Date().toISOString(),device.id).run();
+        return json(await loadPlanning(env,week),200,cors);
+      }
+
+      const kioskTask=url.pathname.match(/^\/api\/planning\/tasks\/(\d+)\/complete$/);
+      if(kioskTask&&request.method==="POST"){
+        const device=await kioskDevice(request,env);
+        if(!device)return json({error:"Tablette non autorisée"},401,cors);
+        const task=await env.DB.prepare("SELECT * FROM planning_tasks WHERE id=?").bind(Number(kioskTask[1])).first();
+        if(!task)return json({error:"Tâche introuvable"},404,cors);
+        if(task.completed_at)return json({task:publicPlanningTask(task),duplicate:true},200,cors);
+        if(task.request_id)await completePaddockRequest(env,Number(task.request_id),"Réalisée depuis le planning");
+        const now=new Date().toISOString();
+        await env.DB.prepare("UPDATE planning_tasks SET completed_at=?,completed_by=?,updated_at=? WHERE id=? AND completed_at IS NULL")
+          .bind(now,`tablette:${device.id}`,now,task.id).run();
+        const updated=await env.DB.prepare("SELECT * FROM planning_tasks WHERE id=?").bind(task.id).first();
+        await notifyRealtime(env,"planning");
+        return json({task:publicPlanningTask(updated)},200,cors);
+      }
+
       const catalogImageMatch=url.pathname.match(/^\/api\/catalog\/images\/([A-Za-z0-9._-]+)$/);
       if(request.method==="GET"&&catalogImageMatch){
         const object=await env.PRODUCT_IMAGES.get(catalogImageMatch[1]);
@@ -476,6 +502,82 @@ export default{
 
         if(request.method==="GET"&&url.pathname==="/api/admin/operations"){
           return json(await loadOperations(env),200,cors);
+        }
+
+        if(request.method==="GET"&&url.pathname==="/api/admin/planning"){
+          const week=validWeekStart(url.searchParams.get("week"));
+          if(!week)return json({error:"Semaine invalide"},400,cors);
+          const planning=await loadPlanning(env,week);
+          const requests=await env.DB.prepare(`SELECT id,user_id,name,email,date,status,comment FROM paddock_requests
+            WHERE date>=? AND date<=date(?, '+6 days') AND status IN ('pending','accepted') ORDER BY date,name`).bind(week,week).all();
+          return json({...planning,requests:requests.results.map(publicPaddockRequest)},200,cors);
+        }
+
+        if(request.method==="POST"&&url.pathname==="/api/admin/planning/horses"){
+          const input=await readJson(request);const week=validWeekStart(input?.weekStart);const name=String(input?.name||"").trim();
+          if(!week||!name||name.length>80)return json({error:"Semaine ou nom du cheval invalide"},400,cors);
+          const now=new Date().toISOString();
+          await env.DB.prepare(`INSERT INTO planning_horses(name,active,created_at,updated_at) VALUES(?,1,?,?)
+            ON CONFLICT(name) DO UPDATE SET active=1,updated_at=excluded.updated_at`).bind(name,now,now).run();
+          const horse=await env.DB.prepare("SELECT id FROM planning_horses WHERE name=? COLLATE NOCASE").bind(name).first();
+          const pos=await env.DB.prepare("SELECT COALESCE(MAX(position),-1)+1 AS n FROM planning_week_horses WHERE week_start=?").bind(week).first();
+          await env.DB.prepare(`INSERT OR IGNORE INTO planning_week_horses(week_start,horse_id,position) VALUES(?,?,?)`).bind(week,horse.id,pos.n).run();
+          await notifyRealtime(env,"planning");
+          return json(await loadPlanning(env,week),201,cors);
+        }
+
+        if(request.method==="POST"&&url.pathname==="/api/admin/planning/duplicate-horses"){
+          const input=await readJson(request);const from=validWeekStart(input?.fromWeek);const to=validWeekStart(input?.toWeek);
+          if(!from||!to||from===to)return json({error:"Semaines invalides"},400,cors);
+          await env.DB.prepare(`INSERT OR IGNORE INTO planning_week_horses(week_start,horse_id,position)
+            SELECT ?,horse_id,position FROM planning_week_horses WHERE week_start=?`).bind(to,from).run();
+          await notifyRealtime(env,"planning");return json(await loadPlanning(env,to),200,cors);
+        }
+
+        const adminWeekHorse=url.pathname.match(/^\/api\/admin\/planning\/weeks\/(\d{4}-\d{2}-\d{2})\/horses\/(\d+)$/);
+        if(adminWeekHorse&&request.method==="DELETE"){
+          await env.DB.batch([
+            env.DB.prepare("DELETE FROM planning_tasks WHERE week_start=? AND horse_id=?").bind(adminWeekHorse[1],Number(adminWeekHorse[2])),
+            env.DB.prepare("DELETE FROM planning_week_horses WHERE week_start=? AND horse_id=?").bind(adminWeekHorse[1],Number(adminWeekHorse[2]))
+          ]);
+          await notifyRealtime(env,"planning");return json({deleted:true},200,cors);
+        }
+
+        if(request.method==="POST"&&url.pathname==="/api/admin/planning/tasks"){
+          const input=await readJson(request);const validated=validatePlanningTask(input);
+          if(validated.error)return json({error:validated.error},400,cors);
+          const membership=await env.DB.prepare("SELECT 1 ok FROM planning_week_horses WHERE week_start=? AND horse_id=?")
+            .bind(validated.weekStart,validated.horseId).first();
+          if(!membership)return json({error:"Cheval absent de cette semaine"},409,cors);
+          if(validated.requestId){const linked=await env.DB.prepare("SELECT id FROM paddock_requests WHERE id=?").bind(validated.requestId).first();if(!linked)return json({error:"Demande introuvable"},404,cors);}
+          const now=new Date().toISOString();
+          try{const result=await env.DB.prepare(`INSERT INTO planning_tasks(week_start,horse_id,day_index,type,description,paddock,starts_at,ends_at,request_id,position,created_at,updated_at)
+            VALUES(?,?,?,?,?,?,?,?,?,0,?,?)`).bind(validated.weekStart,validated.horseId,validated.dayIndex,validated.type,validated.description,validated.paddock,validated.startsAt,validated.endsAt,validated.requestId,now,now).run();
+            const task=await env.DB.prepare("SELECT * FROM planning_tasks WHERE id=?").bind(result.meta.last_row_id).first();await notifyRealtime(env,"planning");return json({task:publicPlanningTask(task)},201,cors);
+          }catch(error){if(String(error?.message||error).includes("UNIQUE"))return json({error:"Cette demande est déjà liée au planning"},409,cors);throw error;}
+        }
+
+        const adminTask=url.pathname.match(/^\/api\/admin\/planning\/tasks\/(\d+)$/);
+        if(adminTask&&request.method==="DELETE"){
+          await env.DB.prepare("DELETE FROM planning_tasks WHERE id=?").bind(Number(adminTask[1])).run();
+          await notifyRealtime(env,"planning");return json({deleted:true},200,cors);
+        }
+        if(adminTask&&request.method==="PATCH"){
+          const current=await env.DB.prepare("SELECT * FROM planning_tasks WHERE id=?").bind(Number(adminTask[1])).first();
+          if(!current)return json({error:"Tâche introuvable"},404,cors);
+          const input=await readJson(request);
+          if(input.completed===false){await env.DB.prepare("UPDATE planning_tasks SET completed_at=NULL,completed_by=NULL,updated_at=? WHERE id=?").bind(new Date().toISOString(),current.id).run();}
+          else if(input.completed===true&&!current.completed_at){if(current.request_id)await completePaddockRequest(env,Number(current.request_id),"Réalisée depuis le planning");const now=new Date().toISOString();await env.DB.prepare("UPDATE planning_tasks SET completed_at=?,completed_by='backstage',updated_at=? WHERE id=?").bind(now,now,current.id).run();}
+          await notifyRealtime(env,"planning");const updated=await env.DB.prepare("SELECT * FROM planning_tasks WHERE id=?").bind(current.id).first();return json({task:publicPlanningTask(updated)},200,cors);
+        }
+
+        if(request.method==="POST"&&url.pathname==="/api/admin/planning/device-token"){
+          const input=await readJson(request);const label=String(input?.label||"Tablette planning").trim().slice(0,80)||"Tablette planning";
+          const token=crypto.randomUUID()+crypto.randomUUID();const now=new Date().toISOString();
+          await env.DB.prepare("UPDATE planning_kiosk_devices SET active=0,updated_at=?").bind(now).run();
+          await env.DB.prepare("INSERT INTO planning_kiosk_devices(label,token_hash,active,created_at,updated_at) VALUES(?,?,1,?,?)")
+            .bind(label,await sha256(token),now,now).run();
+          return json({token,label,createdAt:now},201,cors);
         }
 
         if(request.method==="GET"&&url.pathname==="/api/admin/users"){
@@ -1508,6 +1610,74 @@ function isAdmin(request,env){
   if(!env.ADMIN_TOKEN)return false;
   const value=request.headers.get("authorization")||"";
   return value===`Bearer ${String(env.ADMIN_TOKEN).trim()}`;
+}
+
+async function kioskDevice(request,env){
+  const value=request.headers.get("authorization")||"";
+  if(!value.startsWith("Bearer "))return null;
+  const hash=await sha256(value.slice(7).trim());
+  return env.DB.prepare("SELECT id,label FROM planning_kiosk_devices WHERE token_hash=? AND active=1").bind(hash).first();
+}
+
+function validWeekStart(value){
+  const week=String(value||"");
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(week))return"";
+  const date=new Date(week+"T12:00:00Z");
+  return !Number.isNaN(date.getTime())&&date.getUTCDay()===1?week:"";
+}
+
+function publicPlanningTask(row){
+  return{id:Number(row.id),weekStart:row.week_start,horseId:Number(row.horse_id),dayIndex:Number(row.day_index),
+    type:row.type,description:row.description||"",paddock:row.paddock||"",startsAt:row.starts_at||"",
+    endsAt:row.ends_at||"",requestId:row.request_id===null?null:Number(row.request_id),position:Number(row.position||0),
+    completedAt:row.completed_at||null,completedBy:row.completed_by||null};
+}
+
+async function loadPlanning(env,week){
+  const [horseResult,taskResult]=await Promise.all([
+    env.DB.prepare(`SELECT h.id,h.name,wh.position FROM planning_week_horses wh JOIN planning_horses h ON h.id=wh.horse_id
+      WHERE wh.week_start=? AND h.active=1 ORDER BY wh.position,h.name`).bind(week).all(),
+    env.DB.prepare(`SELECT * FROM planning_tasks WHERE week_start=? ORDER BY day_index,horse_id,position,id`).bind(week).all()
+  ]);
+  return{weekStart:week,horses:horseResult.results.map(row=>({id:Number(row.id),name:row.name,position:Number(row.position)})),
+    tasks:taskResult.results.map(publicPlanningTask)};
+}
+
+function validatePlanningTask(input){
+  const weekStart=validWeekStart(input?.weekStart);const horseId=Number(input?.horseId);const dayIndex=Number(input?.dayIndex);
+  const type=String(input?.type||"");const description=String(input?.description||"").trim();const paddock=String(input?.paddock||"").trim();
+  const startsAt=String(input?.startsAt||"").trim()||null;const endsAt=String(input?.endsAt||"").trim()||null;
+  const requestId=input?.requestId?Number(input.requestId):null;
+  if(!weekStart||!Number.isInteger(horseId)||horseId<1||!Number.isInteger(dayIndex)||dayIndex<0||dayIndex>6)return{error:"Semaine, cheval ou jour invalide"};
+  if(!["paddock","travail","longe","repos","concours","proprietaire","autre"].includes(type))return{error:"Type de tâche invalide"};
+  if(description.length>300)return{error:"Description trop longue"};
+  if(type==="autre"&&!description)return{error:"Le texte de la tâche est obligatoire"};
+  if(type==="paddock"&&(!paddock||!/^\d{2}:\d{2}$/.test(startsAt||"")||!/^\d{2}:\d{2}$/.test(endsAt||"")))return{error:"Paddock et horaires obligatoires"};
+  if(requestId!==null&&(!Number.isInteger(requestId)||requestId<1))return{error:"Demande liée invalide"};
+  return{weekStart,horseId,dayIndex,type,description,paddock:type==="paddock"?paddock:"",startsAt:type==="paddock"?startsAt:null,
+    endsAt:type==="paddock"?endsAt:null,requestId};
+}
+
+async function completePaddockRequest(env,requestId,defaultComment=""){
+  const current=await env.DB.prepare("SELECT * FROM paddock_requests WHERE id=?").bind(requestId).first();
+  if(!current)throw new Error("Demande de mise au paddock introuvable");
+  if(current.status==="completed")return{request:current,duplicate:true};
+  const existingUsage=await env.DB.prepare("SELECT id FROM paddock_usages WHERE request_id=?").bind(current.id).first();
+  const now=new Date().toISOString();const comment=current.comment||defaultComment;
+  if(!existingUsage){
+    const card=await env.DB.prepare("SELECT remaining FROM paddock_cards WHERE user_id=?").bind(current.user_id).first();
+    const mode=card&&Number(card.remaining)>0?"card":"invoice";
+    const statements=[env.DB.prepare("UPDATE paddock_requests SET status='completed',comment=?,updated_at=? WHERE id=? AND status<>'completed'").bind(comment,now,current.id)];
+    if(mode==="card")statements.push(env.DB.prepare(`UPDATE paddock_cards SET remaining=remaining-1,updated_at=?
+      WHERE user_id=? AND remaining>0 AND NOT EXISTS(SELECT 1 FROM paddock_usages WHERE request_id=?)`).bind(now,current.user_id,current.id));
+    statements.push(env.DB.prepare(`INSERT OR IGNORE INTO paddock_usages(user_id,request_id,usage_date,mode,created_at) VALUES(?,?,?,?,?)`)
+      .bind(current.user_id,current.id,current.date,mode,now));
+    await env.DB.batch(statements);
+  }else await env.DB.prepare("UPDATE paddock_requests SET status='completed',comment=?,updated_at=? WHERE id=?").bind(comment,now,current.id).run();
+  const updated=await env.DB.prepare("SELECT * FROM paddock_requests WHERE id=?").bind(current.id).first();
+  await notifyRealtime(env,"paddock-requests");await notifyRealtime(env,"paddock-accounts");
+  const email=await sendPaddockRequestStatusEmail(env,updated);
+  return{request:updated,email};
 }
 
 // Limite actuellement acceptée par Web Crypto dans Cloudflare Workers.
