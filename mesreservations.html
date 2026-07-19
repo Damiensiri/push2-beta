@@ -101,6 +101,11 @@ year:"numeric"
 }).format(date)
 }
 
+function formatShortDateFR(dateStr){
+const match=String(dateStr||"").match(/^(\d{4})-(\d{2})-(\d{2})$/)
+return match?`${match[3]}/${match[2]}/${match[1].slice(-2)}`:""
+}
+
 function formatTimeFR(value){
 if(!value) return "--:--"
 const parts=String(value).split(":")
@@ -265,8 +270,8 @@ return
 const remaining=Math.max(0,Number(card.remaining)||0)
 const total=Math.max(0,Number(card.total)||0)
 const progress=total > 0 ? Math.min(100,Math.max(0,(remaining / total) * 100)) : 0
-const lastCardUse=(account.usages||[]).find(item=>item.mode==="card")
-const lastUse=lastCardUse?formatDateFR(lastCardUse.date):"Aucune mise enregistrée"
+const lastCompletedUse=(account.usages||[])[0]
+const lastUse=lastCompletedUse?formatShortDateFR(lastCompletedUse.date):"Aucune mise enregistrée"
 const progressColor=remaining >= 5 ? "progress-green" : remaining >= 2 ? "progress-orange" : "progress-red"
 const remainingDisplay=remaining === 0
 ? '<span class="card-complete">Carte complète</span>'
