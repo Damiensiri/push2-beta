@@ -1634,13 +1634,18 @@ function publicPlanningTask(row){
 }
 
 async function loadPlanning(env,week){
-  const [horseResult,taskResult]=await Promise.all([
+  const [horseResult,taskResult,reservationResult,hoursResult]=await Promise.all([
     env.DB.prepare(`SELECT h.id,h.name,wh.position FROM planning_week_horses wh JOIN planning_horses h ON h.id=wh.horse_id
       WHERE wh.week_start=? AND h.active=1 ORDER BY wh.position,h.name`).bind(week).all(),
-    env.DB.prepare(`SELECT * FROM planning_tasks WHERE week_start=? ORDER BY day_index,horse_id,position,id`).bind(week).all()
+    env.DB.prepare(`SELECT * FROM planning_tasks WHERE week_start=? ORDER BY day_index,horse_id,position,id`).bind(week).all(),
+    env.DB.prepare(`SELECT id,name,paddock,date,time,duration FROM paddock_reservations
+      WHERE date>=? AND date<=date(?, '+6 days') ORDER BY date,time,paddock,id`).bind(week,week).all(),
+    env.DB.prepare("SELECT paddock,schedule_json FROM paddock_hours").all()
   ]);
+  const paddockHours={};for(const row of hoursResult.results)paddockHours[row.paddock]=JSON.parse(row.schedule_json);
   return{weekStart:week,horses:horseResult.results.map(row=>({id:Number(row.id),name:row.name,position:Number(row.position)})),
-    tasks:taskResult.results.map(publicPlanningTask)};
+    tasks:taskResult.results.map(publicPlanningTask),paddockReservations:reservationResult.results.map(row=>({id:String(row.id),
+      name:row.name,paddock:row.paddock,date:row.date,time:row.time,duration:Number(row.duration)})),paddockHours};
 }
 
 function validatePlanningTask(input){
