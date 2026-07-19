@@ -557,6 +557,24 @@ export default{
           }catch(error){if(String(error?.message||error).includes("UNIQUE"))return json({error:"Cette demande est déjà liée au planning"},409,cors);throw error;}
         }
 
+        if(request.method==="POST"&&url.pathname==="/api/admin/planning/tasks/batch"){
+          const input=await readJson(request);const days=[...new Set((Array.isArray(input?.dayIndexes)?input.dayIndexes:[]).map(Number))].sort((a,b)=>a-b);
+          if(!days.length||days.length>7||days.some(day=>!Number.isInteger(day)||day<0||day>6))return json({error:"Sélection de jours invalide"},400,cors);
+          if(input?.requestId&&days.length>1)return json({error:"Une demande de mise au paddock ne peut être liée qu’à une seule journée"},409,cors);
+          const tasks=days.map(dayIndex=>validatePlanningTask({...input,dayIndex}));const invalid=tasks.find(task=>task.error);
+          if(invalid)return json({error:invalid.error},400,cors);
+          const membership=await env.DB.prepare("SELECT 1 ok FROM planning_week_horses WHERE week_start=? AND horse_id=?")
+            .bind(tasks[0].weekStart,tasks[0].horseId).first();
+          if(!membership)return json({error:"Cheval absent de cette semaine"},409,cors);
+          if(tasks[0].requestId){const linked=await env.DB.prepare("SELECT id FROM paddock_requests WHERE id=? AND status='accepted'").bind(tasks[0].requestId).first();if(!linked)return json({error:"Seule une demande acceptée peut être liée au planning"},409,cors);}
+          const now=new Date().toISOString();
+          try{await env.DB.batch(tasks.map(task=>env.DB.prepare(`INSERT INTO planning_tasks(week_start,horse_id,day_index,type,description,paddock,starts_at,ends_at,request_id,position,created_at,updated_at)
+            VALUES(?,?,?,?,?,?,?,?,?,0,?,?)`).bind(task.weekStart,task.horseId,task.dayIndex,task.type,task.description,task.paddock,
+              task.startsAt,task.endsAt,task.requestId,now,now)));}
+          catch(error){if(String(error?.message||error).includes("UNIQUE"))return json({error:"Cette demande est déjà liée au planning"},409,cors);throw error;}
+          await notifyRealtime(env,"planning");return json({created:tasks.length,planning:await loadPlanning(env,tasks[0].weekStart)},201,cors);
+        }
+
         if(request.method==="POST"&&url.pathname==="/api/admin/planning/reorder"){
           const input=await readJson(request);const week=validWeekStart(input?.weekStart);
           if(!week)return json({error:"Semaine invalide"},400,cors);
