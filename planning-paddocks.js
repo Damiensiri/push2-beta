@@ -4,7 +4,7 @@
   const clockValue=value=>`${String(Math.floor(value/60)).padStart(2,'0')}:${String(value%60).padStart(2,'0')}`;
   const dayName=date=>new Date(date+'T12:00:00').toLocaleDateString('fr-FR',{weekday:'long'}).toLowerCase();
   function reservations(date,paddock){return (state.paddockReservations||[]).filter(item=>item.date===date&&item.paddock===paddock);}
-  function slots(date){const set=new Set(),name=dayName(date);for(const paddock of paddocks){const cfg=state.paddockHours?.[paddock.id]?.[name];if(cfg&&!cfg.closed){for(let t=mins(cfg.open);t<mins(cfg.close);t+=60)set.add(clockValue(t));}for(const item of reservations(date,paddock.id))set.add(item.time)}return [...set].sort((a,b)=>mins(a)-mins(b));}
+  function slots(date){const set=new Set(),name=dayName(date);for(const paddock of paddocks){const cfg=state.paddockHours?.[paddock.id]?.[name];if(cfg&&!cfg.closed){for(let t=mins(cfg.open);t<mins(cfg.close);t+=60)set.add(clockValue(t));}for(const item of reservations(date,paddock.id)){const start=mins(item.time),end=start+Number(item.duration||60);set.add(item.time);if(Number.isFinite(end))set.add(clockValue(end));}}return [...set].sort((a,b)=>mins(a)-mins(b));}
   function covered(date,paddock,time){const at=mins(time);return reservations(date,paddock).some(item=>{const start=mins(item.time);return at>start&&at<start+Number(item.duration||60)});}
   const originalTaskHtml=taskHtml;
   taskHtml=function(task){const taskDate=add(week,task.dayIndex),late=!task.completedAt&&taskDate<iso(new Date());return originalTaskHtml(task).replace('class="task ',`class="task ${late?'overdue ':''}`);};
