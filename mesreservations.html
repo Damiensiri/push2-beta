@@ -75,6 +75,12 @@ const dateTime=new Date(dateStr+"T"+timeStr)
 return dateTime < new Date()
 }
 
+function isDayFinished(dateStr){
+const now=new Date()
+const today=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`
+return String(dateStr||"") < today
+}
+
 function getReservationDateTime(dateStr, timeStr="00:00"){
 return new Date(dateStr+"T"+timeStr)
 }
@@ -384,7 +390,7 @@ count++
 /* ===== DEMANDES ===== */
 
 for(const mise of paddockRequests){
-let old=isPast(mise.date)
+let old=isDayFinished(mise.date)
 
 const statusLabels={pending:"En attente",accepted:"Accepté",refused:"Refusé",completed:"Réalisé",cancelled:"Annulé"}
 const statut=statusLabels[mise.status]||"En attente"
