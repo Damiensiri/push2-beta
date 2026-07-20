@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta name="generator" content="HTML Tidy for Mac OS X (vers 31 October 2006 - Apple Inc. build 13462), see www.w3.org">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+    <meta name="theme-color" content="#07111f">
+    <title>
+      Planning Écurie — Bêta
+    </title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800&amp;display=swap" rel="stylesheet" type="text/css">
+    <style type="text/css">
+:root{--bg:#07111f;--panel:#ffffff12;--line:#ffffff25;--text:#f8fbff;--muted:#a9bdd0;--green:#62df91;--yellow:#ffd166;--blue:#8ecae6}*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%}body{overflow:hidden;background:radial-gradient(circle at 12% 0,#285d7d 0,transparent 34rem),linear-gradient(135deg,#07111f,#0d2638 60%,#07131e);color:var(--text);font-family:Montserrat,system-ui,sans-serif}.app{height:100vh;padding:14px;display:grid;grid-template-rows:auto auto 1fr;gap:12px}.header{display:flex;align-items:center;justify-content:space-between;gap:16px}.brand{display:flex;align-items:center;gap:13px}.logo{width:48px;height:48px;filter:brightness(0) invert(1)}h1{margin:0;font-size:clamp(1.7rem,3.5vw,3.5rem)}.sub{color:var(--muted);font-size:.75rem;font-weight:700}.clock{font-size:clamp(2.5rem,5vw,5rem);font-weight:800;font-variant-numeric:tabular-nums}.toolbar{display:grid;grid-template-columns:auto 1fr auto auto;align-items:center;gap:10px}.navigation,.modes{display:flex;align-items:center;gap:7px}.toolbar button{min-height:45px;border:1px solid var(--line);border-radius:12px;background:#ffffff10;color:white;font:inherit;font-weight:800;padding:0 14px}.toolbar button.active{background:var(--green);color:#062013;border-color:transparent}.period{text-align:center;font-weight:800}.board{min-height:0;overflow:auto;overscroll-behavior:contain;padding-right:3px}.daily{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:11px;align-content:start}.horse-card{min-height:155px;background:linear-gradient(145deg,#ffffff15,#ffffff0b);border:1px solid var(--line);border-radius:20px;padding:15px;box-shadow:0 14px 30px #0004}.horse-card h2{margin:0 0 11px;font-size:1.35rem}.no-task{color:var(--muted);font-size:.85rem}.week-grid{min-width:1180px;display:grid;grid-template-columns:165px repeat(7,minmax(140px,1fr));gap:7px}.head,.horse,.cell{border:1px solid var(--line);border-radius:13px;padding:10px;background:#ffffff0a}.head,.horse{font-weight:800;background:#ffffff12;position:sticky;z-index:2}.head{top:0}.horse{left:0}.cell{min-height:120px}.task{border-radius:11px;background:#132f45;border-left:6px solid var(--blue);padding:10px;margin-bottom:8px;cursor:pointer;font-size:.82rem;line-height:1.35}.task.linked{box-shadow:inset 0 0 0 2px var(--yellow)}.task.done{opacity:.5;border-left-color:var(--green);text-decoration:line-through;cursor:default}.task.pending{animation:pulse .8s infinite alternate}@keyframes pulse{to{opacity:.55}}.linked-label{margin-top:5px;color:var(--yellow);font-size:.7rem;font-weight:700}.empty{color:var(--muted)}dialog{background:#122537;color:white;border:1px solid var(--line);border-radius:20px;padding:25px;max-width:500px}dialog::backdrop{background:#000b}dialog input{width:100%;min-height:48px;background:#07111f;color:white;border:1px solid var(--line);border-radius:12px;padding:10px;margin:10px 0}dialog button{min-height:48px;border:0;border-radius:12px;background:var(--green);font-weight:800;padding:0 18px}.error{color:#ff8585}@media(max-width:760px){.toolbar{grid-template-columns:1fr}.navigation,.modes{justify-content:center}.clock{font-size:2.4rem}}
+    </style>
+  </head>
+  <body>
+    <main class="app">
+      <header class="header">
+        <div class="brand">
+          <img class="logo apple-logo" src="image/icon-192x192.png" alt="Écurie Damien Siri" style="filter:none;border-radius:12px">
+          <div>
+            <h1>
+              Planning Écurie
+            </h1>
+            <div class="sub">
+              BÊTA · D1 · Validation définitive
+            </div>
+          </div>
+        </div>
+        <div id="clock" class="clock"></div>
+      </header>
+      <nav class="toolbar">
+        <div class="navigation">
+          <button id="prev">‹</button><button id="next">›</button>
+        </div><span id="period" class="period"></span>
+        <div class="modes">
+          <button id="dayMode" class="active">Jour</button><button id="weekMode">Semaine</button>
+        </div>
+        <div class="navigation">
+          <button id="refresh">Actualiser</button><button id="close">Masquer</button>
+        </div>
+      </nav>
+      <section id="board" class="board"></section>
+    </main>
+    <dialog id="setup">
+      <h2>
+        Autoriser cette tablette
+      </h2>
+      <p>
+        Collez le jeton créé dans Backstage bêta. Il restera uniquement sur cet appareil.
+      </p><input id="token" autocomplete="off">
+      <p id="setupError" class="error"></p><button id="saveToken">Enregistrer</button>
+    </dialog><script type="text/javascript">
+const API='https://ecurie-notifications-beta.damiensiri-pro.workers.dev',KEY='ecurie_planning_beta_device_token',$=id=>document.getElementById(id),days=['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche'],labels={paddock:'Paddock',travail:'Travail',longe:'Longe',repos:'Repos',concours:'Concours',proprietaire:'Propriétaire',autre:'Autre'};let selected=iso(new Date()),week=monday(new Date()),mode='day',state={horses:[],tasks:[]},busy=new Set();function iso(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}function monday(d){d=new Date(d);d.setHours(12,0,0,0);d.setDate(d.getDate()-((d.getDay()+6)%7));return iso(d)}function add(value,n){const d=new Date(value+'T12:00:00');d.setDate(d.getDate()+n);return iso(d)}function dayIndex(){return (new Date(selected+'T12:00:00').getDay()+6)%7}function esc(v){return String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'})[c])}async function api(path,opt={}){const device=localStorage.getItem(KEY);if(!device){setup.showModal();throw Error('Jeton requis')}const r=await fetch(API+path,{...opt,headers:{authorization:'Bearer '+device,...(opt.body?{'content-type':'application/json'}:{})},cache:'no-store'}),d=await r.json().catch(()=>({}));if(r.status===401){localStorage.removeItem(KEY);if(!setup.open)setup.showModal()}if(!r.ok)throw Error(d.error||'Erreur réseau');return d}function taskText(t){let x=labels[t.type]||t.type;if(t.type==='paddock')x+=` · ${esc(t.paddock)} ${t.startsAt}–${t.endsAt}`;if(t.description)x+=` · ${esc(t.description)}`;return x}function taskHtml(t){return `<div class="task ${t.completedAt?'done':''} ${t.requestId?'linked':''} ${busy.has(t.id)?'pending':''}" data-id="${t.id}"><strong>${taskText(t)}<\/strong>${t.requestId?'<div class="linked-label">🌿 Demande de mise au paddock<\/div>':''}<\/div>`}function render(){dayMode.classList.toggle('active',mode==='day');weekMode.classList.toggle('active',mode==='week');if(mode==='day'){const date=new Date(selected+'T12:00:00');period.textContent=date.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});const di=dayIndex();board.innerHTML=`<div class="daily">${state.horses.map(h=>{const ts=state.tasks.filter(t=>t.horseId===h.id&&t.dayIndex===di);return `<article class="horse-card"><h2>${esc(h.name)}<\/h2>${ts.length?ts.map(taskHtml).join(''):'<div class="no-task">Aucune tâche prévue<\/div>'}<\/article>`}).join('')||'<p class="empty">Aucun cheval cette semaine.<\/p>'}<\/div>`}else{period.textContent='Semaine du '+new Date(week+'T12:00:00').toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'});let html='<div class="week-grid"><div><\/div>'+days.map(d=>`<div class="head">${d}<\/div>`).join('');for(const h of state.horses){html+=`<div class="horse">${esc(h.name)}<\/div>`;for(let d=0;d<7;d++)html+=`<div class="cell">${state.tasks.filter(t=>t.horseId===h.id&&t.dayIndex===d).map(taskHtml).join('')}<\/div>`}board.innerHTML=html+'<\/div>'}board.querySelectorAll('.task:not(.done)').forEach(el=>el.onclick=()=>complete(Number(el.dataset.id)))}async function load(){try{state=await api('/api/planning?week='+week);render()}catch(e){if(e.message!=='Jeton requis')board.innerHTML=`<p class="error">${esc(e.message)}<\/p>`}}async function complete(id){if(busy.has(id)||!confirm('Valider définitivement cette tâche ?'))return;busy.add(id);render();try{const d=await api(`/api/planning/tasks/${id}/complete`,{method:'POST'});state.tasks=state.tasks.map(t=>t.id===id?d.task:t)}catch(e){alert(e.message)}finally{busy.delete(id);render()}}function move(n){if(mode==='week'){week=add(week,n*7);selected=week}else{selected=add(selected,n);const nextWeek=monday(new Date(selected+'T12:00:00'));if(nextWeek!==week){week=nextWeek;load();return}}render()}prev.onclick=()=>move(-1);next.onclick=()=>move(1);dayMode.onclick=()=>{mode='day';render()};weekMode.onclick=()=>{mode='week';render()};refresh.onclick=load;close.onclick=()=>location.href='ecran.html';saveToken.onclick=async()=>{localStorage.setItem(KEY,token.value.trim());try{await load();setup.close();setupError.textContent=''}catch(e){setupError.textContent=e.message}};function tick(){clock.textContent=new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}tick();setInterval(tick,1000);if(!localStorage.getItem(KEY))setup.showModal();else load();let idle;function reset(){clearTimeout(idle);idle=setTimeout(()=>location.href='ecran.html',60000)}document.addEventListener('pointerdown',reset);document.addEventListener('scroll',reset,true);reset();try{const ws=new WebSocket(API.replace('https','wss')+'/api/realtime');ws.onmessage=e=>{try{if(JSON.parse(e.data).type==='planning')load()}catch{}}}catch{}
+    </script>
+    <link rel="stylesheet" href="planning-paddocks.css?v=20260719-1">
+    <link rel="stylesheet" href="planning-enhancements.css?v=20260719-1">
+    <link rel="stylesheet" href="planning-adaptive.css?v=20260720-1">
+    <script src="planning-paddocks.js?v=20260719-2"></script>
+  </body>
+</html>

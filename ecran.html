@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta name="generator" content="HTML Tidy for Mac OS X (vers 31 October 2006 - Apple Inc. build 13462), see www.w3.org">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+    <meta name="theme-color" content="#07111f">
+    <title>
+      Écurie — Écran bêta
+    </title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800&amp;display=swap" rel="stylesheet" type="text/css">
+    <style type="text/css">
+:root{--bg:#07111f;--panel:#ffffff12;--line:#ffffff25;--text:#f8fbff;--muted:#a9bdd0;--green:#62df91;--red:#ff7777;--amber:#ffc067;--blue:#8ecae6}*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%}body{overflow:hidden;background:radial-gradient(circle at 12% 0,#285d7d 0,transparent 34rem),linear-gradient(135deg,#07111f,#0d2638 60%,#07131e);color:var(--text);font-family:Montserrat,system-ui,sans-serif;user-select:none;touch-action:manipulation}.screen{height:100vh;padding:14px;display:grid;grid-template-rows:auto 1fr;gap:13px}.header{display:grid;grid-template-columns:1fr auto;align-items:center;gap:18px}.brand{display:flex;align-items:center;gap:16px}.logo{width:54px;height:54px;filter:brightness(0) invert(1);opacity:.92}.title h1{margin:0;font-size:clamp(2rem,4vw,4rem);line-height:1}.sub{display:flex;align-items:center;gap:10px;margin-top:8px;color:var(--muted);font-size:.85rem;font-weight:700}.dot{width:10px;height:10px;border-radius:50%;background:var(--green);box-shadow:0 0 0 5px #62df9122}.beta{border:1px solid #74dca0;border-radius:999px;padding:5px 10px;color:#74dca0;font-size:.7rem;letter-spacing:.12em}.clock{font-size:clamp(3.3rem,7vw,7rem);font-weight:800;line-height:1;font-variant-numeric:tabular-nums}.content{min-height:0;display:grid;grid-template-columns:1fr 1fr;gap:13px}.group{min-height:0;display:grid;grid-template-rows:auto 1fr;gap:8px}.group-title{display:flex;justify-content:space-between;align-items:center;text-transform:uppercase;font-size:.84rem;font-weight:800;letter-spacing:.08em}.group-title span:last-child{color:var(--muted);font-size:.72rem;letter-spacing:0;text-transform:none}.cards{min-height:0;display:grid;grid-template-rows:repeat(3,minmax(0,1fr));gap:10px}.card{min-height:0;display:grid;grid-template-rows:auto 1fr auto;gap:8px;background:linear-gradient(145deg,#ffffff15,#ffffff0b);border:1px solid var(--line);border-radius:20px;padding:15px 18px;box-shadow:0 15px 32px #0004;backdrop-filter:blur(14px);overflow:hidden}.card.open{border-color:#62df9166}.card.closed,.card.hors-service{border-color:#ff777766}.card.prevision{border-color:#ffc06777}.top{display:flex;align-items:center;justify-content:space-between;gap:12px}.name{display:flex;align-items:center;gap:11px;min-width:0;font-size:clamp(1.25rem,2.5vw,2.5rem);font-weight:800}.name img{width:31px;height:31px}.state{min-width:105px;padding:8px 13px;border-radius:999px;text-align:center;background:var(--amber);font-size:.75rem;font-weight:800}.state.open{background:var(--green);color:#082214}.state.closed{background:var(--red)}.state.hors-service{background:#8997a7}.middle{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.metric{display:flex;align-items:center;gap:7px;border:1px solid var(--line);background:#ffffff0c;border-radius:10px;padding:7px 10px;font-size:.76rem;font-weight:800}.yn{border-radius:999px;padding:4px 8px}.yn.yes{background:var(--green);color:#072113}.yn.no{background:var(--red)}.hours{margin-left:auto;font-size:clamp(1.15rem,2.15vw,2.15rem);font-weight:800;font-variant-numeric:tabular-nums}.special{color:var(--amber)}.info{min-height:1.2em;color:var(--amber);font-size:.76rem;font-weight:700;white-space:pre-line}.stable{grid-template-rows:auto 1fr}.stable-main{display:grid;align-content:center;gap:7px;text-align:center}.stable-time{font-size:clamp(1.7rem,3.4vw,3.3rem);font-weight:800}.stable-source{color:var(--muted);font-size:.7rem;font-weight:800;text-transform:uppercase}.alert{border:1px solid var(--line);border-radius:10px;padding:9px 11px;text-align:left;color:var(--muted);font-size:.72rem}.alert.has{color:white;border-color:#ffc06766}.alert.urgent{color:#ffd0d0;border-color:#ff7777;background:#ff777712}.loading{color:var(--muted);display:grid;place-items:center;height:100%}.hint{position:fixed;bottom:4px;left:50%;transform:translateX(-50%);font-size:.6rem;color:#ffffff45}@media(max-width:850px),(orientation:portrait){body{overflow:auto}.screen{height:auto;min-height:100vh}.content{grid-template-columns:1fr}.card{min-height:180px}.clock{font-size:3.4rem}.title h1{font-size:2rem}}
+    </style>
+  </head>
+  <body>
+    <main class="screen">
+      <header class="header">
+        <div class="brand">
+          <img class="logo apple-logo" src="image/icon-192x192.png" alt="Écurie Damien Siri" style="filter:none;border-radius:12px">
+          <div class="title">
+            <h1>
+              Informations Écurie
+            </h1>
+            <div class="sub">
+              <span id="date"></span><span class="beta">BÊTA</span>
+            </div>
+          </div>
+        </div>
+        <div id="clock" class="clock"></div>
+      </header>
+      <div class="content">
+        <section class="group">
+          <div class="group-title">
+            <span>Espaces travail</span><span id="workMeta"></span>
+          </div>
+          <div class="cards">
+            <article id="carriere" class="card">
+              <div class="loading">
+                Chargement…
+              </div>
+            </article>
+            <article id="manege" class="card">
+              <div class="loading">
+                Chargement…
+              </div>
+            </article>
+            <article id="stable" class="card stable">
+              <div class="loading">
+                Chargement…
+              </div>
+            </article>
+          </div>
+        </section>
+        <section class="group">
+          <div class="group-title">
+            <span>Paddocks</span><span id="paddockMeta"></span>
+          </div>
+          <div class="cards">
+            <article id="maison" class="card">
+              <div class="loading">
+                Chargement…
+              </div>
+            </article>
+            <article id="grande-voie" class="card">
+              <div class="loading">
+                Chargement…
+              </div>
+            </article>
+            <article id="beudot" class="card">
+              <div class="loading">
+                Chargement…
+              </div>
+            </article>
+          </div>
+        </section>
+      </div>
+    </main>
+    <div class="hint">
+      Double toucher : planning
+    </div><script type="text/javascript">
+const API='https://ecurie-notifications-beta.damiensiri-pro.workers.dev',ORDER=['carriere','manege','maison','grande-voie','beudot'],WORK=['carriere','manege'],PADDOCKS=['maison','grande-voie','beudot'],NAMES={carriere:'Carrière',manege:'Manège',maison:'Maison','grande-voie':'Grande voie',beudot:'Beudot'};let last='';const $=id=>document.getElementById(id);function esc(v){return String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'})[c])}function label(s){return s==='ouvert'?'Ouvert':s==='ferme'?'Fermé':s==='prevision'?'Prévu':s==='hors-service'?'H. service':''}function cls(s){return s==='ouvert'?'open':s==='ferme'?'closed':s==='prevision'?'prevision':s==='hors-service'?'hors-service':''}function yn(v){return v?`<span class="yn ${v==='oui'?'yes':'no'}">${v==='oui'?'OUI':'NON'}<\/span>`:''}function card(row){const work=WORK.includes(row.espace),hours=row.horaire_special||row.horaire_affiche||'',c=cls(row.statut_auto);return `<div class="top"><div class="name"><img src="image/${work?'travail':'paddock'}.svg" alt=""><span>${esc(NAMES[row.espace]||row.espace)}<\/span><\/div><span class="state ${c}">${label(row.statut_auto)}<\/span><\/div><div class="middle">${work?`<div class="metric">Liberté ${yn(row.liberte)}<\/div><div class="metric">Longe ${yn(row.longe)}<\/div>`:''}<div class="hours ${row.horaire_special?'special':''}">${esc(hours)}<\/div><\/div><div class="info">${esc(row.info||'')}<\/div>`}function iso(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}function stable(data,schedules,exceptions){const exception=exceptions.find(x=>String(x.date).slice(0,10)===iso()&&x.message),day=new Date().toLocaleDateString('fr-FR',{weekday:'long'}).toLowerCase(),schedule=schedules.find(x=>String(x.jour).toLowerCase()===day),hours=exception?.message||(schedule?`${schedule.ouvert} - ${schedule.ferme}`:'Horaires non définis'),home=data.find(x=>x.espace==='accueil'),alert=home?.alerte||'',urgent=String(home?.urgent).toLowerCase()==='oui';return `<div class="top"><div class="name"><img src="image/time.svg" alt=""><span>Horaires Écurie<\/span><\/div><strong>Aujourd’hui<\/strong><\/div><div class="stable-main"><div class="stable-time">${esc(hours)}<\/div><div class="stable-source">${exception?'Horaires adaptés':'Horaires habituels'}<\/div><div class="alert ${alert?'has':''} ${urgent?'urgent':''}">${alert?`<strong>Alerte :<\/strong> ${esc(alert)}`:'Aucune alerte'}<\/div><\/div>`}function render(data,schedules,exceptions){const key=JSON.stringify([data,schedules,exceptions]);if(key===last)return;last=key;for(const id of ORDER){const row=data.find(x=>x.espace===id),el=$(id);if(!row)continue;el.className='card '+cls(row.statut_auto);el.innerHTML=card(row)}$('stable').innerHTML=stable(data,schedules,exceptions);$('workMeta').textContent=`${WORK.filter(id=>data.find(x=>x.espace===id)?.statut_auto==='ouvert').length}/2 ouverts`;$('paddockMeta').textContent=`${PADDOCKS.filter(id=>data.find(x=>x.espace===id)?.statut_auto==='ouvert').length}/3 ouverts`}async function load(){try{const [a,b,c]=await Promise.all(['/api/statuses','/api/schedules','/api/exceptions'].map(path=>fetch(API+path,{cache:'no-store'}).then(r=>{if(!r.ok)throw Error();return r.json()})));render(a,b,c)}catch(e){$('date').textContent='Connexion aux données en attente'}}function tick(){const d=new Date();$('clock').textContent=d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});$('date').textContent=d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})}let tap=0;document.addEventListener('pointerup',()=>{const now=Date.now();if(now-tap<400)location.href='planning.html';tap=now});tick();setInterval(tick,1000);load();setInterval(load,60000);try{const ws=new WebSocket(API.replace('https','wss')+'/api/realtime');ws.onmessage=()=>load()}catch{}
+    </script>
+  </body>
+</html>

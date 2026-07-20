@@ -1,0 +1,6 @@
+/* Chaque ligne hebdomadaire suit naturellement le cheval qui contient le plus de tâches. */
+.week-grid{grid-auto-rows:auto;align-items:stretch}
+.week-grid .horse,.week-grid .cell{min-height:56px;height:auto}
+.week-grid .cell{align-self:stretch}
+.daily{align-items:start}
+.daily .horse-card{min-height:0;height:auto}
