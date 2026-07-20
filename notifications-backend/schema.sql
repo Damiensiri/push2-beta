@@ -199,6 +199,7 @@ CREATE TABLE IF NOT EXISTS paddock_requests (
   date TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','accepted','refused','completed','cancelled')),
   comment TEXT NOT NULL DEFAULT '',
+  is_free INTEGER NOT NULL DEFAULT 0 CHECK(is_free IN (0,1)),
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
   UNIQUE(user_id,date),

@@ -427,6 +427,7 @@ export default{
         const units=Number(offer.units),absorbed=Math.min(units,usageResult.results.length),remaining=Math.max(0,units-absorbed);
         const now=new Date().toISOString(),publicId=`C${Date.now()}${Math.floor(Math.random()*900)+100}`;
         const statements=[
+          env.DB.prepare("DELETE FROM paddock_usages WHERE user_id=? AND mode='card'").bind(viewer.id),
           env.DB.prepare(`INSERT INTO paddock_cards(user_id,total,remaining,created_at,updated_at) VALUES(?,?,?,?,?)
             ON CONFLICT(user_id) DO UPDATE SET total=excluded.total,remaining=excluded.remaining,created_at=excluded.created_at,updated_at=excluded.updated_at`)
             .bind(viewer.id,units,remaining,now,now),
@@ -819,7 +820,7 @@ export default{
 
         if(request.method==="GET"&&url.pathname==="/api/admin/liberte"){
           const [requestResult,exceptionResult,userResult]=await Promise.all([
-            env.DB.prepare(`SELECT id,user_id,name,email,date,status,comment,created_at,updated_at
+            env.DB.prepare(`SELECT id,user_id,name,email,date,status,comment,is_free,created_at,updated_at
               FROM paddock_requests ORDER BY date DESC,id DESC`).all(),
             env.DB.prepare(`SELECT date,is_open,comment,updated_at FROM paddock_request_exceptions
               ORDER BY date DESC`).all(),
@@ -828,7 +829,7 @@ export default{
               ORDER BY last_name,first_name`).all()
           ]);
           return json({
-            requests:requestResult.results.map(publicPaddockRequest),
+            requests:requestResult.results.map(publicAdminPaddockRequest),
             exceptions:exceptionResult.results.map(row=>({date:row.date,open:Boolean(row.is_open),comment:row.comment||"",updatedAt:row.updated_at})),
             users:userResult.results.map(publicUser)
           },200,cors);
@@ -955,38 +956,22 @@ export default{
           const input=await readJson(request);
           const status=String(input?.status||"");
           const comment=String(input?.comment||"").trim();
+          const isFree=input?.free===undefined?null:Boolean(input.free);
           if(!["pending","accepted","refused","completed","cancelled"].includes(status))return json({error:"Statut invalide"},400,cors);
           if(comment.length>500)return json({error:"Commentaire trop long"},400,cors);
           const current=await env.DB.prepare("SELECT * FROM paddock_requests WHERE id=?").bind(Number(adminPaddockRequest[1])).first();
           if(!current)return json({error:"Demande introuvable"},404,cors);
           const now=new Date().toISOString();
-          if(current.status!=="completed"&&status==="completed"){
-            const existingUsage=await env.DB.prepare("SELECT id FROM paddock_usages WHERE request_id=?").bind(current.id).first();
-            if(!existingUsage){
-              const card=await env.DB.prepare("SELECT remaining FROM paddock_cards WHERE user_id=?").bind(current.user_id).first();
-              const mode=card&&Number(card.remaining)>0?"card":"invoice";
-              const statements=[
-                env.DB.prepare("UPDATE paddock_requests SET status=?,comment=?,updated_at=? WHERE id=?").bind(status,comment,now,current.id),
-                env.DB.prepare(`INSERT INTO paddock_usages(user_id,request_id,usage_date,mode,created_at)
-                  VALUES(?,?,?,?,?)`).bind(current.user_id,current.id,current.date,mode,now)
-              ];
-              if(mode==="card")statements.push(env.DB.prepare(`UPDATE paddock_cards SET remaining=remaining-1,updated_at=?
-                WHERE user_id=? AND remaining>0`).bind(now,current.user_id));
-              await env.DB.batch(statements);
-            }else{
-              await env.DB.prepare("UPDATE paddock_requests SET status=?,comment=?,updated_at=? WHERE id=?")
-                .bind(status,comment,now,current.id).run();
-            }
-          }else{
-            await env.DB.prepare("UPDATE paddock_requests SET status=?,comment=?,updated_at=? WHERE id=?")
-              .bind(status,comment,now,current.id).run();
-          }
+          const free=isFree===null?Boolean(current.is_free):isFree;
+          await env.DB.prepare("UPDATE paddock_requests SET status=?,comment=?,is_free=?,updated_at=? WHERE id=?")
+            .bind(status,comment,free?1:0,now,current.id).run();
+          await reconcilePaddockUsage(env,{...current,status,is_free:free?1:0},now);
           const updated=await env.DB.prepare("SELECT * FROM paddock_requests WHERE id=?").bind(current.id).first();
           await notifyRealtime(env,"paddock-requests");
           const statusChanged=current.status!==status;
           let email={requested:false,sent:false};
           if(statusChanged)email=await sendPaddockRequestStatusEmail(env,updated);
-          return json({request:publicPaddockRequest(updated),statusChanged,email},200,cors);
+          return json({request:publicAdminPaddockRequest(updated),statusChanged,email},200,cors);
         }
 
         if(request.method==="POST"&&url.pathname==="/api/admin/paddocks/blockages"){
@@ -1083,9 +1068,12 @@ export default{
           if(!Number.isInteger(total)||total<1||total>999||!Number.isInteger(remaining)||remaining<0||remaining>total)
             return json({error:"Valeurs de carte invalides"},400,cors);
           const now=new Date().toISOString();
-          await env.DB.prepare(`INSERT INTO paddock_cards(user_id,total,remaining,created_at,updated_at) VALUES(?,?,?,?,?)
-            ON CONFLICT(user_id) DO UPDATE SET total=excluded.total,remaining=excluded.remaining,updated_at=excluded.updated_at`)
-            .bind(userId,total,remaining,now,now).run();
+          await env.DB.batch([
+            env.DB.prepare("DELETE FROM paddock_usages WHERE user_id=? AND mode='card'").bind(userId),
+            env.DB.prepare(`INSERT INTO paddock_cards(user_id,total,remaining,created_at,updated_at) VALUES(?,?,?,?,?)
+              ON CONFLICT(user_id) DO UPDATE SET total=excluded.total,remaining=excluded.remaining,created_at=excluded.created_at,updated_at=excluded.updated_at`)
+              .bind(userId,total,remaining,now,now)
+          ]);
           await notifyRealtime(env,"paddock-accounts");
           return json(await loadPaddockAccount(env,userId),200,cors);
         }
@@ -1725,22 +1713,36 @@ async function completePaddockRequest(env,requestId,defaultComment=""){
   const current=await env.DB.prepare("SELECT * FROM paddock_requests WHERE id=?").bind(requestId).first();
   if(!current)throw new Error("Demande de mise au paddock introuvable");
   if(current.status==="completed")return{request:current,duplicate:true};
-  const existingUsage=await env.DB.prepare("SELECT id FROM paddock_usages WHERE request_id=?").bind(current.id).first();
   const now=new Date().toISOString();const comment=current.comment||defaultComment;
-  if(!existingUsage){
-    const card=await env.DB.prepare("SELECT remaining FROM paddock_cards WHERE user_id=?").bind(current.user_id).first();
-    const mode=card&&Number(card.remaining)>0?"card":"invoice";
-    const statements=[env.DB.prepare("UPDATE paddock_requests SET status='completed',comment=?,updated_at=? WHERE id=? AND status<>'completed'").bind(comment,now,current.id)];
-    if(mode==="card")statements.push(env.DB.prepare(`UPDATE paddock_cards SET remaining=remaining-1,updated_at=?
-      WHERE user_id=? AND remaining>0 AND NOT EXISTS(SELECT 1 FROM paddock_usages WHERE request_id=?)`).bind(now,current.user_id,current.id));
-    statements.push(env.DB.prepare(`INSERT OR IGNORE INTO paddock_usages(user_id,request_id,usage_date,mode,created_at) VALUES(?,?,?,?,?)`)
-      .bind(current.user_id,current.id,current.date,mode,now));
-    await env.DB.batch(statements);
-  }else await env.DB.prepare("UPDATE paddock_requests SET status='completed',comment=?,updated_at=? WHERE id=?").bind(comment,now,current.id).run();
+  await env.DB.prepare("UPDATE paddock_requests SET status='completed',comment=?,updated_at=? WHERE id=?").bind(comment,now,current.id).run();
+  await reconcilePaddockUsage(env,{...current,status:"completed"},now);
   const updated=await env.DB.prepare("SELECT * FROM paddock_requests WHERE id=?").bind(current.id).first();
   await notifyRealtime(env,"paddock-requests");await notifyRealtime(env,"paddock-accounts");
   const email=await sendPaddockRequestStatusEmail(env,updated);
   return{request:updated,email};
+}
+
+async function reconcilePaddockUsage(env,row,now=new Date().toISOString()){
+  const usage=await env.DB.prepare("SELECT * FROM paddock_usages WHERE request_id=?").bind(row.id).first();
+  const chargeable=row.status==="completed"&&!Boolean(row.is_free);
+  if(!chargeable&&usage){
+    const statements=[];
+    if(usage.mode==="card")statements.push(env.DB.prepare(`UPDATE paddock_cards SET remaining=MIN(total,remaining+1),updated_at=? WHERE user_id=?`).bind(now,row.user_id));
+    statements.push(env.DB.prepare("DELETE FROM paddock_usages WHERE id=?").bind(usage.id));
+    await env.DB.batch(statements);
+    await notifyRealtime(env,"paddock-accounts");
+    return;
+  }
+  if(chargeable&&!usage){
+    const card=await env.DB.prepare("SELECT remaining FROM paddock_cards WHERE user_id=?").bind(row.user_id).first();
+    const mode=card&&Number(card.remaining)>0?"card":"invoice";
+    const statements=[];
+    if(mode==="card")statements.push(env.DB.prepare(`UPDATE paddock_cards SET remaining=remaining-1,updated_at=? WHERE user_id=? AND remaining>0`).bind(now,row.user_id));
+    statements.push(env.DB.prepare(`INSERT OR IGNORE INTO paddock_usages(user_id,request_id,usage_date,mode,created_at) VALUES(?,?,?,?,?)`)
+      .bind(row.user_id,row.id,row.date,mode,now));
+    await env.DB.batch(statements);
+    await notifyRealtime(env,"paddock-accounts");
+  }
 }
 
 // Limite actuellement acceptée par Web Crypto dans Cloudflare Workers.
@@ -1823,6 +1825,10 @@ function validatePaddockRequestDate(date,{now=new Date(),exception=null,ignoreDe
 function publicPaddockRequest(row){
   return{id:String(row.id),userId:row.user_id===undefined?undefined:Number(row.user_id),name:row.name,email:row.email,
     date:row.date,status:row.status,comment:row.comment||"",createdAt:row.created_at,updatedAt:row.updated_at};
+}
+
+function publicAdminPaddockRequest(row){
+  return{...publicPaddockRequest(row),free:Boolean(row.is_free)};
 }
 
 function publicProduct(row){
