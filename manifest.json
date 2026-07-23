@@ -3,7 +3,7 @@
   "short_name": "Ecurie DSIRI",
   "description": "Application officielle de l'Écurie Damien Siri.",
   "id": "./",
-  "start_url": "./index.html?v=20260716-2",
+  "start_url": "./index.html?v=20260723-1",
   "scope": "./",
   "display": "standalone",
   "display_override": [
