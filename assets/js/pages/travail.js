@@ -80,14 +80,13 @@ document.getElementById(espace+"-longe").innerHTML=
 makeBadge(row.longe)
 
 const statut=(row.statut_auto || "").toLowerCase().trim()
-const manualStatus=(row.statut_manuel || "").toLowerCase().trim()
 const statusWrap=document.getElementById(espace+"-statut").closest(".status-wrap")
 statusWrap.className="status-wrap status-"+statut
 
 document.getElementById(espace+"-statut").innerText=STATUS_LABELS[statut] || ""
 
 const el=document.getElementById(espace+"-horaire")
-el.innerText=manualStatus==="prevision"?(row.horaire_special || ""):transitionText(row.transition)
+el.innerText=(row.horaire_special || "").trim() || transitionText(row.transition)
 el.hidden=!el.innerText
 
 document.getElementById(espace+"-info").innerText=row.info || ""

@@ -50,13 +50,12 @@ const row=data.find(x=>x.espace===e);
 if(!row) return;
 
 const statut=(row.statut_auto||"").toLowerCase().trim();
-const manualStatus=(row.statut_manuel||"").toLowerCase().trim();
 const statusWrap=document.getElementById(e+"-statut").closest(".status-wrap");
 statusWrap.className="status-wrap status-"+statut;
 
 document.getElementById(e+"-statut").innerText=STATUS_LABELS[statut]||"";
 const el=document.getElementById(e+"-horaire");
-el.innerText=manualStatus==="prevision"?(row.horaire_special||""):transitionText(row.transition);
+el.innerText=(row.horaire_special||"").trim()||transitionText(row.transition);
 el.hidden=!el.innerText;
 
 document.getElementById(e+"-info").innerText=row.info||"";

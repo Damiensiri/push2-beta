@@ -180,12 +180,11 @@ return map[t]||t;
 }
 
 const status=(e.statut_auto||"").toLowerCase().trim();
-const manualStatus=(e.statut_manuel||"").toLowerCase().trim();
 const statusColors={"ouvert":"#33d17a","prevision":"#ffb23f","ferme":"#ff4d4d","hors-service":"#d6dde8"};
 statut.innerText=STATUS_LABELS[status]||"---";
 statut.style.color=statusColors[status]||"";
 
-horaire.innerText=manualStatus==="prevision"?(e.horaire_special||""):transitionText(e.transition);
+horaire.innerText=(e.horaire_special||"").trim()||transitionText(e.transition);
 horaire.hidden=!horaire.innerText;
 
 info.innerText=e.info||"Aucune info";
