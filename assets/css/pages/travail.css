@@ -142,12 +142,6 @@
   font-size:13px;
 }
 
-.option-pill{
-  display:flex;
-  align-items:center;
-  gap:5px;
-}
-
 .badge{
   font-size:13px;
   font-weight:800;
@@ -192,17 +186,17 @@
   }
 
   .card{
-    margin:0 12px 10px;
-    padding:12px;
-    border-radius:22px;
+    margin:0 14px 12px;
+    padding:14px;
+    border-radius:24px;
   }
 
   .card-top{
-    grid-template-columns:minmax(0,1fr) minmax(112px,40%);
+    grid-template-columns:minmax(0,1fr) minmax(116px,42%);
     grid-template-areas:
       "title status"
-      "options status";
-    gap:7px 9px;
+      "options options";
+    gap:11px 10px;
   }
 
   .title-wrap{
@@ -211,84 +205,69 @@
   }
 
   .title-wrap img{
-    width:24px;
+    width:27px;
     flex:0 0 auto;
   }
 
   .card-title{
-    font-size:clamp(18px,5.5vw,21px);
+    font-size:clamp(19px,6vw,22px);
     line-height:1.05;
   }
 
   .status-wrap{
+    grid-column:auto;
+    grid-row:auto;
     grid-area:status;
     justify-self:stretch;
     min-width:0;
-    height:100%;
-    align-content:center;
-    padding:6px 7px;
-    border-radius:15px;
+    padding:8px 9px;
+    border-radius:16px;
   }
 
   .status-label{
-    font-size:13px;
+    font-size:14px;
   }
 
   .status-detail{
     max-width:100%;
-    font-size:9px;
-    line-height:1.2;
+    font-size:10px;
   }
 
   .card-middle{
-    display:flex;
-    flex-wrap:nowrap;
+    display:grid;
+    grid-template-columns:auto auto auto auto;
     justify-content:start;
     align-items:center;
-    gap:5px;
+    gap:6px 9px;
     width:100%;
-    min-width:0;
-    font-size:10px;
+    font-size:12px;
     white-space:nowrap;
   }
 
-  .option-pill{
-    gap:3px;
-    padding:4px 5px;
-    border:1px solid rgba(255,255,255,.12);
-    border-radius:999px;
-    background:rgba(255,255,255,.08);
-  }
-
   .badge{
-    font-size:10px;
+    font-size:12px;
   }
 
   .card-info{
-    margin-top:8px;
-    padding:7px 9px;
-    border-radius:14px;
-    font-size:11px;
-    line-height:1.35;
+    margin-top:11px;
+    padding:9px 11px;
+    border-radius:15px;
+    font-size:12px;
   }
 }
 
 @media (max-width:370px){
   .card-top{
-    grid-template-columns:minmax(0,1fr) minmax(104px,40%);
+    grid-template-columns:minmax(0,1fr) minmax(108px,43%);
   }
 
   .card-middle{
-    gap:3px;
-    font-size:9px;
-  }
-
-  .option-pill{
-    padding-inline:4px;
+    gap:5px 7px;
+    font-size:11px;
   }
 
   .badge{
-    font-size:9px;
+    font-size:11px;
   }
 }
 
