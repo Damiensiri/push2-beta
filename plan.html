@@ -18,7 +18,7 @@
 <link rel="stylesheet" href="assets/css/themes/christmas.css?v=20260724-1">
 <link rel="stylesheet" href="assets/css/themes/winter.css?v=20260724-1">
 <link rel="stylesheet" href="assets/css/themes/spring.css?v=20260724-1">
-<link rel="stylesheet" href="assets/css/pages/plan.css?v=20260724-1">
+<link rel="stylesheet" href="assets/css/pages/plan.css?v=20260724-2">
 </head>
 
 <body class="app-page">
@@ -47,10 +47,10 @@
 </div>
 
 <div class="legend">
-<div class="legend-item"><img src="image/ouvert.png"> Ouvert</div>
-<div class="legend-item"><img src="image/prevision.png"> Prévision d'ouverture</div>
-<div class="legend-item"><img src="image/ferme.png"> Fermé</div>
-<div class="legend-item"><img src="image/horsservice.png"> Hors service</div>
+<div class="legend-item"><span class="status-swatch status-swatch-open"></span> Ouvert</div>
+<div class="legend-item"><span class="status-swatch status-swatch-planned"></span> Prévision d'ouverture</div>
+<div class="legend-item"><span class="status-swatch status-swatch-closed"></span> Fermé</div>
+<div class="legend-item"><span class="status-swatch status-swatch-off"></span> Hors service</div>
 </div>
 
 <div id="panel">
@@ -75,10 +75,6 @@
 <div class="row">
 <div class="label">Statut</div>
 <div class="value" id="statut">---</div>
-</div>
-
-<div class="row">
-<div class="label">Horaires</div>
 <div class="value" id="horaire">---</div>
 </div>
 
@@ -103,7 +99,7 @@
 
 </div>
 
-<script src="assets/js/pages/plan.js?v=20260724-1"></script>
+<script src="assets/js/pages/plan.js?v=20260724-2"></script>
 <script src="assets/js/status-realtime.js?v=20260724-1"></script>
 
 </body>

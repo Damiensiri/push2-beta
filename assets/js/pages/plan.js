@@ -3,17 +3,23 @@ const FRESHNESS=60000;
 const CACHE_KEY="statuts";
 const CACHE_CONFIRMED_AT_KEY="statuts_confirmed_at";
 
-const ICONS={
-"ouvert":"image/ouvert.png",
-"ferme":"image/ferme.png",
-"prevision":"image/prevision.png",
-"hors-service":"image/horsservice.png"
-};
-
 const PADDOCK_ICONS={
 "maison":"image/paddock-maison.svg",
 "grande-voie":"image/paddock-grande-voie.svg",
 "beudot":"image/paddock-beudot.svg"
+};
+
+const SPACE_ICONS={
+"carriere":"image/travail.svg",
+"manege":"image/travail.svg",
+...PADDOCK_ICONS
+};
+
+const STATUS_LABELS={
+"ouvert":"Ouvert",
+"prevision":"Prévu",
+"ferme":"Fermé",
+"hors-service":"Hors service"
 };
 
 let DATA=[];
@@ -35,11 +41,27 @@ const haloCircle=document.getElementById("haloCircle");
 const panelIconImg=document.getElementById("panelIconImg");
 
 function setPanelIcon(espace){
-if(espace==="carriere" || espace==="manege"){
-panelIconImg.src="image/travail.svg";
-}else{
-panelIconImg.src=PADDOCK_ICONS[espace]||"image/paddock.svg";
+panelIconImg.src=SPACE_ICONS[espace]||"image/paddock.svg";
 }
+
+function formatStatusTime(value){
+const match=String(value||"").match(/^(\d{2}):(\d{2})$/);
+return match?`${match[1]}h${match[2]}`:"";
+}
+
+function transitionText(transition){
+if(!transition||!transition.type||!transition.time) return "";
+const time=formatStatusTime(transition.time);
+if(!time) return "";
+const offset=Number(transition.dayOffset)||0;
+let day="";
+if(offset===1) day=" demain";
+else if(offset>1){
+const date=new Date();
+date.setDate(date.getDate()+offset);
+day=" "+date.toLocaleDateString("fr-FR",{weekday:"long"});
+}
+return transition.type==="closing"?`Fermeture${day} à ${time}`:`Ouverture${day} à ${time}`;
 }
 
 function loadData(){
@@ -89,9 +111,11 @@ return false;
 
 function renderIcons(data){
 data.forEach(e=>{
-const icon=ICONS[(e.statut_auto||"").toLowerCase().trim()];
+const icon=SPACE_ICONS[e.espace];
 const el=document.getElementById("icon-"+e.espace);
-if(el && icon) el.src=icon;
+const button=el&&el.closest(".plan-btn");
+if(el&&icon) el.src=icon;
+if(button) button.dataset.status=(e.statut_auto||"").toLowerCase().trim();
 });
 }
 
@@ -155,34 +179,20 @@ return map[t]||t;
 
 }
 
-if(e.statut_auto==="ouvert"){
-statut.innerText="Ouvert";
-statut.style.color="#33d17a";
-}
+const status=(e.statut_auto||"").toLowerCase().trim();
+const manualStatus=(e.statut_manuel||"").toLowerCase().trim();
+const statusColors={"ouvert":"#33d17a","prevision":"#ffb23f","ferme":"#ff4d4d","hors-service":"#d6dde8"};
+statut.innerText=STATUS_LABELS[status]||"---";
+statut.style.color=statusColors[status]||"";
 
-if(e.statut_auto==="prevision"){
-statut.innerText="Ouverture prévue";
-statut.style.color="#ffb23f";
-}
+horaire.innerText=manualStatus==="prevision"?(e.horaire_special||""):transitionText(e.transition);
+horaire.hidden=!horaire.innerText;
 
-if(e.statut_auto==="ferme"){
-statut.innerText="Fermé";
-statut.style.color="#ff4d4d";
-}
-
-if(e.statut_auto==="hors-service"){
-statut.innerText="Hors service";
-statut.style.color="#d6dde8";
-}
 info.innerText=e.info||"Aucune info";
 
 /* couleur halo */
 
-let color="#33d17a";
-
-if(e.statut_auto==="ferme") color="#ff4d4d";
-if(e.statut_auto==="prevision") color="#ffb23f";
-if(e.statut_auto==="hors-service") color="#d6dde8";
+let color=statusColors[status]||"#33d17a";
 
 haloCircle.style.stroke=color;
 
@@ -196,13 +206,6 @@ haloCircle.style.transition="stroke-dashoffset 0.9s ease";
 haloCircle.style.strokeDashoffset="0";
 },50);
 
-/* horaires */
-
-if(e.horaire_special && e.horaire_special.trim() !== ""){
-horaire.innerHTML = `<span style="color:#ffb23f;font-weight:700">${e.horaire_special}</span>`;
-}else{
-horaire.innerText = e.horaire_affiche||"---";
-}
 /* options */
 
 let show=false;

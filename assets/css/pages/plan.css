@@ -101,6 +101,26 @@
   filter:drop-shadow(0 1px 2px rgba(0,0,0,.12));
 }
 
+.plan-btn[data-status="ouvert"]{
+  border-color:rgba(98,227,148,.78);
+  background:rgba(62,171,105,.78);
+}
+
+.plan-btn[data-status="prevision"]{
+  border-color:rgba(255,191,93,.82);
+  background:rgba(220,143,36,.82);
+}
+
+.plan-btn[data-status="ferme"]{
+  border-color:rgba(255,119,119,.78);
+  background:rgba(183,67,67,.80);
+}
+
+.plan-btn[data-status="hors-service"]{
+  border-color:rgba(214,221,232,.66);
+  background:rgba(91,105,124,.82);
+}
+
 #btn-carriere{
   top:20%;
   left:25%;
@@ -156,10 +176,16 @@
   background:rgba(255,255,255,.18);
 }
 
-.legend-item img{
+.status-swatch{
   width:22px;
+  height:22px;
   flex:0 0 auto;
+  border:1px solid rgba(255,255,255,.50);
+  border-radius:7px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.22);
 }
+
+.status-swatch-open{background:rgba(62,171,105,.90)}.status-swatch-planned{background:rgba(220,143,36,.92)}.status-swatch-closed{background:rgba(183,67,67,.92)}.status-swatch-off{background:rgba(91,105,124,.92)}
 
 #panel{
   position:fixed;
@@ -322,6 +348,7 @@
 }
 
 #horaire{
+  margin-top:3px;
   font-size:14px;
   font-weight:500;
 }
