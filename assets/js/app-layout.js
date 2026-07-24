@@ -1,4 +1,27 @@
 (function initializeAppLayout(){
+  const layoutVersion=(()=>{
+    try{return new URL(document.currentScript?.src||"",window.location.href).searchParams.get("v")||"current";}
+    catch(error){return"current";}
+  })();
+  const hadServiceWorkerController=Boolean(navigator.serviceWorker?.controller);
+  if("serviceWorker" in navigator){
+    const reloadKey=`ecurie-pwa-controller-reload:${layoutVersion}`;
+    if(hadServiceWorkerController){
+      navigator.serviceWorker.addEventListener("controllerchange",()=>{
+        try{
+          if(sessionStorage.getItem(reloadKey))return;
+          sessionStorage.setItem(reloadKey,"1");
+        }catch(error){}
+        window.location.reload();
+      });
+    }
+    window.addEventListener("load",()=>{
+      navigator.serviceWorker.getRegistration().then(registration=>{
+        if(registration)return registration.update();
+      }).catch(()=>{});
+    },{once:true});
+  }
+
   const authPage=location.pathname.split("/").pop()==="connexion.html";
   const authToken=localStorage.getItem("ecurie_beta_session")||"";
   if(!authPage){
