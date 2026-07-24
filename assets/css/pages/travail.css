@@ -96,13 +96,18 @@
 }
 
 .status-wrap{
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  gap:7px;
+  display:grid;
+  justify-items:end;
+  gap:4px;
   grid-column:2;
   grid-row:1 / span 2;
   justify-self:end;
+  min-width:128px;
+  padding:10px 12px;
+  border:1px solid rgba(255,255,255,.16);
+  border-radius:18px;
+  background:rgba(255,255,255,.10);
+  text-align:right;
 }
 
 .title-wrap{
@@ -124,13 +129,7 @@
   text-shadow:0 2px 14px rgba(0,0,0,.16);
 }
 
-.card-top > img,
-.status-wrap > img{
-  width:32px;
-  height:32px;
-  object-fit:contain;
-  filter:drop-shadow(0 8px 14px rgba(12,42,82,.24));
-}
+.status-label{font-size:15px;font-weight:800;line-height:1.1}.status-detail{max-width:190px;color:rgba(255,255,255,.86);font-size:11px;font-weight:650;line-height:1.3}.status-ouvert .status-label{color:#62e394}.status-prevision .status-label{color:#ffbf5d}.status-ferme .status-label{color:#ff7777}.status-hors-service .status-label{color:#d6dde8}
 
 .card-middle{
   grid-area:options;
@@ -141,20 +140,6 @@
   align-self:end;
   color:rgba(255,255,255,.82);
   font-size:13px;
-}
-
-.horaire{
-  margin-left:0;
-  padding:6px 9px;
-  border:1px solid rgba(255,255,255,.14);
-  border-radius:999px;
-  color:rgba(255,255,255,.92);
-  background:rgba(255,255,255,.12);
-  font-size:11px;
-  line-height:1;
-  white-space:nowrap;
-  text-align:center;
-  text-shadow:0 1px 10px rgba(0,0,0,.16);
 }
 
 .badge{
@@ -189,51 +174,12 @@
   display:none;
 }
 
-.legend{
-  display:grid;
-  grid-template-columns:repeat(2,minmax(0,1fr));
-  gap:10px;
-  margin:22px 18px 0;
-  padding:15px;
-  border:1px solid var(--glass-line);
-  border-radius:26px;
-  color:rgba(255,255,255,.97);
-  background:rgba(255,255,255,.16);
-  box-shadow:var(--shadow-soft),inset 0 1px 0 rgba(255,255,255,.22);
-  font-size:12.5px;
-  font-weight:700;
-  text-shadow:0 2px 12px rgba(8,31,62,.30);
-  backdrop-filter:blur(22px) saturate(140%);
-  -webkit-backdrop-filter:blur(22px) saturate(140%);
-}
-
-.legend-item{
-  min-width:0;
-  margin:0;
-  padding:10px;
-  display:flex;
-  align-items:center;
-  gap:10px;
-  border:1px solid rgba(255,255,255,.14);
-  border-radius:16px;
-  background:rgba(255,255,255,.18);
-}
-
-.legend-item img{
-  width:22px;
-  flex:0 0 auto;
-}
-
 @keyframes dataSyncShimmer{
   0%{transform:translate3d(-125%,0,0);}
   58%,100%{transform:translate3d(125%,0,0);}
 }
 
 @media (max-width:370px){
-  .legend{
-    grid-template-columns:1fr;
-  }
-
   .card-middle{
     font-size:12px;
   }

@@ -1361,7 +1361,8 @@ async function loadPublicStatuses(env,date=new Date()){
   const scheduleMap=new Map(schedulesResult.results.map(row=>[`${row.space_slug}:${row.day}`,row]));
   const rows=spacesResult.results.map(space=>{
     const schedule=scheduleMap.get(`${space.slug}:${paris.day}`)||null;
-    return publicSpace(space,schedule,paris.minutes);
+    const nextOpening=findNextSpaceOpening(scheduleMap,space.slug,paris.day,paris.minutes);
+    return publicSpace(space,schedule,paris.minutes,nextOpening);
   });
   rows.push({
     espace:"accueil",statut_manuel:"",statut_auto:"ferme",liberte:"",longe:"",info:"",
@@ -1370,10 +1371,17 @@ async function loadPublicStatuses(env,date=new Date()){
   return rows;
 }
 
-function publicSpace(space,schedule,minutes){
+function publicSpace(space,schedule,minutes,nextOpening=null){
   const normalHours=schedule?`${schedule.opens_at} - ${schedule.closes_at}`:"";
   const status=calculateStatus(space.manual_status,schedule,minutes);
   const hidesHours=status==="ferme"||status==="hors-service";
+  let transition=null;
+  if(space.manual_status==="ouvert"&&status==="ouvert"&&schedule){
+    const opens=timeToMinutes(schedule.opens_at),closes=timeToMinutes(schedule.closes_at);
+    transition={type:"closing",time:schedule.closes_at,dayOffset:closes<=opens&&minutes>=opens?1:0};
+  }else if(space.manual_status==="ouvert"&&status==="prevision"&&nextOpening){
+    transition={type:"opening",time:nextOpening.time,dayOffset:nextOpening.dayOffset};
+  }
   return{
     espace:space.slug,
     statut_manuel:space.manual_status,
@@ -1384,8 +1392,21 @@ function publicSpace(space,schedule,minutes){
     alerte:"",
     horaire_special:hidesHours?"":space.special_hours||"",
     horaire_affiche:hidesHours?"":normalHours,
+    transition,
     urgent:""
   };
+}
+
+function findNextSpaceOpening(scheduleMap,slug,currentDay,minutes){
+  const today=scheduleMap.get(`${slug}:${currentDay}`)||null;
+  const todayOpening=timeToMinutes(today?.opens_at);
+  if(todayOpening!==null&&minutes<todayOpening)return{time:today.opens_at,dayOffset:0};
+  for(let dayOffset=1;dayOffset<=7;dayOffset++){
+    const day=((currentDay-1+dayOffset)%7)+1;
+    const schedule=scheduleMap.get(`${slug}:${day}`)||null;
+    if(timeToMinutes(schedule?.opens_at)!==null)return{time:schedule.opens_at,dayOffset};
+  }
+  return null;
 }
 
 function calculateStatus(manualStatus,schedule,minutes){
@@ -2152,7 +2173,7 @@ export class RealtimeHub{
 
 export{
   compatibleAlert,validateAlert,parisNow,isPushEnabled,sendRequestedPush,plainTextMessage,
-  calculateStatus,publicSpace,publicSchedule,validateSpace,validateSchedules,timeToMinutes,parisClock,
+  calculateStatus,publicSpace,publicSchedule,validateSpace,validateSchedules,timeToMinutes,parisClock,findNextSpaceOpening,
   normalizeEmail,validatePassword,validateNewUser,hashPassword,verifyPassword,publicUser,validatePaddockBooking,validatePaddockHours,
   parisLocalMinute,reservationLocalMinute,duePaddockReminderTypes,isValidPushSubscriptionId,isValidPushInstallationId,processPaddockPushReminders,
   validatePaddockRequestDate

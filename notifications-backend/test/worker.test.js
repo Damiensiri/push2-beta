@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   compatibleAlert,validateAlert,parisNow,isPushEnabled,sendRequestedPush,plainTextMessage,
-  calculateStatus,publicSpace,publicSchedule,validateSpace,validateSchedules,timeToMinutes,
+  calculateStatus,publicSpace,publicSchedule,validateSpace,validateSchedules,timeToMinutes,findNextSpaceOpening,
   normalizeEmail,validatePassword,validateNewUser,hashPassword,verifyPassword,validatePaddockBooking,
   reservationLocalMinute,duePaddockReminderTypes,validatePaddockRequestDate
 } from "../src/worker.js";
@@ -152,6 +152,23 @@ test("fermé et hors service masquent les horaires",()=>{
   const forecast=publicSpace({...base,manual_status:"prevision"},schedule,12*60);
   assert.equal(forecast.horaire_affiche,"10:00 - 20:00");
   assert.equal(forecast.horaire_special,"Prévu 19h");
+});
+
+test("la prochaine ouverture d’un espace distingue aujourd’hui et demain",()=>{
+  const schedules=new Map([
+    ["carriere:1",{opens_at:"08:00",closes_at:"21:00"}],
+    ["carriere:2",{opens_at:"09:30",closes_at:"20:00"}]
+  ]);
+  assert.deepEqual(findNextSpaceOpening(schedules,"carriere",1,7*60),{time:"08:00",dayOffset:0});
+  assert.deepEqual(findNextSpaceOpening(schedules,"carriere",1,22*60),{time:"09:30",dayOffset:1});
+});
+
+test("le statut automatique expose sa prochaine transition",()=>{
+  const base={slug:"carriere",manual_status:"ouvert",liberte:"oui",longe:"non",info:"",special_hours:""};
+  const schedule={opens_at:"08:00",closes_at:"21:00"};
+  assert.deepEqual(publicSpace(base,schedule,10*60).transition,{type:"closing",time:"21:00",dayOffset:0});
+  assert.deepEqual(publicSpace(base,schedule,7*60,{time:"08:00",dayOffset:0}).transition,{type:"opening",time:"08:00",dayOffset:0});
+  assert.equal(publicSpace({...base,manual_status:"prevision",special_hours:"Après entretien"},schedule,10*60).transition,null);
 });
 
 test("les horaires de nuit sont acceptés",()=>{

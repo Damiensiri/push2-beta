@@ -7,11 +7,31 @@ const CACHE_CONFIRMED_AT_KEY="statuts_confirmed_at"
 let syncPending=false
 let backgroundedAt=null
 
-const ICONS_STATUT={
-"ouvert":"image/ouvert.png",
-"ferme":"image/ferme.png",
-"prevision":"image/prevision.png",
-"hors-service":"image/horsservice.png"
+const STATUS_LABELS={
+"ouvert":"Ouvert",
+"ferme":"Fermé",
+"prevision":"Prévu",
+"hors-service":"Hors service"
+}
+
+function formatStatusTime(value){
+const match=String(value||"").match(/^(\d{2}):(\d{2})$/)
+return match?`${match[1]}h${match[2]}`:""
+}
+
+function transitionText(transition){
+if(!transition || !transition.type || !transition.time) return ""
+const time=formatStatusTime(transition.time)
+if(!time) return ""
+const offset=Number(transition.dayOffset)||0
+let day=""
+if(offset===1) day=" demain"
+else if(offset>1){
+const date=new Date()
+date.setDate(date.getDate()+offset)
+day=" "+date.toLocaleDateString("fr-FR",{weekday:"long"})
+}
+return transition.type==="closing"?`Fermeture${day} à ${time}`:`Ouverture${day} à ${time}`
 }
 
 window.addEventListener("DOMContentLoaded",()=>{
@@ -60,27 +80,15 @@ document.getElementById(espace+"-longe").innerHTML=
 makeBadge(row.longe)
 
 const statut=(row.statut_auto || "").toLowerCase().trim()
+const manualStatus=(row.statut_manuel || "").toLowerCase().trim()
+const statusWrap=document.getElementById(espace+"-statut").closest(".status-wrap")
+statusWrap.className="status-wrap status-"+statut
 
-document.getElementById(espace+"-statut").src=
-ICONS_STATUT[statut] || ""
-
-const horaire=row.horaire_special || row.horaire_affiche || ""
+document.getElementById(espace+"-statut").innerText=STATUS_LABELS[statut] || ""
 
 const el=document.getElementById(espace+"-horaire")
-
-el.innerText=horaire
-
-if(row.horaire_special){
-
-el.style.color="#E88B00"
-el.style.fontWeight="600"
-
-}else{
-
-el.style.color="var(--text)"
-el.style.fontWeight="400"
-
-}
+el.innerText=manualStatus==="prevision"?(row.horaire_special || ""):transitionText(row.transition)
+el.hidden=!el.innerText
 
 document.getElementById(espace+"-info").innerText=row.info || ""
 
