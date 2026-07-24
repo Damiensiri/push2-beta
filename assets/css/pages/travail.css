@@ -97,7 +97,7 @@
 
 .status-wrap{
   display:grid;
-  justify-items:end;
+  justify-items:center;
   gap:4px;
   grid-column:2;
   grid-row:1 / span 2;
@@ -107,7 +107,7 @@
   border:1px solid rgba(255,255,255,.16);
   border-radius:18px;
   background:rgba(255,255,255,.10);
-  text-align:right;
+  text-align:center;
 }
 
 .title-wrap{
