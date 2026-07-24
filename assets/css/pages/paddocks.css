@@ -124,7 +124,7 @@
   text-align:center;
 }
 
-.status-label{display:inline-flex;align-items:center;justify-content:center;gap:7px;font-size:15px;font-weight:800;line-height:1.1;white-space:nowrap}.status-label::before{content:"";width:8px;height:8px;flex:0 0 auto;border-radius:50%;background:currentColor;box-shadow:0 0 9px currentColor}.status-detail{max-width:190px;color:rgba(255,255,255,.86);font-size:11px;font-weight:650;line-height:1.3}.status-ouvert .status-label{color:#62e394}.status-prevision .status-label{color:#ffbf5d}.status-ferme .status-label{color:#ff7777}.status-hors-service .status-label{color:#d6dde8}
+.status-label{display:inline-flex;align-items:center;justify-content:center;gap:5px;font-size:15px;font-weight:800;line-height:1.1;white-space:nowrap}.status-label::before{content:"";width:8px;height:8px;flex:0 0 auto;border-radius:50%;background:currentColor;box-shadow:0 0 9px currentColor}.status-detail{max-width:190px;color:rgba(255,255,255,.86);font-size:11px;font-weight:650;line-height:1.3}.status-ouvert .status-label{color:#62e394}.status-prevision .status-label{color:#ffbf5d}.status-ferme .status-label{color:#ff7777}.status-hors-service .status-label{color:#d6dde8}
 
 .card-info{
   margin-top:14px;
@@ -190,7 +190,6 @@
   }
 
   .status-hors-service .status-label{
-    gap:5px;
     font-size:12px;
   }
 
