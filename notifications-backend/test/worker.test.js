@@ -143,12 +143,15 @@ test("les statuts manuels neutralisent le calcul automatique",()=>{
   assert.equal(calculateStatus("hors-service",schedule,12*60),"hors-service");
 });
 
-test("fermé et hors service masquent les horaires",()=>{
+test("fermé et hors service masquent les horaires mais conservent le texte personnalisé",()=>{
   const base={slug:"manege",manual_status:"ferme",liberte:"non",longe:"oui",info:"",special_hours:"Prévu 19h"};
   const schedule={opens_at:"10:00",closes_at:"20:00"};
   const closed=publicSpace(base,schedule,12*60);
   assert.equal(closed.horaire_affiche,"");
-  assert.equal(closed.horaire_special,"");
+  assert.equal(closed.horaire_special,"Prévu 19h");
+  const unavailable=publicSpace({...base,manual_status:"hors-service"},schedule,12*60);
+  assert.equal(unavailable.horaire_affiche,"");
+  assert.equal(unavailable.horaire_special,"Prévu 19h");
   const forecast=publicSpace({...base,manual_status:"prevision"},schedule,12*60);
   assert.equal(forecast.horaire_affiche,"10:00 - 20:00");
   assert.equal(forecast.horaire_special,"Prévu 19h");

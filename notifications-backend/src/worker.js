@@ -1390,7 +1390,7 @@ function publicSpace(space,schedule,minutes,nextOpening=null){
     longe:space.longe||"",
     info:space.info||"",
     alerte:"",
-    horaire_special:hidesHours?"":space.special_hours||"",
+    horaire_special:space.special_hours||"",
     horaire_affiche:hidesHours?"":normalHours,
     transition,
     urgent:""
