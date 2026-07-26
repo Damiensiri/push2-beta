@@ -5,7 +5,7 @@ import {
   calculateStatus,publicSpace,publicSchedule,validateSpace,validateSchedules,timeToMinutes,findNextSpaceOpening,
   normalizeEmail,validatePassword,validateNewUser,hashPassword,verifyPassword,validatePaddockBooking,
   reservationLocalMinute,duePaddockReminderTypes,validatePaddockRequestDate,
-  validStaffMonth,staffMonthRange,staffMinutes,validateStaffShift
+  validStaffMonth,staffMonthRange,staffMinutes,validateStaffShift,isStaffWeekStart,addIsoDays
 } from "../src/worker.js";
 
 test("les comptes utilisateurs normalisent et valident l’identité",()=>{
@@ -53,6 +53,13 @@ test("les heures salariés sont calculées en minutes sans saisie incohérente",
   assert.equal(validateStaffShift({
     employeeId:1,date:"2026-07-01",status:"work",morningStart:"07:30",morningEnd:""
   }).error,"Les horaires de début et de fin doivent être complets et cohérents");
+});
+
+test("le copier-coller du planning utilise des semaines commençant le lundi",()=>{
+  assert.equal(isStaffWeekStart("2026-07-06"),true);
+  assert.equal(isStaffWeekStart("2026-07-07"),false);
+  assert.equal(isStaffWeekStart("date-invalide"),false);
+  assert.equal(addIsoDays("2026-07-06",7),"2026-07-13");
 });
 
 test("les exceptions Liberté ouvrent ou ferment une date",()=>{

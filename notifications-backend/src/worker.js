@@ -671,6 +671,20 @@ export default{
         }
 
         const staffEmployee=url.pathname.match(/^\/api\/admin\/staff-planning\/employees\/(\d+)$/);
+        if(staffEmployee&&request.method==="DELETE"){
+          const employeeId=Number(staffEmployee[1]);
+          const current=await env.DB.prepare("SELECT * FROM staff_employees WHERE id=? AND active=1").bind(employeeId).first();
+          if(!current)return json({error:"Salarié introuvable"},404,cors);
+          const activeCount=await env.DB.prepare("SELECT COUNT(*) AS n FROM staff_employees WHERE active=1").first();
+          if(Number(activeCount?.n||0)<=4)return json({error:"Le planning doit conserver au moins quatre salariés"},409,cors);
+          await env.DB.batch([
+            env.DB.prepare("DELETE FROM staff_shifts WHERE employee_id=?").bind(employeeId),
+            env.DB.prepare("DELETE FROM staff_employees WHERE id=?").bind(employeeId)
+          ]);
+          await notifyRealtime(env,"staff-planning");
+          return json({deleted:true},200,cors);
+        }
+
         if(staffEmployee&&request.method==="PATCH"){
           const current=await env.DB.prepare("SELECT * FROM staff_employees WHERE id=?").bind(Number(staffEmployee[1])).first();
           if(!current)return json({error:"Salarié introuvable"},404,cors);
@@ -693,6 +707,31 @@ export default{
             if(String(error?.message||error).includes("UNIQUE"))return json({error:"Ce salarié existe déjà"},409,cors);
             throw error;
           }
+        }
+
+        if(request.method==="POST"&&url.pathname==="/api/admin/staff-planning/copy-week"){
+          const input=await readJson(request);
+          const sourceStart=String(input?.sourceStart||"");
+          const targetStart=String(input?.targetStart||"");
+          if(!isStaffWeekStart(sourceStart)||!isStaffWeekStart(targetStart))
+            return json({error:"Les semaines source et destination doivent commencer un lundi"},400,cors);
+          if(sourceStart===targetStart)return json({error:"Choisissez deux semaines différentes"},400,cors);
+          const sourceEnd=addIsoDays(sourceStart,6);const targetEnd=addIsoDays(targetStart,6);
+          const delta=Math.round((Date.parse(targetStart+"T12:00:00Z")-Date.parse(sourceStart+"T12:00:00Z"))/86400000);
+          const now=new Date().toISOString();
+          await env.DB.batch([
+            env.DB.prepare(`DELETE FROM staff_shifts WHERE work_date>=? AND work_date<=?
+              AND employee_id IN (SELECT id FROM staff_employees WHERE active=1)`).bind(targetStart,targetEnd),
+            env.DB.prepare(`INSERT INTO staff_shifts(employee_id,work_date,status,morning_start,morning_end,
+              afternoon_start,afternoon_end,note,created_at,updated_at)
+              SELECT s.employee_id,date(s.work_date,?),s.status,s.morning_start,s.morning_end,
+                s.afternoon_start,s.afternoon_end,s.note,?,?
+              FROM staff_shifts s JOIN staff_employees e ON e.id=s.employee_id
+              WHERE e.active=1 AND s.work_date>=? AND s.work_date<=?`)
+              .bind(`${delta>=0?"+":""}${delta} days`,now,now,sourceStart,sourceEnd)
+          ]);
+          await notifyRealtime(env,"staff-planning");
+          return json({copied:true,sourceStart,targetStart},200,cors);
         }
 
         if(request.method==="PUT"&&url.pathname==="/api/admin/staff-planning/shifts"){
@@ -1842,6 +1881,16 @@ function validStaffColor(value){
   return /^#[0-9a-f]{6}$/i.test(color)?color.toUpperCase():"#F27D2C";
 }
 
+function addIsoDays(value,count){
+  const date=new Date(value+"T12:00:00Z");
+  date.setUTCDate(date.getUTCDate()+count);
+  return date.toISOString().slice(0,10);
+}
+
+function isStaffWeekStart(value){
+  return /^\d{4}-\d{2}-\d{2}$/.test(value)&&!Number.isNaN(Date.parse(value+"T12:00:00Z"))&&new Date(value+"T12:00:00Z").getUTCDay()===1;
+}
+
 function staffMinutes(start,end){
   if(!start&&!end)return 0;
   if(!/^\d{2}:\d{2}$/.test(start||"")||!/^\d{2}:\d{2}$/.test(end||""))return null;
@@ -2329,5 +2378,5 @@ export{
   calculateStatus,publicSpace,publicSchedule,validateSpace,validateSchedules,timeToMinutes,parisClock,findNextSpaceOpening,
   normalizeEmail,validatePassword,validateNewUser,hashPassword,verifyPassword,publicUser,validatePaddockBooking,validatePaddockHours,
   parisLocalMinute,reservationLocalMinute,duePaddockReminderTypes,isValidPushSubscriptionId,isValidPushInstallationId,processPaddockPushReminders,
-  validatePaddockRequestDate,validStaffMonth,staffMonthRange,staffMinutes,validateStaffShift
+  validatePaddockRequestDate,validStaffMonth,staffMonthRange,staffMinutes,validateStaffShift,isStaffWeekStart,addIsoDays
 };
