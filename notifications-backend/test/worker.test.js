@@ -67,6 +67,12 @@ test("le copier-coller du planning utilise des semaines commençant le lundi",()
   assert.equal(addIsoDays("2026-07-06",7),"2026-07-13");
 });
 
+test("le copier-coller mensuel accepte uniquement des mois valides et distincts",()=>{
+  assert.equal(validStaffMonth("2026-07"),"2026-07");
+  assert.equal(validStaffMonth("juillet"),"");
+  assert.notEqual(validStaffMonth("2026-07"),validStaffMonth("2026-08"));
+});
+
 test("le calendrier iCal public est lu sans connexion Google",()=>{
   assert.deepEqual(googleCalendarIcalUrls({
     GOOGLE_CALENDAR_ICAL_URL:"https://example.com/one.ics",

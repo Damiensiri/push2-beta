@@ -761,6 +761,30 @@ export default{
           return json({copied:true,sourceStart,targetStart},200,cors);
         }
 
+        if(request.method==="POST"&&url.pathname==="/api/admin/staff-planning/copy-month"){
+          const input=await readJson(request);
+          const sourceMonth=validStaffMonth(input?.sourceMonth);
+          const targetMonth=validStaffMonth(input?.targetMonth);
+          if(!sourceMonth||!targetMonth)return json({error:"Mois source ou destination invalide"},400,cors);
+          if(sourceMonth===targetMonth)return json({error:"Choisissez deux mois différents"},400,cors);
+          const now=new Date().toISOString();
+          await env.DB.batch([
+            env.DB.prepare(`DELETE FROM staff_shifts
+              WHERE work_date>=?||'-01' AND work_date<date(?||'-01','+1 month')
+              AND employee_id IN (SELECT id FROM staff_employees WHERE active=1)`).bind(targetMonth,targetMonth),
+            env.DB.prepare(`INSERT INTO staff_shifts(employee_id,work_date,status,morning_start,morning_end,
+              afternoon_start,afternoon_end,note,created_at,updated_at)
+              SELECT s.employee_id,?||substr(s.work_date,8,3),s.status,s.morning_start,s.morning_end,
+                s.afternoon_start,s.afternoon_end,s.note,?,?
+              FROM staff_shifts s JOIN staff_employees e ON e.id=s.employee_id
+              WHERE e.active=1 AND s.work_date>=?||'-01' AND s.work_date<date(?||'-01','+1 month')
+                AND CAST(substr(s.work_date,9,2) AS INTEGER)<=CAST(strftime('%d',date(?||'-01','+1 month','-1 day')) AS INTEGER)`)
+              .bind(targetMonth,now,now,sourceMonth,sourceMonth,targetMonth)
+          ]);
+          await notifyRealtime(env,"staff-planning");
+          return json({copied:true,sourceMonth,targetMonth},200,cors);
+        }
+
         if(request.method==="PUT"&&url.pathname==="/api/admin/staff-planning/shift-range"){
           const input=await readJson(request);
           const employeeId=Number(input?.employeeId);
