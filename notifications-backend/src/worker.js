@@ -21,6 +21,10 @@ export default{
         return json({ok:true,environment:env.ENVIRONMENT||"unknown",pushEnabled:isPushEnabled(env)},200,cors);
       }
 
+      if(request.method==="GET"&&url.pathname==="/api/google-calendar/callback"){
+        return handleGoogleCalendarCallback(url,env);
+      }
+
       if(request.method==="GET"&&url.pathname==="/api/notifications"){
         const result=await env.DB.prepare(`
           SELECT id,date,heure,categorie,titre,message,epingle,active
@@ -650,6 +654,52 @@ export default{
           ]);
           return json({month,range,employees:employeeResult.results.map(publicStaffEmployee),
             shifts:shiftResult.results.map(publicStaffShift)},200,cors);
+        }
+
+        if(request.method==="GET"&&url.pathname==="/api/admin/google-calendar/status"){
+          const connection=await env.DB.prepare(`SELECT calendar_name,connected_at,updated_at
+            FROM google_calendar_connections WHERE id=1`).first();
+          return json({configured:isGoogleCalendarConfigured(env),connected:Boolean(connection),
+            calendarName:connection?.calendar_name||"",connectedAt:connection?.connected_at||""},200,cors);
+        }
+
+        if(request.method==="POST"&&url.pathname==="/api/admin/google-calendar/connect"){
+          if(!isGoogleCalendarConfigured(env))return json({error:"La connexion Google n’est pas encore configurée dans Cloudflare"},503,cors);
+          const state=crypto.randomUUID()+crypto.randomUUID();const now=new Date();
+          await env.DB.batch([
+            env.DB.prepare("DELETE FROM google_calendar_oauth_states WHERE expires_at<=?").bind(now.toISOString()),
+            env.DB.prepare(`INSERT INTO google_calendar_oauth_states(state_hash,created_at,expires_at)
+              VALUES(?,?,?)`).bind(await sha256(state),now.toISOString(),new Date(now.getTime()+10*60*1000).toISOString())
+          ]);
+          return json({authorizationUrl:googleAuthorizationUrl(env,state)},200,cors);
+        }
+
+        if(request.method==="DELETE"&&url.pathname==="/api/admin/google-calendar/connection"){
+          await env.DB.prepare("DELETE FROM google_calendar_connections WHERE id=1").run();
+          await notifyRealtime(env,"google-calendar");
+          return json({disconnected:true},200,cors);
+        }
+
+        if(request.method==="GET"&&url.pathname==="/api/admin/google-calendar/events"){
+          const month=validStaffMonth(url.searchParams.get("month"));
+          if(!month)return json({error:"Mois invalide"},400,cors);
+          if(!isGoogleCalendarConfigured(env))return json({configured:false,connected:false,events:[]},200,cors);
+          const connection=await env.DB.prepare("SELECT * FROM google_calendar_connections WHERE id=1").first();
+          if(!connection)return json({configured:true,connected:false,events:[]},200,cors);
+          const accessToken=await googleAccessToken(env,connection);
+          const range=staffCivilMonthRange(month);
+          const endpoint=new URL(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(connection.calendar_id)}/events`);
+          endpoint.searchParams.set("timeMin",range.start);
+          endpoint.searchParams.set("timeMax",range.end);
+          endpoint.searchParams.set("singleEvents","true");
+          endpoint.searchParams.set("orderBy","startTime");
+          endpoint.searchParams.set("maxResults","2500");
+          endpoint.searchParams.set("timeZone","Europe/Paris");
+          const response=await fetch(endpoint,{headers:{authorization:`Bearer ${accessToken}`}});
+          const data=await response.json().catch(()=>({}));
+          if(!response.ok)throw new Error(data?.error?.message||"Impossible de lire Google Calendar");
+          return json({configured:true,connected:true,calendarName:connection.calendar_name,
+            events:(data.items||[]).filter(item=>item.status!=="cancelled").map(publicGoogleCalendarEvent)},200,cors);
         }
 
         if(request.method==="POST"&&url.pathname==="/api/admin/staff-planning/employees"){
@@ -1881,6 +1931,112 @@ function validStaffColor(value){
   return /^#[0-9a-f]{6}$/i.test(color)?color.toUpperCase():"#F27D2C";
 }
 
+function isGoogleCalendarConfigured(env){
+  return Boolean(env.GOOGLE_CALENDAR_CLIENT_ID&&env.GOOGLE_CALENDAR_CLIENT_SECRET&&
+    env.GOOGLE_CALENDAR_TOKEN_KEY&&env.GOOGLE_CALENDAR_REDIRECT_URI);
+}
+
+function googleAuthorizationUrl(env,state){
+  const url=new URL("https://accounts.google.com/o/oauth2/v2/auth");
+  url.searchParams.set("client_id",env.GOOGLE_CALENDAR_CLIENT_ID);
+  url.searchParams.set("redirect_uri",env.GOOGLE_CALENDAR_REDIRECT_URI);
+  url.searchParams.set("response_type","code");
+  url.searchParams.set("scope","https://www.googleapis.com/auth/calendar.readonly");
+  url.searchParams.set("access_type","offline");
+  url.searchParams.set("prompt","consent");
+  url.searchParams.set("include_granted_scopes","true");
+  url.searchParams.set("state",state);
+  return url.toString();
+}
+
+async function handleGoogleCalendarCallback(url,env){
+  const backstage="https://damiensiri.github.io/backstage-beta/staff.html";
+  try{
+    if(url.searchParams.get("error"))throw new Error("Autorisation Google refusée");
+    if(!isGoogleCalendarConfigured(env))throw new Error("Configuration Google incomplète");
+    const code=String(url.searchParams.get("code")||"");
+    const state=String(url.searchParams.get("state")||"");
+    if(!code||state.length<40)throw new Error("Réponse Google invalide");
+    const stateHash=await sha256(state);
+    const savedState=await env.DB.prepare(`SELECT state_hash FROM google_calendar_oauth_states
+      WHERE state_hash=? AND expires_at>?`).bind(stateHash,new Date().toISOString()).first();
+    await env.DB.prepare("DELETE FROM google_calendar_oauth_states WHERE state_hash=?").bind(stateHash).run();
+    if(!savedState)throw new Error("Autorisation Google expirée");
+    const tokenResponse=await fetch("https://oauth2.googleapis.com/token",{
+      method:"POST",headers:{"content-type":"application/x-www-form-urlencoded"},
+      body:new URLSearchParams({code,client_id:env.GOOGLE_CALENDAR_CLIENT_ID,
+        client_secret:env.GOOGLE_CALENDAR_CLIENT_SECRET,redirect_uri:env.GOOGLE_CALENDAR_REDIRECT_URI,
+        grant_type:"authorization_code"})
+    });
+    const tokenData=await tokenResponse.json().catch(()=>({}));
+    if(!tokenResponse.ok||!tokenData.refresh_token)throw new Error(tokenData.error_description||"Google n’a pas fourni d’autorisation durable");
+    const calendarResponse=await fetch("https://www.googleapis.com/calendar/v3/calendars/primary",{
+      headers:{authorization:`Bearer ${tokenData.access_token}`}
+    });
+    const calendar=await calendarResponse.json().catch(()=>({}));
+    if(!calendarResponse.ok)throw new Error(calendar?.error?.message||"Agenda Google inaccessible");
+    const encrypted=await encryptGoogleToken(tokenData.refresh_token,env.GOOGLE_CALENDAR_TOKEN_KEY);
+    const now=new Date().toISOString();
+    await env.DB.prepare(`INSERT INTO google_calendar_connections(id,calendar_id,calendar_name,
+      encrypted_refresh_token,encryption_iv,connected_at,updated_at) VALUES(1,'primary',?,?,?,?,?)
+      ON CONFLICT(id) DO UPDATE SET calendar_id='primary',calendar_name=excluded.calendar_name,
+      encrypted_refresh_token=excluded.encrypted_refresh_token,encryption_iv=excluded.encryption_iv,
+      connected_at=excluded.connected_at,updated_at=excluded.updated_at`)
+      .bind(String(calendar.summary||"Agenda Google").slice(0,160),encrypted.value,encrypted.iv,now,now).run();
+    await notifyRealtime(env,"google-calendar");
+    return Response.redirect(`${backstage}?google=connected`,302);
+  }catch(error){
+    console.error("Google Calendar OAuth:",error);
+    return Response.redirect(`${backstage}?google=error`,302);
+  }
+}
+
+async function googleAccessToken(env,connection){
+  const refreshToken=await decryptGoogleToken(connection.encrypted_refresh_token,connection.encryption_iv,
+    env.GOOGLE_CALENDAR_TOKEN_KEY);
+  const response=await fetch("https://oauth2.googleapis.com/token",{
+    method:"POST",headers:{"content-type":"application/x-www-form-urlencoded"},
+    body:new URLSearchParams({client_id:env.GOOGLE_CALENDAR_CLIENT_ID,
+      client_secret:env.GOOGLE_CALENDAR_CLIENT_SECRET,refresh_token:refreshToken,grant_type:"refresh_token"})
+  });
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok||!data.access_token)throw new Error(data.error_description||"La connexion Google Calendar doit être renouvelée");
+  return data.access_token;
+}
+
+async function googleTokenKey(secret){
+  const bytes=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(String(secret)));
+  return crypto.subtle.importKey("raw",bytes,{name:"AES-GCM"},false,["encrypt","decrypt"]);
+}
+
+async function encryptGoogleToken(value,secret){
+  const iv=crypto.getRandomValues(new Uint8Array(12));
+  const encrypted=await crypto.subtle.encrypt({name:"AES-GCM",iv},await googleTokenKey(secret),
+    new TextEncoder().encode(value));
+  return{value:bytesToBase64(new Uint8Array(encrypted)),iv:bytesToBase64(iv)};
+}
+
+async function decryptGoogleToken(value,iv,secret){
+  const decrypted=await crypto.subtle.decrypt({name:"AES-GCM",iv:base64ToBytes(iv)},await googleTokenKey(secret),
+    base64ToBytes(value));
+  return new TextDecoder().decode(decrypted);
+}
+
+function staffCivilMonthRange(month){
+  const first=new Date(month+"-01T00:00:00Z");
+  const start=new Date(first);start.setUTCDate(start.getUTCDate()-1);
+  const end=new Date(first);end.setUTCMonth(end.getUTCMonth()+1);end.setUTCDate(end.getUTCDate()+1);
+  return{start:start.toISOString(),end:end.toISOString()};
+}
+
+function publicGoogleCalendarEvent(item){
+  const allDay=Boolean(item.start?.date);
+  return{id:String(item.id||""),title:String(item.summary||"Sans titre").slice(0,240),
+    start:item.start?.dateTime||item.start?.date||"",end:item.end?.dateTime||item.end?.date||"",
+    date:String(item.start?.dateTime||item.start?.date||"").slice(0,10),allDay,
+    location:String(item.location||"").slice(0,240),htmlLink:String(item.htmlLink||"")};
+}
+
 function addIsoDays(value,count){
   const date=new Date(value+"T12:00:00Z");
   date.setUTCDate(date.getUTCDate()+count);
@@ -2378,5 +2534,6 @@ export{
   calculateStatus,publicSpace,publicSchedule,validateSpace,validateSchedules,timeToMinutes,parisClock,findNextSpaceOpening,
   normalizeEmail,validatePassword,validateNewUser,hashPassword,verifyPassword,publicUser,validatePaddockBooking,validatePaddockHours,
   parisLocalMinute,reservationLocalMinute,duePaddockReminderTypes,isValidPushSubscriptionId,isValidPushInstallationId,processPaddockPushReminders,
-  validatePaddockRequestDate,validStaffMonth,staffMonthRange,staffMinutes,validateStaffShift,isStaffWeekStart,addIsoDays
+  validatePaddockRequestDate,validStaffMonth,staffMonthRange,staffMinutes,validateStaffShift,isStaffWeekStart,addIsoDays,
+  isGoogleCalendarConfigured,staffCivilMonthRange,publicGoogleCalendarEvent,encryptGoogleToken,decryptGoogleToken
 };
