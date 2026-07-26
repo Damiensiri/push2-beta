@@ -636,6 +636,93 @@ export default{
           return json({token,label,createdAt:now},201,cors);
         }
 
+        if(request.method==="GET"&&url.pathname==="/api/admin/staff-planning"){
+          const month=validStaffMonth(url.searchParams.get("month"));
+          if(!month)return json({error:"Mois invalide"},400,cors);
+          const range=staffMonthRange(month);
+          const [employeeResult,shiftResult]=await Promise.all([
+            env.DB.prepare(`SELECT id,name,color,active,position,created_at,updated_at
+              FROM staff_employees WHERE active=1 ORDER BY position,name`).all(),
+            env.DB.prepare(`SELECT id,employee_id,work_date,status,morning_start,morning_end,
+              afternoon_start,afternoon_end,note,created_at,updated_at
+              FROM staff_shifts WHERE work_date>=? AND work_date<=?
+              ORDER BY work_date,employee_id`).bind(range.start,range.end).all()
+          ]);
+          return json({month,range,employees:employeeResult.results.map(publicStaffEmployee),
+            shifts:shiftResult.results.map(publicStaffShift)},200,cors);
+        }
+
+        if(request.method==="POST"&&url.pathname==="/api/admin/staff-planning/employees"){
+          const input=await readJson(request);const name=String(input?.name||"").trim();
+          const color=validStaffColor(input?.color);
+          if(!name||name.length>80)return json({error:"Nom du salarié invalide"},400,cors);
+          const now=new Date().toISOString();
+          const position=await env.DB.prepare("SELECT COALESCE(MAX(position),-1)+1 AS n FROM staff_employees").first();
+          try{
+            const result=await env.DB.prepare(`INSERT INTO staff_employees(name,color,active,position,created_at,updated_at)
+              VALUES(?,?,1,?,?,?)`).bind(name,color,Number(position?.n||0),now,now).run();
+            const employee=await env.DB.prepare("SELECT * FROM staff_employees WHERE id=?").bind(result.meta.last_row_id).first();
+            await notifyRealtime(env,"staff-planning");
+            return json({employee:publicStaffEmployee(employee)},201,cors);
+          }catch(error){
+            if(String(error?.message||error).includes("UNIQUE"))return json({error:"Ce salarié existe déjà"},409,cors);
+            throw error;
+          }
+        }
+
+        const staffEmployee=url.pathname.match(/^\/api\/admin\/staff-planning\/employees\/(\d+)$/);
+        if(staffEmployee&&request.method==="PATCH"){
+          const current=await env.DB.prepare("SELECT * FROM staff_employees WHERE id=?").bind(Number(staffEmployee[1])).first();
+          if(!current)return json({error:"Salarié introuvable"},404,cors);
+          const input=await readJson(request);
+          const name=String(input?.name??current.name).trim();
+          const color=validStaffColor(input?.color??current.color);
+          const active=input?.active===undefined?Number(current.active):input.active?1:0;
+          if(!name||name.length>80)return json({error:"Nom du salarié invalide"},400,cors);
+          if(!active){
+            const activeCount=await env.DB.prepare("SELECT COUNT(*) AS n FROM staff_employees WHERE active=1").first();
+            if(Number(activeCount?.n||0)<=4)return json({error:"Le planning doit conserver au moins quatre salariés actifs"},409,cors);
+          }
+          try{
+            await env.DB.prepare("UPDATE staff_employees SET name=?,color=?,active=?,updated_at=? WHERE id=?")
+              .bind(name,color,active,new Date().toISOString(),current.id).run();
+            const employee=await env.DB.prepare("SELECT * FROM staff_employees WHERE id=?").bind(current.id).first();
+            await notifyRealtime(env,"staff-planning");
+            return json({employee:publicStaffEmployee(employee)},200,cors);
+          }catch(error){
+            if(String(error?.message||error).includes("UNIQUE"))return json({error:"Ce salarié existe déjà"},409,cors);
+            throw error;
+          }
+        }
+
+        if(request.method==="PUT"&&url.pathname==="/api/admin/staff-planning/shifts"){
+          const input=await readJson(request);const shift=validateStaffShift(input);
+          if(shift.error)return json({error:shift.error},400,cors);
+          const employee=await env.DB.prepare("SELECT id FROM staff_employees WHERE id=? AND active=1").bind(shift.employeeId).first();
+          if(!employee)return json({error:"Salarié introuvable"},404,cors);
+          const now=new Date().toISOString();
+          await env.DB.prepare(`INSERT INTO staff_shifts(employee_id,work_date,status,morning_start,morning_end,
+            afternoon_start,afternoon_end,note,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?)
+            ON CONFLICT(employee_id,work_date) DO UPDATE SET status=excluded.status,
+              morning_start=excluded.morning_start,morning_end=excluded.morning_end,
+              afternoon_start=excluded.afternoon_start,afternoon_end=excluded.afternoon_end,
+              note=excluded.note,updated_at=excluded.updated_at`)
+            .bind(shift.employeeId,shift.date,shift.status,shift.morningStart,shift.morningEnd,
+              shift.afternoonStart,shift.afternoonEnd,shift.note,now,now).run();
+          const saved=await env.DB.prepare("SELECT * FROM staff_shifts WHERE employee_id=? AND work_date=?")
+            .bind(shift.employeeId,shift.date).first();
+          await notifyRealtime(env,"staff-planning");
+          return json({shift:publicStaffShift(saved)},200,cors);
+        }
+
+        const staffShift=url.pathname.match(/^\/api\/admin\/staff-planning\/shifts\/(\d+)\/(\d{4}-\d{2}-\d{2})$/);
+        if(staffShift&&request.method==="DELETE"){
+          await env.DB.prepare("DELETE FROM staff_shifts WHERE employee_id=? AND work_date=?")
+            .bind(Number(staffShift[1]),staffShift[2]).run();
+          await notifyRealtime(env,"staff-planning");
+          return json({deleted:true},200,cors);
+        }
+
         if(request.method==="GET"&&url.pathname==="/api/admin/users"){
           const result=await env.DB.prepare(`SELECT id,email,first_name,last_name,card_number,role,status,approval_status,
             must_change_password,created_at,updated_at,last_login_at,
@@ -1730,6 +1817,72 @@ function validatePlanningTask(input){
     endsAt:type==="paddock"?endsAt:null,requestId};
 }
 
+function validStaffMonth(value){
+  const month=String(value||"");
+  if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(month))return"";
+  return month;
+}
+
+function staffMonthRange(month){
+  const valid=validStaffMonth(month);
+  if(!valid)return null;
+  const [year,monthNumber]=valid.split("-").map(Number);
+  const first=new Date(Date.UTC(year,monthNumber-1,1));
+  const last=new Date(Date.UTC(year,monthNumber,0));
+  const mondayOffset=(first.getUTCDay()+6)%7;
+  const sundayOffset=6-((last.getUTCDay()+6)%7);
+  const start=new Date(first);start.setUTCDate(start.getUTCDate()-mondayOffset);
+  const end=new Date(last);end.setUTCDate(end.getUTCDate()+sundayOffset);
+  const iso=date=>date.toISOString().slice(0,10);
+  return{start:iso(start),end:iso(end)};
+}
+
+function validStaffColor(value){
+  const color=String(value||"").trim();
+  return /^#[0-9a-f]{6}$/i.test(color)?color.toUpperCase():"#F27D2C";
+}
+
+function staffMinutes(start,end){
+  if(!start&&!end)return 0;
+  if(!/^\d{2}:\d{2}$/.test(start||"")||!/^\d{2}:\d{2}$/.test(end||""))return null;
+  const from=timeToMinutes(start),to=timeToMinutes(end);
+  if(from===null||to===null||to<=from)return null;
+  return to-from;
+}
+
+function validateStaffShift(input){
+  const employeeId=Number(input?.employeeId);const date=String(input?.date||"");
+  const status=String(input?.status||"work").toLowerCase();
+  const morningStart=String(input?.morningStart||"").trim()||null;
+  const morningEnd=String(input?.morningEnd||"").trim()||null;
+  const afternoonStart=String(input?.afternoonStart||"").trim()||null;
+  const afternoonEnd=String(input?.afternoonEnd||"").trim()||null;
+  const note=String(input?.note||"").trim();
+  if(!Number.isInteger(employeeId)||employeeId<1||!/^\d{4}-\d{2}-\d{2}$/.test(date)||Number.isNaN(new Date(date+"T12:00:00Z").getTime()))
+    return{error:"Salarié ou date invalide"};
+  if(!["work","rest","leave","sick","absence"].includes(status))return{error:"Type de journée invalide"};
+  if(note.length>200)return{error:"Note trop longue"};
+  if(status!=="work")return{employeeId,date,status,morningStart:null,morningEnd:null,afternoonStart:null,afternoonEnd:null,note};
+  const morningMinutes=staffMinutes(morningStart,morningEnd);
+  const afternoonMinutes=staffMinutes(afternoonStart,afternoonEnd);
+  if(morningMinutes===null||afternoonMinutes===null)return{error:"Les horaires de début et de fin doivent être complets et cohérents"};
+  if(!morningMinutes&&!afternoonMinutes&&note==="")return{error:"Renseignez au moins une plage horaire ou une note"};
+  return{employeeId,date,status,morningStart,morningEnd,afternoonStart,afternoonEnd,note,
+    totalMinutes:morningMinutes+afternoonMinutes};
+}
+
+function publicStaffEmployee(row){
+  return{id:Number(row.id),name:row.name,color:row.color,active:Boolean(row.active),position:Number(row.position||0)};
+}
+
+function publicStaffShift(row){
+  const morning=staffMinutes(row.morning_start,row.morning_end)||0;
+  const afternoon=staffMinutes(row.afternoon_start,row.afternoon_end)||0;
+  return{id:Number(row.id),employeeId:Number(row.employee_id),date:row.work_date,status:row.status,
+    morningStart:row.morning_start||"",morningEnd:row.morning_end||"",afternoonStart:row.afternoon_start||"",
+    afternoonEnd:row.afternoon_end||"",note:row.note||"",totalMinutes:morning+afternoon};
+}
+
 async function completePaddockRequest(env,requestId,defaultComment=""){
   const current=await env.DB.prepare("SELECT * FROM paddock_requests WHERE id=?").bind(requestId).first();
   if(!current)throw new Error("Demande de mise au paddock introuvable");
@@ -2176,5 +2329,5 @@ export{
   calculateStatus,publicSpace,publicSchedule,validateSpace,validateSchedules,timeToMinutes,parisClock,findNextSpaceOpening,
   normalizeEmail,validatePassword,validateNewUser,hashPassword,verifyPassword,publicUser,validatePaddockBooking,validatePaddockHours,
   parisLocalMinute,reservationLocalMinute,duePaddockReminderTypes,isValidPushSubscriptionId,isValidPushInstallationId,processPaddockPushReminders,
-  validatePaddockRequestDate
+  validatePaddockRequestDate,validStaffMonth,staffMonthRange,staffMinutes,validateStaffShift
 };

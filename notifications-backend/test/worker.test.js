@@ -4,7 +4,8 @@ import {
   compatibleAlert,validateAlert,parisNow,isPushEnabled,sendRequestedPush,plainTextMessage,
   calculateStatus,publicSpace,publicSchedule,validateSpace,validateSchedules,timeToMinutes,findNextSpaceOpening,
   normalizeEmail,validatePassword,validateNewUser,hashPassword,verifyPassword,validatePaddockBooking,
-  reservationLocalMinute,duePaddockReminderTypes,validatePaddockRequestDate
+  reservationLocalMinute,duePaddockReminderTypes,validatePaddockRequestDate,
+  validStaffMonth,staffMonthRange,staffMinutes,validateStaffShift
 } from "../src/worker.js";
 
 test("les comptes utilisateurs normalisent et valident l’identité",()=>{
@@ -32,6 +33,26 @@ test("les demandes Liberté sont ouvertes du lundi au samedi avec délai la veil
   assert.equal(validatePaddockRequestDate("2026-07-18",{now:fridayAt19}),"");
   assert.equal(validatePaddockRequestDate("2026-07-18",{now:fridayAt21}),"Demande possible uniquement jusqu’à 20h la veille");
   assert.equal(validatePaddockRequestDate("2026-07-19",{now:fridayAt19}),"Demande impossible le dimanche");
+});
+
+test("le planning salariés construit automatiquement les semaines du mois",()=>{
+  assert.equal(validStaffMonth("2026-07"),"2026-07");
+  assert.equal(validStaffMonth("2026-13"),"");
+  assert.deepEqual(staffMonthRange("2026-07"),{start:"2026-06-29",end:"2026-08-02"});
+});
+
+test("les heures salariés sont calculées en minutes sans saisie incohérente",()=>{
+  assert.equal(staffMinutes("07:30","12:00"),270);
+  assert.equal(staffMinutes("14:00","17:45"),225);
+  assert.equal(staffMinutes("12:00","07:30"),null);
+  assert.equal(staffMinutes("",""),0);
+  assert.equal(validateStaffShift({
+    employeeId:1,date:"2026-07-01",status:"work",
+    morningStart:"07:30",morningEnd:"12:00",afternoonStart:"14:00",afternoonEnd:"17:45"
+  }).totalMinutes,495);
+  assert.equal(validateStaffShift({
+    employeeId:1,date:"2026-07-01",status:"work",morningStart:"07:30",morningEnd:""
+  }).error,"Les horaires de début et de fin doivent être complets et cohérents");
 });
 
 test("les exceptions Liberté ouvrent ou ferment une date",()=>{
