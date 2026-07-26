@@ -676,7 +676,7 @@ export default{
           const current=await env.DB.prepare("SELECT * FROM staff_employees WHERE id=? AND active=1").bind(employeeId).first();
           if(!current)return json({error:"Salarié introuvable"},404,cors);
           const activeCount=await env.DB.prepare("SELECT COUNT(*) AS n FROM staff_employees WHERE active=1").first();
-          if(Number(activeCount?.n||0)<=4)return json({error:"Le planning doit conserver au moins quatre salariés"},409,cors);
+          if(Number(activeCount?.n||0)<=1)return json({error:"Le planning doit conserver au moins un salarié"},409,cors);
           await env.DB.batch([
             env.DB.prepare("DELETE FROM staff_shifts WHERE employee_id=?").bind(employeeId),
             env.DB.prepare("DELETE FROM staff_employees WHERE id=?").bind(employeeId)
@@ -695,7 +695,7 @@ export default{
           if(!name||name.length>80)return json({error:"Nom du salarié invalide"},400,cors);
           if(!active){
             const activeCount=await env.DB.prepare("SELECT COUNT(*) AS n FROM staff_employees WHERE active=1").first();
-            if(Number(activeCount?.n||0)<=4)return json({error:"Le planning doit conserver au moins quatre salariés actifs"},409,cors);
+            if(Number(activeCount?.n||0)<=1)return json({error:"Le planning doit conserver au moins un salarié actif"},409,cors);
           }
           try{
             await env.DB.prepare("UPDATE staff_employees SET name=?,color=?,active=?,updated_at=? WHERE id=?")
