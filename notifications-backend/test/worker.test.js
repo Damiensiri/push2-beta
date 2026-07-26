@@ -6,7 +6,7 @@ import {
   normalizeEmail,validatePassword,validateNewUser,hashPassword,verifyPassword,validatePaddockBooking,
   reservationLocalMinute,duePaddockReminderTypes,validatePaddockRequestDate,
   validStaffMonth,staffMonthRange,staffMinutes,validateStaffShift,isStaffWeekStart,addIsoDays,
-  isGoogleCalendarConfigured,staffCivilMonthRange,publicGoogleCalendarEvent,encryptGoogleToken,decryptGoogleToken
+  parseIcsCalendar
 } from "../src/worker.js";
 
 test("les comptes utilisateurs normalisent et valident l’identité",()=>{
@@ -63,24 +63,36 @@ test("le copier-coller du planning utilise des semaines commençant le lundi",()
   assert.equal(addIsoDays("2026-07-06",7),"2026-07-13");
 });
 
-test("Google Calendar reste en lecture seule et ses jetons sont chiffrés",async()=>{
-  assert.equal(isGoogleCalendarConfigured({
-    GOOGLE_CALENDAR_CLIENT_ID:"id",GOOGLE_CALENDAR_CLIENT_SECRET:"secret",
-    GOOGLE_CALENDAR_TOKEN_KEY:"key",GOOGLE_CALENDAR_REDIRECT_URI:"https://example.com/callback"
-  }),true);
-  assert.equal(isGoogleCalendarConfigured({GOOGLE_CALENDAR_CLIENT_ID:"id"}),false);
-  const encrypted=await encryptGoogleToken("refresh-token-test","cle-de-chiffrement-test");
-  assert.notEqual(encrypted.value,"refresh-token-test");
-  assert.equal(await decryptGoogleToken(encrypted.value,encrypted.iv,"cle-de-chiffrement-test"),"refresh-token-test");
-  assert.deepEqual(staffCivilMonthRange("2026-07"),{
-    start:"2026-06-30T00:00:00.000Z",end:"2026-08-02T00:00:00.000Z"
-  });
-  assert.deepEqual(publicGoogleCalendarEvent({
-    id:"event-1",summary:"Vétérinaire",start:{dateTime:"2026-07-10T09:00:00+02:00"},
-    end:{dateTime:"2026-07-10T10:00:00+02:00"},location:"Écurie",htmlLink:"https://calendar.google.com/event"
-  }),{id:"event-1",title:"Vétérinaire",start:"2026-07-10T09:00:00+02:00",
-    end:"2026-07-10T10:00:00+02:00",date:"2026-07-10",allDay:false,location:"Écurie",
-    htmlLink:"https://calendar.google.com/event"});
+test("le calendrier iCal public est lu sans connexion Google",()=>{
+  const events=parseIcsCalendar(`BEGIN:VCALENDAR
+BEGIN:VEVENT
+UID:event-1
+DTSTART;TZID=Europe/Paris:20260710T090000
+DTEND;TZID=Europe/Paris:20260710T100000
+SUMMARY:Vétérinaire
+LOCATION:Écurie
+END:VEVENT
+BEGIN:VEVENT
+UID:event-2
+DTSTART;VALUE=DATE:20260714
+DTEND;VALUE=DATE:20260715
+SUMMARY:Concours
+END:VEVENT
+BEGIN:VEVENT
+UID:event-annule
+DTSTART;VALUE=DATE:20260720
+DTEND;VALUE=DATE:20260721
+SUMMARY:Annulé
+STATUS:CANCELLED
+END:VEVENT
+END:VCALENDAR`,"2026-07");
+  assert.deepEqual(events,[{
+    id:"event-1",title:"Vétérinaire",start:"2026-07-10T09:00:00",end:"2026-07-10T10:00:00",
+    date:"2026-07-10",allDay:false,location:"Écurie",htmlLink:""
+  },{
+    id:"event-2",title:"Concours",start:"2026-07-14",end:"2026-07-15",
+    date:"2026-07-14",allDay:true,location:"",htmlLink:""
+  }]);
 });
 
 test("les exceptions Liberté ouvrent ou ferment une date",()=>{
