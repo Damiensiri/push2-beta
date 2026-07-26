@@ -6,7 +6,7 @@ import {
   normalizeEmail,validatePassword,validateNewUser,hashPassword,verifyPassword,validatePaddockBooking,
   reservationLocalMinute,duePaddockReminderTypes,validatePaddockRequestDate,
   validStaffMonth,staffMonthRange,staffMinutes,validateStaffShift,isStaffWeekStart,addIsoDays,
-  parseIcsCalendar
+  parseIcsCalendar,googleCalendarIcalUrls
 } from "../src/worker.js";
 
 test("les comptes utilisateurs normalisent et valident l’identité",()=>{
@@ -64,6 +64,11 @@ test("le copier-coller du planning utilise des semaines commençant le lundi",()
 });
 
 test("le calendrier iCal public est lu sans connexion Google",()=>{
+  assert.deepEqual(googleCalendarIcalUrls({
+    GOOGLE_CALENDAR_ICAL_URL:"https://example.com/one.ics",
+    GOOGLE_CALENDAR_PERSONAL_ICAL_URL:"",
+    GOOGLE_CALENDAR_GROUP_ICAL_URL:"https://example.com/two.ics"
+  }),["https://example.com/one.ics","https://example.com/two.ics"]);
   const events=parseIcsCalendar(`BEGIN:VCALENDAR
 BEGIN:VEVENT
 UID:event-1

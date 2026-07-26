@@ -653,20 +653,30 @@ export default{
         }
 
         if(request.method==="GET"&&url.pathname==="/api/admin/google-calendar/status"){
-          const configured=Boolean(env.GOOGLE_CALENDAR_ICAL_URL);
+          const configured=googleCalendarIcalUrls(env).length>0;
           return json({configured,connected:configured,
-            calendarName:configured?"Calendrier Damien Siri":""},200,cors);
+            calendarName:configured?"Calendriers Damien Siri":""},200,cors);
         }
 
         if(request.method==="GET"&&url.pathname==="/api/admin/google-calendar/events"){
           const month=validStaffMonth(url.searchParams.get("month"));
           if(!month)return json({error:"Mois invalide"},400,cors);
-          if(!env.GOOGLE_CALENDAR_ICAL_URL)return json({configured:false,connected:false,events:[]},200,cors);
-          const response=await fetch(env.GOOGLE_CALENDAR_ICAL_URL,{headers:{accept:"text/calendar"},cf:{cacheTtl:300}});
-          if(!response.ok)throw new Error("Impossible de lire le calendrier iCal");
-          const text=await response.text();
-          return json({configured:true,connected:true,calendarName:"Calendrier Damien Siri",
-            events:parseIcsCalendar(text,month)},200,{...cors,"cache-control":"private, max-age=60"});
+          const urls=googleCalendarIcalUrls(env);
+          if(!urls.length)return json({configured:false,connected:false,events:[]},200,cors);
+          const calendars=await Promise.allSettled(urls.map(async calendarUrl=>{
+            const response=await fetch(calendarUrl,{headers:{accept:"text/calendar"},cf:{cacheTtl:300}});
+            if(!response.ok)throw new Error(`Calendrier iCal inaccessible (${response.status})`);
+            return parseIcsCalendar(await response.text(),month);
+          }));
+          const available=calendars.filter(result=>result.status==="fulfilled");
+          if(!available.length)throw new Error("Impossible de lire les calendriers iCal");
+          const unique=new Map();
+          for(const result of available){
+            for(const event of result.value)unique.set(`${event.id}|${event.start}`,event);
+          }
+          const events=[...unique.values()].sort((a,b)=>a.start.localeCompare(b.start)||a.title.localeCompare(b.title,"fr"));
+          return json({configured:true,connected:true,calendarName:"Calendriers Damien Siri",
+            events,calendarCount:available.length},200,{...cors,"cache-control":"private, max-age=60"});
         }
 
         if(request.method==="POST"&&url.pathname==="/api/admin/staff-planning/employees"){
@@ -1898,6 +1908,14 @@ function validStaffColor(value){
   return /^#[0-9a-f]{6}$/i.test(color)?color.toUpperCase():"#F27D2C";
 }
 
+function googleCalendarIcalUrls(env){
+  return[
+    env.GOOGLE_CALENDAR_ICAL_URL,
+    env.GOOGLE_CALENDAR_PERSONAL_ICAL_URL,
+    env.GOOGLE_CALENDAR_GROUP_ICAL_URL
+  ].map(value=>String(value||"").trim()).filter(Boolean);
+}
+
 function decodeIcsText(value){
   return String(value||"").replace(/\\n/gi,"\n").replace(/\\,/g,",").replace(/\\;/g,";").replace(/\\\\/g,"\\");
 }
@@ -2447,5 +2465,5 @@ export{
   normalizeEmail,validatePassword,validateNewUser,hashPassword,verifyPassword,publicUser,validatePaddockBooking,validatePaddockHours,
   parisLocalMinute,reservationLocalMinute,duePaddockReminderTypes,isValidPushSubscriptionId,isValidPushInstallationId,processPaddockPushReminders,
   validatePaddockRequestDate,validStaffMonth,staffMonthRange,staffMinutes,validateStaffShift,isStaffWeekStart,addIsoDays,
-  parseIcsCalendar
+  parseIcsCalendar,googleCalendarIcalUrls
 };
