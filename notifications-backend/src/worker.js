@@ -761,6 +761,35 @@ export default{
           return json({copied:true,sourceStart,targetStart},200,cors);
         }
 
+        if(request.method==="PUT"&&url.pathname==="/api/admin/staff-planning/shift-range"){
+          const input=await readJson(request);
+          const employeeId=Number(input?.employeeId);
+          const status=String(input?.status||"").toLowerCase();
+          const startDate=String(input?.startDate||"");
+          const endDate=String(input?.endDate||"");
+          const note=String(input?.note||"").trim();
+          if(!Number.isInteger(employeeId)||employeeId<1)return json({error:"Salarié invalide"},400,cors);
+          if(!["leave","sick"].includes(status))return json({error:"La période doit être un congé ou un arrêt maladie"},400,cors);
+          if(!isIsoDate(startDate)||!isIsoDate(endDate)||endDate<startDate)return json({error:"Période invalide"},400,cors);
+          const dayCount=Math.round((Date.parse(endDate+"T12:00:00Z")-Date.parse(startDate+"T12:00:00Z"))/86400000)+1;
+          if(dayCount>366)return json({error:"La période ne peut pas dépasser 366 jours"},400,cors);
+          if(note.length>200)return json({error:"Note trop longue"},400,cors);
+          const employee=await env.DB.prepare("SELECT id FROM staff_employees WHERE id=? AND active=1").bind(employeeId).first();
+          if(!employee)return json({error:"Salarié introuvable"},404,cors);
+          const now=new Date().toISOString();
+          const statements=[];
+          for(let date=startDate;date<=endDate;date=addIsoDays(date,1)){
+            statements.push(env.DB.prepare(`INSERT INTO staff_shifts(employee_id,work_date,status,morning_start,morning_end,
+              afternoon_start,afternoon_end,note,created_at,updated_at) VALUES(?,?,?,NULL,NULL,NULL,NULL,?,?,?)
+              ON CONFLICT(employee_id,work_date) DO UPDATE SET status=excluded.status,morning_start=NULL,morning_end=NULL,
+              afternoon_start=NULL,afternoon_end=NULL,note=excluded.note,updated_at=excluded.updated_at`)
+              .bind(employeeId,date,status,note,now,now));
+          }
+          await env.DB.batch(statements);
+          await notifyRealtime(env,"staff-planning");
+          return json({saved:true,dayCount,startDate,endDate,status},200,cors);
+        }
+
         if(request.method==="PUT"&&url.pathname==="/api/admin/staff-planning/shifts"){
           const input=await readJson(request);const shift=validateStaffShift(input);
           if(shift.error)return json({error:shift.error},400,cors);
@@ -1973,8 +2002,12 @@ function addIsoDays(value,count){
   return date.toISOString().slice(0,10);
 }
 
+function isIsoDate(value){
+  return /^\d{4}-\d{2}-\d{2}$/.test(value)&&!Number.isNaN(Date.parse(value+"T12:00:00Z"));
+}
+
 function isStaffWeekStart(value){
-  return /^\d{4}-\d{2}-\d{2}$/.test(value)&&!Number.isNaN(Date.parse(value+"T12:00:00Z"))&&new Date(value+"T12:00:00Z").getUTCDay()===1;
+  return isIsoDate(value)&&new Date(value+"T12:00:00Z").getUTCDay()===1;
 }
 
 function staffMinutes(start,end){
@@ -1995,7 +2028,7 @@ function validateStaffShift(input){
   const note=String(input?.note||"").trim();
   if(!Number.isInteger(employeeId)||employeeId<1||!/^\d{4}-\d{2}-\d{2}$/.test(date)||Number.isNaN(new Date(date+"T12:00:00Z").getTime()))
     return{error:"Salarié ou date invalide"};
-  if(!["work","rest","leave","sick","absence"].includes(status))return{error:"Type de journée invalide"};
+  if(!["work","rest","leave","sick","absence","cfa"].includes(status))return{error:"Type de journée invalide"};
   if(note.length>200)return{error:"Note trop longue"};
   if(status!=="work")return{employeeId,date,status,morningStart:null,morningEnd:null,afternoonStart:null,afternoonEnd:null,note};
   const morningMinutes=staffMinutes(morningStart,morningEnd);
@@ -2015,7 +2048,7 @@ function publicStaffShift(row){
   const afternoon=staffMinutes(row.afternoon_start,row.afternoon_end)||0;
   return{id:Number(row.id),employeeId:Number(row.employee_id),date:row.work_date,status:row.status,
     morningStart:row.morning_start||"",morningEnd:row.morning_end||"",afternoonStart:row.afternoon_start||"",
-    afternoonEnd:row.afternoon_end||"",note:row.note||"",totalMinutes:morning+afternoon};
+    afternoonEnd:row.afternoon_end||"",note:row.note||"",totalMinutes:row.status==="cfa"?420:morning+afternoon};
 }
 
 async function completePaddockRequest(env,requestId,defaultComment=""){

@@ -54,6 +54,10 @@ test("les heures salariés sont calculées en minutes sans saisie incohérente",
   assert.equal(validateStaffShift({
     employeeId:1,date:"2026-07-01",status:"work",morningStart:"07:30",morningEnd:""
   }).error,"Les horaires de début et de fin doivent être complets et cohérents");
+  assert.deepEqual(validateStaffShift({
+    employeeId:1,date:"2026-07-02",status:"cfa",note:"Formation"
+  }),{employeeId:1,date:"2026-07-02",status:"cfa",morningStart:null,morningEnd:null,
+    afternoonStart:null,afternoonEnd:null,note:"Formation"});
 });
 
 test("le copier-coller du planning utilise des semaines commençant le lundi",()=>{
