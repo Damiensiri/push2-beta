@@ -108,6 +108,18 @@ END:VCALENDAR`,"2026-07");
     id:"event-2",title:"Concours",start:"2026-07-14",end:"2026-07-15",
     date:"2026-07-14",allDay:true,location:"",htmlLink:""
   }]);
+  const colored=parseIcsCalendar(`BEGIN:VCALENDAR
+X-WR-CALNAME:Concours club
+BEGIN:VEVENT
+UID:event-color
+DTSTART;VALUE=DATE:20260714
+DTEND;VALUE=DATE:20260717
+SUMMARY:Championnat
+END:VEVENT
+END:VCALENDAR`,"2026-07",{index:2,color:"#47A66A"});
+  assert.equal(colored[0].calendarName,"Concours club");
+  assert.equal(colored[0].calendarColor,"#47A66A");
+  assert.equal(colored[0].calendarIndex,2);
 });
 
 test("les exceptions Liberté ouvrent ou ferment une date",()=>{

@@ -674,10 +674,15 @@ export default{
           if(!month)return json({error:"Mois invalide"},400,cors);
           const urls=googleCalendarIcalUrls(env);
           if(!urls.length)return json({configured:false,connected:false,events:[]},200,cors);
-          const calendars=await Promise.allSettled(urls.map(async calendarUrl=>{
-            const response=await fetch(calendarUrl,{headers:{accept:"text/calendar"},cf:{cacheTtl:300}});
+          const forceRefresh=url.searchParams.get("refresh")==="1";
+          const colors=["#F28C28","#5B8DEF","#47A66A"];
+          const calendars=await Promise.allSettled(urls.map(async(calendarUrl,index)=>{
+            const separator=calendarUrl.includes("?")?"&":"?";
+            const requestUrl=forceRefresh?`${calendarUrl}${separator}_refresh=${Date.now()}`:calendarUrl;
+            const response=await fetch(requestUrl,{headers:{accept:"text/calendar",
+              ...(forceRefresh?{"cache-control":"no-cache"}:{})},cf:{cacheTtl:forceRefresh?0:300}});
             if(!response.ok)throw new Error(`Calendrier iCal inaccessible (${response.status})`);
-            return parseIcsCalendar(await response.text(),month);
+            return parseIcsCalendar(await response.text(),month,{index,color:colors[index%colors.length]});
           }));
           const available=calendars.filter(result=>result.status==="fulfilled");
           if(!available.length)throw new Error("Impossible de lire les calendriers iCal");
@@ -687,7 +692,8 @@ export default{
           }
           const events=[...unique.values()].sort((a,b)=>a.start.localeCompare(b.start)||a.title.localeCompare(b.title,"fr"));
           return json({configured:true,connected:true,calendarName:"Calendriers Damien Siri",
-            events,calendarCount:available.length},200,{...cors,"cache-control":"private, max-age=60"});
+            events,calendarCount:available.length,refreshed:forceRefresh},200,
+            {...cors,"cache-control":forceRefresh?"private, no-store":"private, max-age=60"});
         }
 
         if(request.method==="POST"&&url.pathname==="/api/admin/staff-planning/employees"){
@@ -2021,10 +2027,11 @@ function parseIcsDate(value,allDay){
   return `${date}T${time}${text.endsWith("Z")?"Z":""}`;
 }
 
-function parseIcsCalendar(source,month){
+function parseIcsCalendar(source,month,calendar=null){
   const valid=validStaffMonth(month);
   if(!valid)return[];
   const unfolded=String(source||"").replace(/\r\n/g,"\n").replace(/\r/g,"\n").replace(/\n[ \t]/g,"");
+  const calendarName=decodeIcsText(unfolded.match(/^X-WR-CALNAME:(.*)$/m)?.[1]||`Calendrier ${(calendar?.index??0)+1}`).trim();
   const first=`${valid}-01`;
   const [year,number]=valid.split("-").map(Number);
   const last=new Date(Date.UTC(year,number,0)).toISOString().slice(0,10);
@@ -2048,13 +2055,19 @@ function parseIcsCalendar(source,month){
     const startDate=start.slice(0,10);
     const effectiveEnd=allDay&&end>start?addIsoDays(end,-1):end.slice(0,10);
     if(startDate>last||effectiveEnd<first)continue;
-    events.push({
+    const event={
       id:String(properties.UID?.value||`${start}-${events.length}`).slice(0,240),
       title:decodeIcsText(properties.SUMMARY?.value||"Sans titre").slice(0,240),
       start,end,date:startDate,allDay,
       location:decodeIcsText(properties.LOCATION?.value||"").slice(0,240),
       htmlLink:""
-    });
+    };
+    if(calendar){
+      event.calendarName=calendarName;
+      event.calendarColor=calendar.color;
+      event.calendarIndex=calendar.index;
+    }
+    events.push(event);
   }
   return events.sort((a,b)=>a.start.localeCompare(b.start)||a.title.localeCompare(b.title,"fr")).slice(0,1000);
 }
