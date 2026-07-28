@@ -166,3 +166,179 @@
   font-weight:800;
   text-decoration:none;
 }
+
+/* Pilote UX 2026-07-28 : page Thèmes compacte, logique inchangée. */
+.admin-page .plan-header{
+  min-height:auto;
+  align-items:center;
+  justify-content:flex-start;
+  gap:12px;
+  padding:calc(14px + var(--safe-top)) 18px 8px;
+}
+
+.admin-page .plan-header #backBtn{
+  position:static;
+  flex:0 0 auto;
+  width:44px;
+  height:44px;
+}
+
+.admin-heading{
+  min-width:0;
+  flex:1;
+}
+
+.admin-heading p{
+  margin:0 0 2px;
+  color:rgba(255,255,255,.62);
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+}
+
+.admin-page .plan-header .admin-heading h1{
+  margin:0;
+  font-size:clamp(24px,6vw,34px);
+  line-height:1;
+  letter-spacing:-.02em;
+}
+
+.admin-environment{
+  flex:0 0 auto;
+  padding:7px 10px;
+  border:1px solid rgba(109,240,160,.35);
+  border-radius:999px;
+  color:#6df0a0;
+  background:rgba(34,112,73,.26);
+  font-size:10px;
+  font-weight:900;
+  letter-spacing:.1em;
+}
+
+.admin-shell{
+  width:min(900px,calc(100% - 28px));
+  margin:6px auto 0;
+  gap:10px;
+}
+
+.admin-card{
+  padding:16px;
+  border-radius:20px;
+}
+
+.admin-intro{
+  display:grid;
+  grid-template-columns:1fr auto;
+  align-items:center;
+  gap:5px 14px;
+  text-align:left;
+}
+
+.admin-intro .admin-kicker,
+.admin-intro h2,
+.admin-intro > p{
+  grid-column:1;
+}
+
+.admin-intro h2{
+  margin-bottom:3px;
+  font-size:20px;
+}
+
+.admin-intro > p{
+  max-width:620px;
+  font-size:12px;
+  line-height:1.4;
+}
+
+.admin-current{
+  grid-column:2;
+  grid-row:1 / span 3;
+  min-width:142px;
+  margin:0;
+  padding:10px 14px;
+  text-align:center;
+}
+
+.admin-form{
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+  gap:10px;
+}
+
+.admin-field{
+  gap:5px;
+}
+
+.admin-field select,
+.admin-field input{
+  min-height:46px;
+  border-radius:14px;
+}
+
+.admin-primary,
+.admin-secondary{
+  min-height:44px;
+  border-radius:14px;
+}
+
+.admin-status{
+  grid-column:1 / -1;
+  min-height:16px;
+  font-size:12px;
+}
+
+.admin-preview{
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr);
+  align-items:center;
+  gap:12px;
+}
+
+.admin-preview .admin-kicker{
+  margin:0;
+}
+
+.admin-links{
+  grid-template-columns:repeat(6,minmax(0,1fr));
+  gap:6px;
+}
+
+.admin-links a{
+  min-height:38px;
+  padding:7px 5px;
+  border-radius:12px;
+  font-size:10px;
+}
+
+@media (max-width:640px){
+  .admin-intro{
+    grid-template-columns:1fr;
+  }
+
+  .admin-current{
+    grid-column:1;
+    grid-row:auto;
+    width:100%;
+    grid-template-columns:1fr auto;
+    align-items:center;
+    text-align:left;
+  }
+
+  .admin-form{
+    grid-template-columns:1fr;
+  }
+
+  .admin-status{
+    grid-column:1;
+  }
+
+  .admin-preview{
+    grid-template-columns:1fr;
+    gap:8px;
+  }
+
+  .admin-links{
+    grid-template-columns:repeat(3,minmax(0,1fr));
+  }
+}

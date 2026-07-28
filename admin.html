@@ -20,7 +20,7 @@
 <link rel="stylesheet" href="assets/css/themes/christmas.css?v=20260724-11">
 <link rel="stylesheet" href="assets/css/themes/winter.css?v=20260724-11">
 <link rel="stylesheet" href="assets/css/themes/spring.css?v=20260724-11">
-<link rel="stylesheet" href="assets/css/pages/admin.css?v=20260724-11">
+<link rel="stylesheet" href="assets/css/pages/admin.css?v=20260728-1">
 </head>
 
 <body class="app-page admin-page">
@@ -33,13 +33,17 @@
 <div id="backBtn" onclick="goBack()">
 <img src="image/back.svg" alt="">
 </div>
-<h1>ADMIN</h1>
+<div class="admin-heading">
+<p>Administration</p>
+<h1>Thèmes</h1>
+</div>
+<span class="admin-environment">BÊTA</span>
 </header>
 
 <main class="admin-shell" aria-labelledby="adminTitle">
 <section class="admin-card admin-intro">
 <p class="admin-kicker">Thèmes saisonniers</p>
-<h2 id="adminTitle">Administration du thème</h2>
+<h2 id="adminTitle">Ambiance de l’application</h2>
 <p>Cette page pilote uniquement l’ambiance saisonnière publiée. Elle ne modifie ni Firebase, ni OneSignal, ni les horaires de lumière.</p>
 <div class="admin-current">
 <span>Thème publié</span>
@@ -47,7 +51,7 @@
 </div>
 </section>
 
-<form class="admin-card admin-form" id="themeAdminForm">
+<form class="admin-card admin-form admin-control" id="themeAdminForm">
 <div class="admin-field">
 <label for="themeSelect">Choisir le thème actif</label>
 <select id="themeSelect">
@@ -69,7 +73,7 @@
 <p class="admin-status" id="adminStatus" aria-live="polite"></p>
 </form>
 
-<section class="admin-card">
+<section class="admin-card admin-preview">
 <p class="admin-kicker">Aperçu rapide</p>
 <div class="admin-links">
 <a href="index.html">Index</a>
