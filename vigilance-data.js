@@ -1,10 +1,10 @@
 window.METEOALARM_VIGILANCE = {
   "department": "Aube",
-  "level": "green",
-  "label": "Vert",
-  "phenomenon": "Aucun phénomène dangereux signalé pour l'Aube.",
-  "period": "Aucune alerte active",
-  "updatedAt": "Vérification automatique active",
+  "level": "yellow",
+  "label": "Jaune",
+  "phenomenon": "Canicule",
+  "period": "Du 29 juillet à 00:00 au 30 juillet à 00:00",
+  "updatedAt": "28 juillet à 06:00",
   "source": "MeteoAlarm / EUMETNET",
   "sourceUrl": "https://meteoalarm.org"
 };
