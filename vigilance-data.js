@@ -4,7 +4,7 @@ window.METEOALARM_VIGILANCE = {
   "label": "Jaune",
   "phenomenon": "Canicule",
   "period": "Du 29 juillet à 00:00 au 30 juillet à 00:00",
-  "updatedAt": "28 juillet à 06:00",
+  "updatedAt": "28 juillet à 16:00",
   "source": "MeteoAlarm / EUMETNET",
   "sourceUrl": "https://meteoalarm.org"
 };
