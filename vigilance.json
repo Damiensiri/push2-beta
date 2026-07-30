@@ -3,8 +3,8 @@
   "level": "yellow",
   "label": "Jaune",
   "phenomenon": "Canicule · Orages",
-  "period": "Du 30 juillet à 09:30 au 1 août à 00:00",
-  "updatedAt": "30 juillet à 09:30",
+  "period": "Du 30 juillet à 16:00 au 1 août à 00:00",
+  "updatedAt": "30 juillet à 16:00",
   "source": "MeteoAlarm / EUMETNET",
   "sourceUrl": "https://meteoalarm.org"
 }
