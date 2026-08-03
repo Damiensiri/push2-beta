@@ -3,8 +3,8 @@ window.METEOALARM_VIGILANCE = {
   "level": "yellow",
   "label": "Jaune",
   "phenomenon": "Canicule · Orages",
-  "period": "Du 3 août à 10:00 au 5 août à 00:00",
-  "updatedAt": "3 août à 10:01",
+  "period": "Du 3 août à 14:03 au 5 août à 00:00",
+  "updatedAt": "3 août à 14:04",
   "source": "MeteoAlarm / EUMETNET",
   "sourceUrl": "https://meteoalarm.org"
 };
