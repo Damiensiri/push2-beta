@@ -2,9 +2,9 @@ window.METEOALARM_VIGILANCE = {
   "department": "Aube",
   "level": "yellow",
   "label": "Jaune",
-  "phenomenon": "Canicule · Orages",
-  "period": "Du 4 août à 00:00 au 5 août à 00:00",
-  "updatedAt": "4 août à 00:01",
+  "phenomenon": "Orages",
+  "period": "Du 4 août à 06:00 au 5 août à 00:00",
+  "updatedAt": "4 août à 06:01",
   "source": "MeteoAlarm / EUMETNET",
   "sourceUrl": "https://meteoalarm.org"
 };
