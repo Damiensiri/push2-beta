@@ -3,8 +3,8 @@ window.METEOALARM_VIGILANCE = {
   "level": "yellow",
   "label": "Jaune",
   "phenomenon": "Orages",
-  "period": "Du 4 août à 10:00 au 5 août à 00:00",
-  "updatedAt": "4 août à 10:00",
+  "period": "Du 4 août à 16:00 au 5 août à 00:00",
+  "updatedAt": "4 août à 16:00",
   "source": "MeteoAlarm / EUMETNET",
   "sourceUrl": "https://meteoalarm.org"
 };
