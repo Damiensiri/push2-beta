@@ -92,6 +92,26 @@
   line-height:1.35;
 }
 
+.alert.has{
+  border-color:rgba(255,210,128,.9);
+  color:#fff;
+  background:
+    radial-gradient(circle at 20% 0%,rgba(255,255,255,.25),transparent 42%),
+    linear-gradient(145deg,rgba(237,151,35,.96),rgba(190,95,22,.9));
+  box-shadow:0 10px 24px rgba(154,83,18,.28),inset 0 1px 0 rgba(255,255,255,.24);
+  font-size:.86rem;
+  font-weight:750;
+}
+
+.alert.has.urgent{
+  border-color:rgba(255,130,140,.95);
+  color:#fff;
+  background:
+    radial-gradient(circle at 20% 0%,rgba(255,255,255,.22),transparent 42%),
+    linear-gradient(145deg,rgba(225,0,15,.9),rgba(155,0,18,.88));
+  box-shadow:0 10px 26px rgba(130,0,15,.34),inset 0 1px 0 rgba(255,255,255,.22);
+}
+
 @media(max-width:1000px){
   .card{
     padding:14px 14px 13px 21px;
@@ -242,7 +262,7 @@ function stable(data,schedules,exceptions){
   const home=data.find(x=>x.espace==='accueil');
   const alert=home?.alerte||'';
   const urgent=String(home?.urgent).toLowerCase()==='oui';
-  return `<div class="top"><div class="name"><img src="image/time.svg" alt=""><span>Horaires Écurie<\/span><\/div><strong>Aujourd’hui<\/strong><\/div><div class="stable-main"><div class="stable-time">${esc(hours)}<\/div><div class="stable-source">${exception?'Horaires adaptés':'Horaires habituels'}<\/div><div class="alert ${alert?'has':''} ${urgent?'urgent':''}">${alert?`<strong>Alerte :<\/strong> ${esc(alert)}`:'Aucune alerte'}<\/div><\/div>`;
+  return `<div class="top"><div class="name"><img src="image/time.svg" alt=""><span>Horaires Écurie<\/span><\/div><strong>Aujourd’hui<\/strong><\/div><div class="stable-main"><div class="stable-time">${esc(hours)}<\/div><div class="stable-source">${exception?'Horaires adaptés':'Horaires habituels'}<\/div><div class="alert ${alert?'has':''} ${urgent?'urgent':''}">${alert?`⚠️ <strong>Alerte :<\/strong> ${esc(alert)}`:'Aucune alerte'}<\/div><\/div>`;
 }
 
 function render(data,schedules,exceptions){
