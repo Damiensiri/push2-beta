@@ -3,8 +3,8 @@
   "level": "yellow",
   "label": "Jaune",
   "phenomenon": "Orages",
-  "period": "Du 9 août à 00:00 au 10 août à 00:00",
-  "updatedAt": "8 août à 16:00",
+  "period": "Du 9 août à 06:00 au 10 août à 00:00",
+  "updatedAt": "9 août à 06:00",
   "source": "MeteoAlarm / EUMETNET",
   "sourceUrl": "https://meteoalarm.org"
 }
