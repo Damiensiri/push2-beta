@@ -3,7 +3,7 @@ window.METEOALARM_VIGILANCE = {
   "level": "orange",
   "label": "Orange",
   "phenomenon": "Canicule",
-  "period": "Du 11 août à 16:19 au 13 août à 00:00",
+  "period": "Du 12 août à 00:00 au 13 août à 00:00",
   "updatedAt": "11 août à 16:20",
   "source": "MeteoAlarm / EUMETNET",
   "sourceUrl": "https://meteoalarm.org"
