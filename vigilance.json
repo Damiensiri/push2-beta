@@ -3,8 +3,8 @@
   "level": "yellow",
   "label": "Jaune",
   "phenomenon": "Canicule · Orages",
-  "period": "Du 16 août à 06:00 au 17 août à 00:00",
-  "updatedAt": "16 août à 06:00",
+  "period": "Du 16 août à 16:00 au 17 août à 00:00",
+  "updatedAt": "16 août à 16:01",
   "source": "MeteoAlarm / EUMETNET",
   "sourceUrl": "https://meteoalarm.org"
 }
