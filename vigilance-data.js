@@ -4,7 +4,7 @@ window.METEOALARM_VIGILANCE = {
   "label": "Jaune",
   "phenomenon": "Orages",
   "period": "Du 25 août à 00:00 au 26 août à 00:00",
-  "updatedAt": "24 août à 21:01",
+  "updatedAt": "24 août à 23:12",
   "source": "MeteoAlarm / EUMETNET",
   "sourceUrl": "https://meteoalarm.org"
 };
