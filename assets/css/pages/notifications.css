@@ -94,8 +94,17 @@ body.notifications-page .page{
 }
 
 .card.lu{
-  opacity:.09;
-  filter:saturate(.45) brightness(.85);
+  opacity:1;
+  border-color:rgba(255,255,255,.10);
+  background:
+    linear-gradient(160deg,rgba(20,50,72,.28),rgba(28,76,98,.18)),
+    radial-gradient(circle at 12% 0%,rgba(255,255,255,.08),transparent 38%);
+  box-shadow:0 10px 26px rgba(0,0,0,.10),inset 0 1px 0 rgba(255,255,255,.08);
+  filter:saturate(.45) brightness(.90);
+}
+
+.card.lu > *{
+  opacity:.42;
 }
 
 .card-time{
