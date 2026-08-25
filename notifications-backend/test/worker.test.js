@@ -216,6 +216,30 @@ test("OneSignal reçoit un message sans marqueurs de mise en forme",()=>{
   );
 });
 
+test("une notification programmée ouvre le détail de l’alerte et non celui de la programmation",async()=>{
+  const originalFetch=globalThis.fetch;
+  let payload=null;
+  globalThis.fetch=async(_url,options)=>{
+    payload=JSON.parse(options.body);
+    return new Response(JSON.stringify({id:"onesignal-id"}),{
+      status:200,
+      headers:{"content-type":"application/json"}
+    });
+  };
+  try{
+    const result=await sendRequestedPush({
+      PUSH_ENABLED:"true",ONESIGNAL_APP_ID:"app",ONESIGNAL_REST_API_KEY:"secret"
+    },{
+      id:12,alert_id:178,titre:"Programmation",message:"Message",active:"oui",
+      push_requested:1,push_sent_at:null
+    });
+    assert.equal(result.status,"sent");
+    assert.equal(payload.url,"https://damiensiri.github.io/push2-beta/detail.html?id=178");
+  }finally{
+    globalThis.fetch=originalFetch;
+  }
+});
+
 test("le mode ouvert suit les horaires propres à l’espace",()=>{
   const schedule={opens_at:"10:00",closes_at:"20:00"};
   assert.equal(calculateStatus("ouvert",schedule,9*60),"prevision");

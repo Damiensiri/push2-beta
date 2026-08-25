@@ -1741,7 +1741,8 @@ async function sendRequestedPush(env,alert){
   if(alert.active!=="oui")return{enabled:isPushEnabled(env),status:"inactive-alert"};
   if(!isPushEnabled(env))return{enabled:false,status:"disabled-in-beta"};
 
-  const detailUrl=`https://damiensiri.github.io/push2-beta/detail.html?id=${encodeURIComponent(alert.id)}`;
+  const publicAlertId=alert.alert_id??alert.id;
+  const detailUrl=`https://damiensiri.github.io/push2-beta/detail.html?id=${encodeURIComponent(publicAlertId)}`;
   try{
     const response=await fetch("https://api.onesignal.com/notifications",{
       method:"POST",
