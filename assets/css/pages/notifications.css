@@ -94,8 +94,8 @@ body.notifications-page .page{
 }
 
 .card.lu{
-  opacity:.10;
-  filter:none;
+  opacity:.09;
+  filter:saturate(.45) brightness(.85);
 }
 
 .card-time{
