@@ -19,7 +19,7 @@
 <link rel="stylesheet" href="assets/css/themes/christmas.css?v=20260724-11">
 <link rel="stylesheet" href="assets/css/themes/winter.css?v=20260724-11">
 <link rel="stylesheet" href="assets/css/themes/spring.css?v=20260724-11">
-<link rel="stylesheet" href="assets/css/pages/notifications.css?v=20260724-11">
+<link rel="stylesheet" href="assets/css/pages/notifications.css?v=20260825-1">
 </head>
 
 <body class="app-page notifications-page">
@@ -114,8 +114,8 @@ async function loadNotifications(){
 
     data
       .filter(n=>{
-        if(n.epingle==="oui") return true;
         if(n.active!=="oui") return false;
+        if(n.epingle==="oui") return true;
         if(!n.expire){
           const d=parseDateFR(n.date);
           if(!d) return true;
