@@ -7,6 +7,7 @@ const JSON_HEADERS={
 export default{
   async scheduled(controller,env,ctx){
     ctx.waitUntil(processPaddockPushReminders(env,new Date(controller.scheduledTime)));
+    ctx.waitUntil(processScheduledNotifications(env,new Date(controller.scheduledTime)));
   },
   async fetch(request,env){
     const url=new URL(request.url);
@@ -1468,24 +1469,28 @@ export default{
                    push_requested,push_sent_at,created_at,updated_at
             FROM alerts ORDER BY id DESC
           `).all();
-          return json(result.results,200,cors);
+          const alerts=await attachSchedules(env,result.results);
+          return json(alerts,200,cors);
         }
 
         if(request.method==="POST"&&url.pathname==="/api/admin/notifications"){
           const input=await readJson(request);
           const validated=validateAlert(input);
           if(validated.error)return json({error:validated.error},400,cors);
+          const schedule=validateScheduledNotification(input?.scheduledAt);
+          if(schedule.error)return json({error:schedule.error},400,cors);
 
           const now=parisNow();
+          const alertClock=schedule.scheduledAt?parisDateTime(schedule.scheduledAt):now;
           const result=await env.DB.prepare(`
             INSERT INTO alerts(
               date,heure,categorie,titre,message,epingle,active,
               push_requested,created_at,updated_at
             ) VALUES(?,?,?,?,?,?,?,?,?,?)
           `).bind(
-            now.date,now.time,validated.categorie,validated.titre,
-            validated.message,validated.epingle,validated.active,
-            validated.pushRequested,now.iso,now.iso
+            alertClock.date,alertClock.time,validated.categorie,validated.titre,
+            validated.message,validated.epingle,schedule.scheduledAt?"non":validated.active,
+            schedule.scheduledAt?1:validated.pushRequested,now.iso,now.iso
           ).run();
 
           const created=await env.DB.prepare(`
@@ -1494,11 +1499,16 @@ export default{
             FROM alerts WHERE id=?
           `).bind(result.meta.last_row_id).first();
 
-          const push=await sendRequestedPush(env,created);
+          let scheduled=null;
+          if(schedule.scheduledAt){
+            scheduled=await createScheduledNotification(env,created.id,schedule.scheduledAt,now.iso);
+          }
+          const push=scheduled?{enabled:isPushEnabled(env),status:"scheduled",scheduledAt:schedule.scheduledAt}:await sendRequestedPush(env,created);
           if(push.status==="sent"){
             await markPushSent(env,created.id,push.sentAt);
             created.push_sent_at=push.sentAt;
           }
+          created.schedule=scheduled;
 
           return json({alert:created,push},201,cors);
         }
@@ -1517,6 +1527,8 @@ export default{
           if(!current)return json({error:"Alerte introuvable"},404,cors);
 
           const input=await readJson(request);
+          const schedule=validateScheduledNotification(input?.scheduledAt);
+          if(schedule.error)return json({error:schedule.error},400,cors);
           const validated=validateAlert({
             categorie:input.categorie??current.categorie,
             titre:input.titre??current.titre,
@@ -1528,12 +1540,14 @@ export default{
           if(validated.error)return json({error:validated.error},400,cors);
 
           const now=parisNow();
+          const alertClock=schedule.scheduledAt?parisDateTime(schedule.scheduledAt):{date:current.date,time:current.heure};
           await env.DB.prepare(`
-            UPDATE alerts SET categorie=?,titre=?,message=?,epingle=?,active=?,
-              push_requested=?,updated_at=? WHERE id=?
+            UPDATE alerts SET date=?,heure=?,categorie=?,titre=?,message=?,epingle=?,active=?,
+              push_requested=?,push_sent_at=NULL,updated_at=? WHERE id=?
           `).bind(
+            alertClock.date,alertClock.time,
             validated.categorie,validated.titre,validated.message,
-            validated.epingle,validated.active,validated.pushRequested,
+            validated.epingle,schedule.scheduledAt?"non":validated.active,schedule.scheduledAt?1:validated.pushRequested,
             now.iso,Number(match[1])
           ).run();
 
@@ -1542,11 +1556,18 @@ export default{
                    push_requested,push_sent_at,created_at,updated_at
             FROM alerts WHERE id=?
           `).bind(Number(match[1])).first();
-          const push=await sendRequestedPush(env,updated);
+          let scheduled=null;
+          if(schedule.scheduledAt){
+            scheduled=await upsertScheduledNotification(env,updated.id,schedule.scheduledAt,now.iso);
+          }else if(input.scheduledAt===null){
+            await cancelScheduledNotification(env,updated.id,now.iso);
+          }
+          const push=scheduled?{enabled:isPushEnabled(env),status:"scheduled",scheduledAt:schedule.scheduledAt}:await sendRequestedPush(env,updated);
           if(push.status==="sent"){
             await markPushSent(env,updated.id,push.sentAt);
             updated.push_sent_at=push.sentAt;
           }
+          updated.schedule=scheduled;
           return json({alert:updated,push},200,cors);
         }
       }
@@ -1844,6 +1865,113 @@ async function sendPaddockReminderPush(env,reservation,type,subscriptionIds,deli
   }catch(error){return{sent:false,error:String(error?.message||error)};}
 }
 
+async function attachSchedules(env,alerts){
+  if(!alerts.length)return alerts;
+  const schedules=await env.DB.prepare(`
+    SELECT s.*,a.id AS linked_alert_id FROM scheduled_notifications s
+    JOIN alerts a ON a.id=s.alert_id
+    ORDER BY s.scheduled_at DESC
+  `).all();
+  const byAlert=new Map(schedules.results.map(row=>[Number(row.alert_id),publicScheduledNotification(row)]));
+  return alerts.map(alert=>({...alert,schedule:byAlert.get(Number(alert.id))||null}));
+}
+
+function validateScheduledNotification(value){
+  if(value===undefined||value===null||value==="")return{scheduledAt:null};
+  const date=new Date(String(value));
+  if(Number.isNaN(date.getTime()))return{error:"Date de programmation invalide"};
+  const scheduledAt=date.toISOString();
+  if(date.getTime()<Date.now()-60_000)return{error:"La programmation doit être dans le futur"};
+  return{scheduledAt};
+}
+
+function publicScheduledNotification(row){
+  return{
+    id:Number(row.id),alertId:Number(row.alert_id),scheduledAt:row.scheduled_at,
+    status:row.status,claimedAt:row.claimed_at||null,attemptCount:Number(row.attempt_count||0),
+    sentAt:row.status==="sent"?row.updated_at:null,lastError:row.last_error||null
+  };
+}
+
+async function createScheduledNotification(env,alertId,scheduledAt,now){
+  const deliveryKey=crypto.randomUUID();
+  const result=await env.DB.prepare(`
+    INSERT INTO scheduled_notifications(alert_id,scheduled_at,status,delivery_key,created_at,updated_at)
+    VALUES(?,?,'pending',?,?,?)
+  `).bind(alertId,scheduledAt,deliveryKey,now,now).run();
+  const row=await env.DB.prepare("SELECT * FROM scheduled_notifications WHERE id=?")
+    .bind(result.meta.last_row_id).first();
+  return publicScheduledNotification(row);
+}
+
+async function upsertScheduledNotification(env,alertId,scheduledAt,now){
+  const current=await env.DB.prepare("SELECT * FROM scheduled_notifications WHERE alert_id=?").bind(alertId).first();
+  if(current&&current.status==="sent")return publicScheduledNotification(current);
+  if(current){
+    await env.DB.prepare(`
+      UPDATE scheduled_notifications SET scheduled_at=?,status='pending',claimed_at=NULL,
+        attempt_count=0,last_error=NULL,updated_at=? WHERE alert_id=?
+    `).bind(scheduledAt,now,alertId).run();
+  }else{
+    await createScheduledNotification(env,alertId,scheduledAt,now);
+  }
+  const row=await env.DB.prepare("SELECT * FROM scheduled_notifications WHERE alert_id=?").bind(alertId).first();
+  return publicScheduledNotification(row);
+}
+
+async function cancelScheduledNotification(env,alertId,now){
+  await env.DB.prepare(`
+    UPDATE scheduled_notifications SET status='cancelled',claimed_at=NULL,updated_at=?
+    WHERE alert_id=? AND status IN ('pending','sending','failed')
+  `).bind(now,alertId).run();
+}
+
+async function processScheduledNotifications(env,now=new Date()){
+  if(!isPushEnabled(env))return{processed:0,sent:0,disabled:true};
+  const due=await env.DB.prepare(`
+    SELECT s.id FROM scheduled_notifications s
+    JOIN alerts a ON a.id=s.alert_id
+    WHERE s.status IN ('pending','failed') AND s.scheduled_at<=?
+    ORDER BY s.scheduled_at ASC LIMIT 10
+  `).bind(now.toISOString()).all();
+  let sent=0;
+  for(const item of due.results){
+    const claimedAt=new Date().toISOString();
+    const staleBefore=new Date(Date.now()-45_000).toISOString();
+    const claim=await env.DB.prepare(`
+      UPDATE scheduled_notifications
+      SET status='sending',claimed_at=?,attempt_count=attempt_count+1,last_error=NULL,updated_at=?
+      WHERE id=? AND (status IN ('pending','failed') OR (status='sending' AND claimed_at<?))
+    `).bind(claimedAt,claimedAt,item.id,staleBefore).run();
+    if(!claim.meta.changes)continue;
+    const schedule=await env.DB.prepare(`
+      SELECT s.*,a.id AS alert_id,a.titre,a.message,a.active,a.push_requested,a.push_sent_at
+      FROM scheduled_notifications s JOIN alerts a ON a.id=s.alert_id WHERE s.id=?
+    `).bind(item.id).first();
+    if(!schedule||schedule.push_sent_at){
+      await env.DB.prepare("UPDATE scheduled_notifications SET status='sent',updated_at=? WHERE id=?")
+        .bind(claimedAt,item.id).run();
+      continue;
+    }
+    await env.DB.prepare("UPDATE alerts SET active='oui',push_requested=1,updated_at=? WHERE id=?")
+      .bind(claimedAt,schedule.alert_id).run();
+    const push=await sendRequestedPush(env,{...schedule,active:"oui",push_requested:1,push_sent_at:null});
+    if(push.status==="sent"){
+      await markPushSent(env,schedule.alert_id,push.sentAt);
+      await env.DB.prepare(`
+        UPDATE scheduled_notifications SET status='sent',onesignal_notification_id=?,
+          last_error=NULL,updated_at=? WHERE id=?
+      `).bind(push.id||null,push.sentAt,item.id).run();
+      sent++;
+    }else{
+      await env.DB.prepare(`
+        UPDATE scheduled_notifications SET status='failed',last_error=?,updated_at=? WHERE id=?
+      `).bind(String(push.error||push.status||"Échec OneSignal").slice(0,500),new Date().toISOString(),item.id).run();
+    }
+  }
+  return{processed:due.results.length,sent};
+}
+
 async function markPushSent(env,id,sentAt){
   await env.DB.prepare("UPDATE alerts SET push_sent_at=?,updated_at=? WHERE id=?")
     .bind(sentAt,sentAt,id).run();
@@ -1879,6 +2007,11 @@ function plainTextMessage(value){
 
 function parisNow(){
   const date=new Date();
+  return{...parisDateTime(date),iso:date.toISOString()};
+}
+
+function parisDateTime(value){
+  const date=value instanceof Date?value:new Date(value);
   const parts={};
   new Intl.DateTimeFormat("en-CA",{
     timeZone:"Europe/Paris",year:"numeric",month:"2-digit",day:"2-digit",
@@ -1888,8 +2021,7 @@ function parisNow(){
   });
   return{
     date:`${parts.year}-${parts.month}-${parts.day}`,
-    time:`${parts.hour}:${parts.minute}`,
-    iso:date.toISOString()
+    time:`${parts.hour}:${parts.minute}`
   };
 }
 
@@ -2569,10 +2701,10 @@ export class RealtimeHub{
 }
 
 export{
-  compatibleAlert,validateAlert,parisNow,isPushEnabled,sendRequestedPush,plainTextMessage,
+  compatibleAlert,validateAlert,validateScheduledNotification,parisNow,parisDateTime,isPushEnabled,sendRequestedPush,plainTextMessage,
   calculateStatus,publicSpace,publicSchedule,validateSpace,validateSchedules,timeToMinutes,parisClock,findNextSpaceOpening,
   normalizeEmail,validatePassword,validateNewUser,hashPassword,verifyPassword,publicUser,validatePaddockBooking,validatePaddockHours,
   parisLocalMinute,reservationLocalMinute,duePaddockReminderTypes,isValidPushSubscriptionId,isValidPushInstallationId,processPaddockPushReminders,
-  validatePaddockRequestDate,validStaffMonth,staffMonthRange,staffMinutes,validateStaffShift,isStaffWeekStart,addIsoDays,
+  processScheduledNotifications,validatePaddockRequestDate,validStaffMonth,staffMonthRange,staffMinutes,validateStaffShift,isStaffWeekStart,addIsoDays,
   parseIcsCalendar,googleCalendarIcalUrls
 };
