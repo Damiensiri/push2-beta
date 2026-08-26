@@ -320,15 +320,14 @@ export default{
       if(url.pathname==="/api/paddocks/planning"&&request.method==="GET"){
         const viewer=await authenticatedUser(request,env);
         if(!viewer)return json({error:"Non autorisé"},401,cors);
-        const [reservationResult,hoursResult,restrictionResult,requestExceptionResult]=await Promise.all([
+        const [reservationResult,hours,datedHours,restrictionResult,requestExceptionResult]=await Promise.all([
           env.DB.prepare(`SELECT id,user_id,name,paddock,date,time,duration FROM paddock_reservations
             WHERE date>=date('now') ORDER BY date,time`).all(),
-          env.DB.prepare("SELECT paddock,schedule_json FROM paddock_hours").all(),
+          loadEffectivePaddockHours(env,parisNow().date),
+          loadEffectivePaddockHoursByDate(env,14),
           env.DB.prepare("SELECT date,block_grande_90,block_beudot_90 FROM paddock_restrictions WHERE date>=date('now')").all(),
           env.DB.prepare("SELECT date,is_open,comment FROM paddock_request_exceptions WHERE date>=date('now')").all()
         ]);
-        const hours={};
-        for(const row of hoursResult.results)hours[row.paddock]=JSON.parse(row.schedule_json);
         const restrictions={};
         for(const row of restrictionResult.results)restrictions[row.date]={blockGrande90:Boolean(row.block_grande_90),blockBeudot90:Boolean(row.block_beudot_90)};
         const requestExceptions={};
@@ -336,7 +335,7 @@ export default{
         return json({
           reservations:reservationResult.results.map(row=>({id:String(row.id),name:row.name,paddock:row.paddock,
             date:row.date,time:row.time,duration:Number(row.duration),mine:Number(row.user_id)===Number(viewer.id)})),
-          horaires:hours,restrictions,requestExceptions,
+          horaires:hours,horairesParDate:datedHours,restrictions,requestExceptions,
           viewer:{firstName:viewer.first_name,email:viewer.email,role:viewer.role}
         },200,cors);
       }
@@ -1100,18 +1099,18 @@ export default{
         }
 
         if(request.method==="GET"&&url.pathname==="/api/admin/paddocks"){
-          const [reservationResult,hoursResult,restrictionResult,requestResult]=await Promise.all([
+          const [reservationResult,hours,datedHours,restrictionResult,requestResult]=await Promise.all([
             env.DB.prepare(`SELECT id,name,email,paddock,date,time,duration FROM paddock_reservations
               WHERE date>=date('now') ORDER BY date,time`).all(),
-            env.DB.prepare("SELECT paddock,schedule_json FROM paddock_hours").all(),
+            loadEffectivePaddockHours(env,parisNow().date),
+            loadEffectivePaddockHoursByDate(env,120),
             env.DB.prepare("SELECT date,block_grande_90,block_beudot_90 FROM paddock_restrictions WHERE date>=date('now')").all(),
             env.DB.prepare(`SELECT id,user_id,name,email,date,status,comment,created_at,updated_at
               FROM paddock_requests ORDER BY date DESC,id DESC`).all()
           ]);
-          const hours={};for(const row of hoursResult.results)hours[row.paddock]=JSON.parse(row.schedule_json);
           const restrictions={};for(const row of restrictionResult.results)restrictions[row.date]={blockGrande90:Boolean(row.block_grande_90),blockBeudot90:Boolean(row.block_beudot_90)};
           return json({reservations:reservationResult.results.map(row=>({...row,id:String(row.id),duration:Number(row.duration)})),
-            requests:requestResult.results.map(publicPaddockRequest),horaires:hours,restrictions},200,cors);
+            requests:requestResult.results.map(publicPaddockRequest),horaires:hours,horairesParDate:datedHours,restrictions},200,cors);
         }
 
         if(request.method==="POST"&&url.pathname==="/api/admin/paddocks/reservations"){
@@ -1751,6 +1750,42 @@ async function loadEffectiveSpaceSchedules(env,dateString=""){
     });
   });
   return [...map.values()].sort((a,b)=>String(a.space_slug).localeCompare(String(b.space_slug))||Number(a.day)-Number(b.day));
+}
+
+async function loadEffectivePaddockHours(env,dateString=""){
+  const base=await env.DB.prepare("SELECT paddock,schedule_json FROM paddock_hours").all();
+  const hours={};
+  for(const row of base.results){
+    hours[row.paddock]=JSON.parse(row.schedule_json);
+  }
+  const entries=await loadApplicableHourEntries(env,"paddocks",dateString);
+  const dayNames=["","lundi","mardi","mercredi","jeudi","vendredi","samedi","dimanche"];
+  for(const row of entries){
+    if(!["maison","grande","beudot"].includes(row.target_slug))continue;
+    const dayName=dayNames[Number(row.day)];
+    if(!dayName)continue;
+    const paddockHours=hours[row.target_slug]||{};
+    paddockHours[dayName]={
+      closed:["ferme","hors-service"].includes(String(row.manual_status||"")),
+      open:row.opens_at,
+      close:row.closes_at
+    };
+    hours[row.target_slug]=paddockHours;
+  }
+  return hours;
+}
+
+async function loadEffectivePaddockHoursByDate(env,daysAhead=14){
+  const days=Math.max(1,Math.min(Number(daysAhead)||14,180));
+  const today=parisNow().date;
+  const result={};
+  for(let index=0;index<days;index++){
+    const date=new Date(`${today}T12:00:00`);
+    date.setDate(date.getDate()+index);
+    const key=date.toISOString().slice(0,10);
+    result[key]=await loadEffectivePaddockHours(env,key);
+  }
+  return result;
 }
 
 function spaceProgramFields(schedule){

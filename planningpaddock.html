@@ -159,6 +159,7 @@ document.getElementById("confirmSheet").classList.remove("show")
 
 let reservations=[]
 let horaires={}
+let horairesParDate={}
 let restrictions={}
 let requestExceptions={}
 let selectedDate=null
@@ -418,11 +419,12 @@ durationSelect.addEventListener("change",updatePaddocks)
 async function loadDataRealtime(){
 try{
 const data=await paddockApi("/api/paddocks/planning")
-const nextSignature=JSON.stringify([data.reservations||[],data.horaires||{},data.restrictions||{},data.requestExceptions||{}])
+const nextSignature=JSON.stringify([data.reservations||[],data.horaires||{},data.horairesParDate||{},data.restrictions||{},data.requestExceptions||{}])
 const planningChanged=nextSignature!==lastPlanningSignature
 lastPlanningSignature=nextSignature
 reservations=data.reservations||[]
 horaires=data.horaires||{}
+horairesParDate=data.horairesParDate||{}
 restrictions=data.restrictions||{}
 requestExceptions=data.requestExceptions||{}
 currentViewer=data.viewer
@@ -534,6 +536,17 @@ return date.getFullYear()+"-"+
 
 }
 
+function dayNameFromDateKey(dateKey){
+const parts=String(dateKey||"").split("-")
+const date=parts.length===3?new Date(parts[0],parts[1]-1,parts[2]):new Date()
+return ["dimanche","lundi","mardi","mercredi","jeudi","vendredi","samedi"][date.getDay()]
+}
+
+function paddockHoursForDate(paddock,dateKey){
+const day=dayNameFromDateKey(dateKey)
+return horairesParDate?.[dateKey]?.[paddock]?.[day] || horaires?.[paddock]?.[day]
+}
+
 function requestDateError(date,now=new Date()){
 const exception=requestExceptions[date]
 if(exception&&!exception.open)return exception.comment||"Les demandes sont exceptionnellement fermées pour cette date"
@@ -549,8 +562,7 @@ return""
 function firstFreeSlotToday(paddock,now){
 
 const today=localDateKey(now)
-const names=["dimanche","lundi","mardi","mercredi","jeudi","vendredi","samedi"]
-const config=horaires[paddock] && horaires[paddock][names[now.getDay()]]
+const config=paddockHoursForDate(paddock,today)
 
 if(!config || config.closed){
 return {state:"closed",label:"Fermé"}
@@ -657,21 +669,14 @@ hideStep("stepButton")
 container.innerHTML='<div class="restrictionMessage">⚠️ 1h30 indisponible pour cette date. Les créneaux affichés sont en 1h.</div>'
 }
 
-const parts=selectedDate.split("-")
-const d=new Date(parts[0],parts[1]-1,parts[2])
+const config=paddockHoursForDate(paddock,selectedDate)
 
-const names=["dimanche","lundi","mardi","mercredi","jeudi","vendredi","samedi"]
-
-let jour=names[d.getDay()]
-
-if(!horaires[paddock] || !horaires[paddock][jour] || horaires[paddock][jour].closed){
+if(!config || config.closed){
 
 container.innerHTML='<div class="fullMessage">Paddock fermé</div>'
 return
 
 }
-
-const config=horaires[paddock][jour]
 
 let startMinutes=timeToMinutes(config.open)
 let closeMinutes=timeToMinutes(config.close)
@@ -988,15 +993,7 @@ return
 let slotStartMinutes=timeToMinutes(selected.time);
 let slotEndMinutes=slotStartMinutes+Number(selected.duration);
 
-const selectedDateParts=selected.date.split("-");
-const selectedDayDate=new Date(
-    selectedDateParts[0],
-    selectedDateParts[1]-1,
-    selectedDateParts[2]
-);
-const selectedDayNames=["dimanche","lundi","mardi","mercredi","jeudi","vendredi","samedi"];
-const selectedDay=selectedDayNames[selectedDayDate.getDay()];
-const selectedHours=horaires[selected.paddock] && horaires[selected.paddock][selectedDay];
+const selectedHours=paddockHoursForDate(selected.paddock,selected.date);
 const selectedClosingTime=selectedHours && !selectedHours.closed
     ? timeToMinutes(selectedHours.close)
     : NaN;
