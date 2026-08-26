@@ -39,6 +39,11 @@ export default{
       }
 
       if(request.method==="GET"&&url.pathname==="/api/schedules"){
+        const dateList=parseDateList(url.searchParams.get("dates"));
+        if(dateList.length){
+          const schedules=await loadEffectiveGeneralSchedulesByDate(env,dateList);
+          return json(schedules,200,{...cors,"cache-control":"public, max-age=15"});
+        }
         const schedules=await loadEffectiveGeneralSchedules(env,validIsoDate(url.searchParams.get("date")));
         return json(schedules.map(publicSchedule),200,{...cors,"cache-control":"public, max-age=15"});
       }
@@ -1636,6 +1641,7 @@ const DAY_NAMES=["","lundi","mardi","mercredi","jeudi","vendredi","samedi","dima
 async function loadPublicStatuses(env,date=new Date(),dateOverride=""){
   const paris=parisClock(date);
   const effectiveDate=dateOverride||parisDateTime(date).date;
+  const effectiveDay=dayNumberFromIsoDate(effectiveDate)||paris.day;
   const [spacesResult,schedulesResult,alert]=await Promise.all([
     env.DB.prepare("SELECT * FROM spaces ORDER BY position").all(),
     loadEffectiveSpaceSchedules(env,effectiveDate),
@@ -1643,8 +1649,8 @@ async function loadPublicStatuses(env,date=new Date(),dateOverride=""){
   ]);
   const scheduleMap=new Map(schedulesResult.map(row=>[`${row.space_slug}:${row.day}`,row]));
   const rows=spacesResult.results.map(space=>{
-    const schedule=scheduleMap.get(`${space.slug}:${paris.day}`)||null;
-    const nextOpening=findNextSpaceOpening(scheduleMap,space.slug,paris.day,paris.minutes);
+    const schedule=scheduleMap.get(`${space.slug}:${effectiveDay}`)||null;
+    const nextOpening=findNextSpaceOpening(scheduleMap,space.slug,effectiveDay,paris.minutes);
     return publicSpace(schedule?{...space,...spaceProgramFields(schedule)}:space,schedule,paris.minutes,nextOpening);
   });
   rows.push({
@@ -1721,6 +1727,7 @@ async function loadOperations(env){
 }
 
 async function loadEffectiveGeneralSchedules(env,dateString=""){
+  const date=validIsoDate(dateString)||parisNow().date;
   const base=await env.DB.prepare("SELECT day,opens_at,closes_at FROM general_schedules ORDER BY day").all();
   const entries=await loadApplicableHourEntries(env,"general",dateString);
   if(!entries.length)return base.results;
@@ -1729,6 +1736,14 @@ async function loadEffectiveGeneralSchedules(env,dateString=""){
     map.set(Number(row.day),{day:row.day,opens_at:row.opens_at,closes_at:row.closes_at});
   });
   return [...map.values()].sort((a,b)=>Number(a.day)-Number(b.day));
+}
+
+async function loadEffectiveGeneralSchedulesByDate(env,dateList=[]){
+  const result={};
+  for(const date of dateList){
+    result[date]=(await loadEffectiveGeneralSchedules(env,date)).map(publicSchedule);
+  }
+  return result;
 }
 
 async function loadEffectiveSpaceSchedules(env,dateString=""){
@@ -1750,6 +1765,25 @@ async function loadEffectiveSpaceSchedules(env,dateString=""){
     });
   });
   return [...map.values()].sort((a,b)=>String(a.space_slug).localeCompare(String(b.space_slug))||Number(a.day)-Number(b.day));
+}
+
+async function getEffectiveHours(env,{scope,targetSlug,dateString}){
+  const date=validIsoDate(dateString)||parisNow().date;
+  const day=dayNumberFromIsoDate(date);
+  if(!day)return null;
+  if(scope==="general"){
+    const schedules=await loadEffectiveGeneralSchedules(env,date);
+    return schedules.find(row=>Number(row.day)===day)||null;
+  }
+  if(scope==="work"||scope==="paddocks-space"){
+    const schedules=await loadEffectiveSpaceSchedules(env,date);
+    return schedules.find(row=>row.space_slug===targetSlug&&Number(row.day)===day)||null;
+  }
+  if(scope==="paddock"){
+    const hours=await loadEffectivePaddockHours(env,date);
+    return hours?.[targetSlug]?.[DAY_NAMES[day]]||null;
+  }
+  return null;
 }
 
 async function loadEffectivePaddockHours(env,dateString=""){
@@ -1919,6 +1953,18 @@ async function saveHourProgramEntries(env,programId,entries){
 function validIsoDate(value){
   const date=String(value||"").trim();
   return /^\d{4}-\d{2}-\d{2}$/.test(date)?date:"";
+}
+
+function parseDateList(value){
+  return[...new Set(String(value||"").split(",").map(validIsoDate).filter(Boolean))].slice(0,14);
+}
+
+function dayNumberFromIsoDate(value){
+  const date=validIsoDate(value);
+  if(!date)return 0;
+  const [year,month,day]=date.split("-").map(Number);
+  const local=new Date(year,month-1,day,12,0,0,0);
+  return local.getDay()||7;
 }
 
 function normalizeYesNo(value,allowEmpty){

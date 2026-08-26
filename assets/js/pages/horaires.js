@@ -142,7 +142,8 @@ function cacheIsFresh(){
 }
 
 function fetchJson(url){
-  return fetch(url+"?t="+Date.now(),{cache:"no-store"}).then(response=>{
+  const separator=url.includes("?")?"&":"?";
+  return fetch(url+separator+"t="+Date.now(),{cache:"no-store"}).then(response=>{
     if(!response.ok) throw new Error("Réponse réseau invalide");
     return response.json();
   });
@@ -152,8 +153,11 @@ function fetchJson(url){
 
 function loadHoraires(){
 
+const weekDates=currentWeekDates();
+const scheduleUrl=SHEET_URL+"?dates="+encodeURIComponent(Object.keys(weekDates).join(","));
+
 Promise.all([
-fetchJson(SHEET_URL),
+fetchJson(scheduleUrl),
 fetchJson(EXCEPTIONS_URL)
 ])
 .then(([horaires,exc])=>{
@@ -166,7 +170,7 @@ fetchJson(EXCEPTIONS_URL)
     localStorage.setItem(CACHE_CONFIRMED_AT_KEY,String(Date.now()));
   }catch(e){}
 
-  renderHoraires(horaires);
+  renderHoraires(resolveWeeklyHoraires(horaires,weekDates));
 
   if(syncPending) confirmSync();
 
@@ -177,6 +181,14 @@ fetchJson(EXCEPTIONS_URL)
 
 }
 
+function resolveWeeklyHoraires(payload,weekDates){
+  if(Array.isArray(payload))return payload;
+  return Object.entries(weekDates).map(([date,jour])=>{
+    const rows=payload?.[date]||[];
+    return rows.find(row=>row.jour===jour)||{jour,ouvert:"",ferme:""};
+  });
+}
+
 /* ===== CACHE INSTANT ===== */
 
 try{
@@ -184,7 +196,7 @@ try{
   if(cachedExceptions) applyExceptions(JSON.parse(cachedExceptions));
 
   const cachedHoraires=localStorage.getItem(CACHE_KEY);
-  if(cachedHoraires) renderHoraires(JSON.parse(cachedHoraires));
+  if(cachedHoraires) renderHoraires(resolveWeeklyHoraires(JSON.parse(cachedHoraires),currentWeekDates()));
 }catch(e){}
 
 if(!cacheIsFresh()) requireSync();
