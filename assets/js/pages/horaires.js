@@ -45,12 +45,14 @@ function rollingDates(date=new Date()){
   });
   const current=new Date(Date.UTC(Number(parts.year),Number(parts.month)-1,Number(parts.day),12));
   const names=["lundi","mardi","mercredi","jeudi","vendredi","samedi","dimanche"];
+  const todayIndex=(current.getUTCDay()+6)%7;
   const dates={};
-  for(let index=0;index<7;index++){
+  names.forEach((name,index)=>{
     const day=new Date(current);
-    day.setUTCDate(current.getUTCDate()+index);
-    dates[day.toISOString().slice(0,10)]=names[(day.getUTCDay()+6)%7];
-  }
+    const offset=(index-todayIndex+7)%7;
+    day.setUTCDate(current.getUTCDate()+offset);
+    dates[day.toISOString().slice(0,10)]=name;
+  });
   return dates;
 }
 
