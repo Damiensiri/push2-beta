@@ -36,7 +36,7 @@ function formatTime(val){
 
 }
 
-function currentWeekDates(date=new Date()){
+function rollingDates(date=new Date()){
   const parts={};
   new Intl.DateTimeFormat("en-CA",{
     timeZone:"Europe/Paris",year:"numeric",month:"2-digit",day:"2-digit"
@@ -44,22 +44,19 @@ function currentWeekDates(date=new Date()){
     if(part.type!=="literal") parts[part.type]=part.value;
   });
   const current=new Date(Date.UTC(Number(parts.year),Number(parts.month)-1,Number(parts.day),12));
-  const currentDay=current.getUTCDay()||7;
-  const monday=new Date(current);
-  monday.setUTCDate(current.getUTCDate()-(currentDay-1));
   const names=["lundi","mardi","mercredi","jeudi","vendredi","samedi","dimanche"];
   const dates={};
-  names.forEach((name,index)=>{
-    const day=new Date(monday);
-    day.setUTCDate(monday.getUTCDate()+index);
-    dates[day.toISOString().slice(0,10)]=name;
-  });
+  for(let index=0;index<7;index++){
+    const day=new Date(current);
+    day.setUTCDate(current.getUTCDate()+index);
+    dates[day.toISOString().slice(0,10)]=names[(day.getUTCDay()+6)%7];
+  }
   return dates;
 }
 
 function applyExceptions(data,date=new Date()){
   exceptions={};
-  const weekDates=currentWeekDates(date);
+  const weekDates=rollingDates(date);
 
   data.forEach(row=>{
     const jour=weekDates[String(row.date||"")];
@@ -153,7 +150,7 @@ function fetchJson(url){
 
 function loadHoraires(){
 
-const weekDates=currentWeekDates();
+const weekDates=rollingDates();
 const scheduleUrl=SHEET_URL+"?dates="+encodeURIComponent(Object.keys(weekDates).join(","));
 
 Promise.all([
@@ -196,7 +193,7 @@ try{
   if(cachedExceptions) applyExceptions(JSON.parse(cachedExceptions));
 
   const cachedHoraires=localStorage.getItem(CACHE_KEY);
-  if(cachedHoraires) renderHoraires(resolveWeeklyHoraires(JSON.parse(cachedHoraires),currentWeekDates()));
+  if(cachedHoraires) renderHoraires(resolveWeeklyHoraires(JSON.parse(cachedHoraires),rollingDates()));
 }catch(e){}
 
 if(!cacheIsFresh()) requireSync();
