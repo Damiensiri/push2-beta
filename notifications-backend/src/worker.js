@@ -1911,10 +1911,12 @@ async function validateHourProgram(env,input){
   if(endsOn&&endsOn<startsOn)return{error:"La date de fin doit être après la date de début"};
   const entries=Array.isArray(input?.entries)?input.entries:[];
   if(!entries.length)return{error:"Ajoutez au moins une ligne d’horaire"};
-  const spaces=await env.DB.prepare("SELECT slug FROM spaces").all();
-  const allowedTargets=new Set(scope==="general"?["general"]:spaces.results
-    .map(row=>row.slug)
-    .filter(slug=>scope==="work"?["carriere","manege"].includes(slug):["maison","grande","beudot"].includes(slug)));
+  const spaces=scope==="work"?await env.DB.prepare("SELECT slug FROM spaces").all():{results:[]};
+  const allowedTargets=new Set(
+    scope==="general"?["general"]:
+    scope==="paddocks"?["maison","grande","beudot"]:
+    spaces.results.map(row=>row.slug).filter(slug=>["carriere","manege"].includes(slug))
+  );
   const rows=[];
   const keys=new Set();
   for(const entry of entries){
