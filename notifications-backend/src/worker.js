@@ -1651,7 +1651,7 @@ async function loadPublicStatuses(env,date=new Date(),dateOverride=""){
   const rows=spacesResult.results.map(space=>{
     const schedule=scheduleMap.get(`${space.slug}:${effectiveDay}`)||null;
     const nextOpening=findNextSpaceOpening(scheduleMap,space.slug,effectiveDay,paris.minutes);
-    return publicSpace(schedule?{...space,...spaceProgramFields(schedule)}:space,schedule,paris.minutes,nextOpening);
+    return publicSpace(schedule?{...space,...spaceProgramFields(schedule,space)}:space,schedule,paris.minutes,nextOpening);
   });
   rows.push({
     espace:"accueil",statut_manuel:"",statut_auto:"ferme",liberte:"",longe:"",info:"",
@@ -1752,8 +1752,9 @@ async function loadEffectiveSpaceSchedules(env,dateString=""){
   if(!entries.length)return base.results;
   const map=new Map(base.results.map(row=>[`${row.space_slug}:${row.day}`,{...row}]));
   entries.forEach(row=>{
-    map.set(`${row.target_slug}:${row.day}`,{
-      space_slug:row.target_slug,
+    const spaceSlug=row.target_slug==="grande"?"grande-voie":row.target_slug;
+    map.set(`${spaceSlug}:${row.day}`,{
+      space_slug:spaceSlug,
       day:row.day,
       opens_at:row.opens_at,
       closes_at:row.closes_at,
@@ -1822,9 +1823,9 @@ async function loadEffectivePaddockHoursByDate(env,daysAhead=14){
   return result;
 }
 
-function spaceProgramFields(schedule){
+function spaceProgramFields(schedule,space={}){
   const fields={};
-  if(schedule.program_manual_status)fields.manual_status=schedule.program_manual_status;
+  if(schedule.program_manual_status&&space.manual_status==="ouvert")fields.manual_status=schedule.program_manual_status;
   if(schedule.program_special_hours!==undefined)fields.special_hours=schedule.program_special_hours;
   if(schedule.program_info!==undefined)fields.info=schedule.program_info;
   if(schedule.program_liberte)fields.liberte=schedule.program_liberte;
