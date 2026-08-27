@@ -1,10 +1,10 @@
 {
   "department": "Aube",
-  "level": "yellow",
-  "label": "Jaune",
+  "level": "orange",
+  "label": "Orange",
   "phenomenon": "Orages",
-  "period": "Du 27 août à 00:00 au 28 août à 00:00",
-  "updatedAt": "27 août à 00:00",
+  "period": "Du 27 août à 06:01 au 29 août à 00:00",
+  "updatedAt": "27 août à 06:01",
   "source": "MeteoAlarm / EUMETNET",
   "sourceUrl": "https://meteoalarm.org"
 }
