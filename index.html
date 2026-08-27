@@ -9,7 +9,7 @@
 <title>Ecurie Damien Siri</title>
 
 <script>
-const APP_VERSION="20260825-6";
+const APP_VERSION="20260827-5";
 const APP_BASE_URL=new URL("./",window.location.href);
 const IS_BETA=window.location.hostname==="damiensiri.github.io" &&
               APP_BASE_URL.pathname==="/push2-beta/";
@@ -28,7 +28,7 @@ new URL("OneSignalSDKWorker.js",APP_BASE_URL).href,
 :navigator.serviceWorker.getRegistration();
 
 registrationPromise.then(registration=>{
-if(registration)registration.update();
+setTimeout(()=>registration?.update?.(),3000);
 }).catch(()=>{});
 });
 }
@@ -43,12 +43,12 @@ if(registration)registration.update();
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700&display=swap" rel="stylesheet">
 
 <script src="assets/js/app-config.js?v=20260825-6"></script>
-<script src="assets/js/app-layout.js?v=20260827-4"></script>
+<script src="assets/js/app-layout.js?v=20260827-5"></script>
 <script src="assets/js/profile-store.js?v=20260825-6" defer></script>
 <script src="assets/js/pages/index-profile.js?v=20260825-6" defer></script>
 <script src="assets/js/pages/index-install-prompt.js?v=20260825-6" defer></script>
 
-<link rel="stylesheet" href="assets/css/app.css?v=20260827-4">
+<link rel="stylesheet" href="assets/css/app.css?v=20260827-5">
 <link rel="stylesheet" href="assets/css/themes/summer.css?v=20260825-6">
 <link rel="stylesheet" href="assets/css/themes/autumn.css?v=20260825-6">
 <link rel="stylesheet" href="assets/css/themes/christmas.css?v=20260825-6">
@@ -299,9 +299,11 @@ load();
 setInterval(load,10000);
 window.addEventListener("pwa-data-changed",load);
 
+setTimeout(()=>{
 ["paddocks.html","travail.html","plan.html","horaires.html"].forEach(p=>{
 fetch(withAppVersion(p),{cache:"reload"}).catch(()=>{});
 });
+},2500);
 
 </script>
 

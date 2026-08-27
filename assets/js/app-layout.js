@@ -110,6 +110,7 @@
   let activeTheme=readStoredTheme()||seasonalFallbackTheme()||configuredTheme;
   let lastThemeConfigCheck=0;
   let initialPaintSettled=false;
+  let settleTimer=null;
 
   document.documentElement.classList.add("app-booting");
   document.documentElement.dataset.theme=activeTheme;
@@ -539,14 +540,23 @@
   window.addEventListener("DOMContentLoaded",()=>{
     document.body.dataset.theme=activeTheme;
     initializeThemeBackground();
-    syncRemoteTheme({transitionDuration:0,force:true}).finally(()=>{
-      requestAnimationFrame(()=>{
-        requestAnimationFrame(()=>{
-          initialPaintSettled=true;
-          document.documentElement.classList.remove("app-booting");
-          document.documentElement.classList.add("app-ready");
-        });
-      });
-    });
+    syncRemoteTheme({transitionDuration:0,force:true}).finally(scheduleInitialPaintSettled);
   });
+
+  function scheduleInitialPaintSettled(){
+    if(settleTimer)clearTimeout(settleTimer);
+    const settle=()=>{
+      settleTimer=setTimeout(()=>{
+        initialPaintSettled=true;
+        document.documentElement.classList.remove("app-booting");
+        document.documentElement.classList.add("app-ready");
+      },450);
+    };
+
+    if(document.readyState==="complete"){
+      settle();
+    }else{
+      window.addEventListener("load",settle,{once:true});
+    }
+  }
 })();
