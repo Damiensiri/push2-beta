@@ -3,8 +3,8 @@ window.METEOALARM_VIGILANCE = {
   "level": "orange",
   "label": "Orange",
   "phenomenon": "Orages",
-  "period": "Du 27 août à 06:01 au 29 août à 00:00",
-  "updatedAt": "27 août à 06:01",
+  "period": "Du 27 août à 16:02 au 29 août à 00:00",
+  "updatedAt": "27 août à 16:03",
   "source": "MeteoAlarm / EUMETNET",
   "sourceUrl": "https://meteoalarm.org"
 };
