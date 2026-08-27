@@ -1468,6 +1468,38 @@ export default{
           return json({deleted:true},200,cors);
         }
 
+        if(request.method==="POST"&&url.pathname==="/api/admin/hour-exceptions"){
+          const input=await readJson(request);
+          const validated=await validateHourException(env,input);
+          if(validated.error)return json({error:validated.error},400,cors);
+          const now=parisNow().iso;
+          await env.DB.prepare(`
+            INSERT INTO hour_exceptions(date,scope,target_slug,manual_status,opens_at,closes_at,created_at,updated_at)
+            VALUES(?,?,?,?,?,?,?,?)
+            ON CONFLICT(date,scope,target_slug) DO UPDATE SET
+              manual_status=excluded.manual_status,
+              opens_at=excluded.opens_at,
+              closes_at=excluded.closes_at,
+              updated_at=excluded.updated_at
+          `).bind(validated.date,validated.scope,validated.targetSlug,validated.manualStatus,
+            validated.opensAt,validated.closesAt,now,now).run();
+          await notifyRealtime(env,"schedules");
+          await notifyRealtime(env,"statuses");
+          await notifyRealtime(env,"paddocks");
+          return json({exception:await loadHourException(env,validated.date,validated.scope,validated.targetSlug)},200,cors);
+        }
+
+        const hourExceptionMatch=url.pathname.match(/^\/api\/admin\/hour-exceptions\/(\d+)$/);
+        if(hourExceptionMatch&&request.method==="DELETE"){
+          const result=await env.DB.prepare("DELETE FROM hour_exceptions WHERE id=?")
+            .bind(Number(hourExceptionMatch[1])).run();
+          if(!result.meta.changes)return json({error:"Exception horaire introuvable"},404,cors);
+          await notifyRealtime(env,"schedules");
+          await notifyRealtime(env,"statuses");
+          await notifyRealtime(env,"paddocks");
+          return json({deleted:true},200,cors);
+        }
+
         if(request.method==="POST"&&url.pathname==="/api/admin/exceptions"){
           const input=await readJson(request);
           const date=String(input?.date||"").trim();
@@ -1709,32 +1741,38 @@ function calculateStatus(manualStatus,schedule,minutes){
 }
 
 function publicSchedule(row){
-  return{jour:DAY_NAMES[row.day],ouvert:row.opens_at,ferme:row.closes_at};
+  const value={jour:DAY_NAMES[row.day],ouvert:row.opens_at,ferme:row.closes_at};
+  const status=row.exception_manual_status||row.program_manual_status||"ouvert";
+  if(status!=="ouvert")value.statut=status;
+  return value;
 }
 
 async function loadOperations(env){
-  const [spaces,schedules,general,exceptions,homeAlert,hourPrograms]=await Promise.all([
+  const [spaces,schedules,general,exceptions,hourExceptions,homeAlert,hourPrograms]=await Promise.all([
     env.DB.prepare("SELECT * FROM spaces ORDER BY position").all(),
     env.DB.prepare("SELECT * FROM space_schedules ORDER BY space_slug,day").all(),
     env.DB.prepare("SELECT * FROM general_schedules ORDER BY day").all(),
     env.DB.prepare("SELECT * FROM schedule_exceptions ORDER BY date DESC").all(),
+    env.DB.prepare("SELECT * FROM hour_exceptions ORDER BY date DESC,scope,target_slug").all(),
     env.DB.prepare("SELECT * FROM home_alert WHERE id=1").first(),
     loadHourPrograms(env)
   ]);
   return{spaces:spaces.results,spaceSchedules:schedules.results,
     generalSchedules:general.results,exceptions:exceptions.results,homeAlert:homeAlert||{message:"",urgent:"non"},
-    hourPrograms};
+    hourPrograms,hourExceptions:hourExceptions.results.map(publicHourException)};
 }
 
 async function loadEffectiveGeneralSchedules(env,dateString=""){
   const date=validIsoDate(dateString)||parisNow().date;
+  const day=dayNumberFromIsoDate(date);
   const base=await env.DB.prepare("SELECT day,opens_at,closes_at FROM general_schedules ORDER BY day").all();
   const entries=await loadApplicableHourEntries(env,"general",dateString);
-  if(!entries.length)return base.results;
   const map=new Map(base.results.map(row=>[Number(row.day),{...row}]));
   entries.filter(row=>row.target_slug==="general").forEach(row=>{
-    map.set(Number(row.day),{day:row.day,opens_at:row.opens_at,closes_at:row.closes_at});
+    map.set(Number(row.day),{day:row.day,opens_at:row.opens_at,closes_at:row.closes_at,program_manual_status:row.manual_status});
   });
+  const exception=await loadHourException(env,date,"general","general");
+  if(exception&&day)map.set(day,{day,opens_at:exception.opensAt,closes_at:exception.closesAt,exception_manual_status:exception.manualStatus});
   return [...map.values()].sort((a,b)=>Number(a.day)-Number(b.day));
 }
 
@@ -1747,9 +1785,10 @@ async function loadEffectiveGeneralSchedulesByDate(env,dateList=[]){
 }
 
 async function loadEffectiveSpaceSchedules(env,dateString=""){
+  const date=validIsoDate(dateString)||parisNow().date;
+  const day=dayNumberFromIsoDate(date);
   const base=await env.DB.prepare("SELECT * FROM space_schedules ORDER BY space_slug,day").all();
   const entries=[...await loadApplicableHourEntries(env,"work",dateString),...await loadApplicableHourEntries(env,"paddocks",dateString)];
-  if(!entries.length)return base.results;
   const map=new Map(base.results.map(row=>[`${row.space_slug}:${row.day}`,{...row}]));
   entries.forEach(row=>{
     const spaceSlug=row.target_slug==="grande"?"grande-voie":row.target_slug;
@@ -1765,6 +1804,20 @@ async function loadEffectiveSpaceSchedules(env,dateString=""){
       program_longe:row.longe
     });
   });
+  if(day){
+    const exceptions=await loadHourExceptionsForDate(env,date);
+    exceptions.filter(item=>item.scope==="work"||item.scope==="paddocks").forEach(item=>{
+      const spaceSlug=item.scope==="paddocks"&&item.targetSlug==="grande"?"grande-voie":item.targetSlug;
+      map.set(`${spaceSlug}:${day}`,{
+        space_slug:spaceSlug,
+        day,
+        opens_at:item.opensAt,
+        closes_at:item.closesAt,
+        program_manual_status:item.manualStatus,
+        hour_exception:true
+      });
+    });
+  }
   return [...map.values()].sort((a,b)=>String(a.space_slug).localeCompare(String(b.space_slug))||Number(a.day)-Number(b.day));
 }
 
@@ -1788,6 +1841,8 @@ async function getEffectiveHours(env,{scope,targetSlug,dateString}){
 }
 
 async function loadEffectivePaddockHours(env,dateString=""){
+  const date=validIsoDate(dateString)||parisNow().date;
+  const day=dayNumberFromIsoDate(date);
   const base=await env.DB.prepare("SELECT paddock,schedule_json FROM paddock_hours").all();
   const hours={};
   for(const row of base.results){
@@ -1806,6 +1861,19 @@ async function loadEffectivePaddockHours(env,dateString=""){
       close:row.closes_at
     };
     hours[row.target_slug]=paddockHours;
+  }
+  if(day){
+    const dayName=DAY_NAMES[day];
+    const exceptions=await loadHourExceptionsForDate(env,date);
+    exceptions.filter(item=>item.scope==="paddocks"&&["maison","grande","beudot"].includes(item.targetSlug)).forEach(item=>{
+      const paddockHours=hours[item.targetSlug]||{};
+      paddockHours[dayName]={
+        closed:["ferme","hors-service"].includes(item.manualStatus),
+        open:item.opensAt,
+        close:item.closesAt
+      };
+      hours[item.targetSlug]=paddockHours;
+    });
   }
   return hours;
 }
@@ -1846,6 +1914,20 @@ async function loadApplicableHourEntries(env,scope,dateString=""){
   return result.results;
 }
 
+async function loadHourExceptionsForDate(env,dateString){
+  const date=validIsoDate(dateString);
+  if(!date)return[];
+  const result=await env.DB.prepare("SELECT * FROM hour_exceptions WHERE date=? ORDER BY scope,target_slug")
+    .bind(date).all();
+  return result.results.map(publicHourException);
+}
+
+async function loadHourException(env,date,scope,targetSlug){
+  const row=await env.DB.prepare("SELECT * FROM hour_exceptions WHERE date=? AND scope=? AND target_slug=?")
+    .bind(date,scope,targetSlug).first();
+  return row?publicHourException(row):null;
+}
+
 async function loadHourPrograms(env){
   const programs=await env.DB.prepare("SELECT * FROM hour_programs ORDER BY starts_on DESC,id DESC").all();
   const entries=await env.DB.prepare("SELECT * FROM hour_program_entries ORDER BY program_id,target_slug,day").all();
@@ -1872,6 +1954,12 @@ function publicHourProgram(row){
 function publicHourProgramEntry(row){
   return{targetSlug:row.target_slug,day:row.day,manualStatus:row.manual_status,opensAt:row.opens_at,
     closesAt:row.closes_at,specialHours:row.special_hours||"",info:row.info||"",liberte:row.liberte||"",longe:row.longe||""};
+}
+
+function publicHourException(row){
+  return{id:Number(row.id),date:row.date,scope:row.scope,targetSlug:row.target_slug,
+    manualStatus:row.manual_status,opensAt:row.opens_at,closesAt:row.closes_at,
+    createdAt:row.created_at,updatedAt:row.updated_at};
 }
 
 function validateSpace(input){
@@ -1941,6 +2029,27 @@ async function validateHourProgram(env,input){
       longe:scope==="work"?normalizeYesNo(entry?.longe,true):""});
   }
   return{name,scope,startsOn,endsOn,entries:rows};
+}
+
+async function validateHourException(env,input){
+  const date=validIsoDate(input?.date);
+  const scope=String(input?.scope||"").trim();
+  const targetSlug=String(input?.targetSlug||"").trim();
+  const manualStatus=String(input?.manualStatus||"ouvert").trim().toLowerCase();
+  const opensAt=String(input?.opensAt||"");
+  const closesAt=String(input?.closesAt||"");
+  if(!date)return{error:"Date invalide"};
+  if(!["general","work","paddocks"].includes(scope))return{error:"Type d’exception invalide"};
+  if(!["ouvert","ferme","hors-service"].includes(manualStatus))return{error:"Statut invalide"};
+  if(timeToMinutes(opensAt)===null||timeToMinutes(closesAt)===null)return{error:"Horaire invalide"};
+  const spaces=scope==="work"?await env.DB.prepare("SELECT slug FROM spaces").all():{results:[]};
+  const allowedTargets=new Set(
+    scope==="general"?["general"]:
+    scope==="paddocks"?["maison","grande","beudot"]:
+    spaces.results.map(row=>row.slug).filter(slug=>["carriere","manege"].includes(slug))
+  );
+  if(!allowedTargets.has(targetSlug))return{error:"Espace invalide dans l’exception"};
+  return{date,scope,targetSlug,manualStatus,opensAt,closesAt};
 }
 
 async function saveHourProgramEntries(env,programId,entries){

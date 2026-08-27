@@ -84,6 +84,10 @@ function renderHoraires(data){
 
     if(exceptions[row.jour]){
       contenu=exceptions[row.jour];
+    }else if(row.statut==="ferme"){
+      contenu="Fermé";
+    }else if(row.statut==="hors-service"){
+      contenu="Hors service";
     }else{
       contenu=`${formatTime(row.ouvert)} - ${formatTime(row.ferme)}`;
     }
