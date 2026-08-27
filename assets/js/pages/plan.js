@@ -208,18 +208,21 @@ haloCircle.style.strokeDashoffset="0";
 /* options */
 
 let show=false;
+const showActivities=espace==="carriere"||espace==="manege";
+liberte.innerHTML="";
+longe.innerHTML="";
 
 const activityLabel=value=>{
 if(status==="prevision") return `<span style="color:rgba(255,255,255,.58);font-weight:800">—</span>`;
 return `<span style="color:${value==="oui"?"#33d17a":"#ff4d4d"};font-weight:800">${value.toUpperCase()}</span>`;
 };
 
-if(e.liberte){
+if(showActivities&&e.liberte){
 liberte.innerHTML=`Liberté : ${activityLabel(e.liberte)}`;
 show=true;
 }
 
-if(e.longe){
+if(showActivities&&e.longe){
 longe.innerHTML=`Longe : ${activityLabel(e.longe)}`;
 show=true;
 }
