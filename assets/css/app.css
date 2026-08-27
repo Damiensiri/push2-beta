@@ -90,6 +90,10 @@ html.app-booting *::after{
   animation-delay:0s!important;
 }
 
+html.auth-checking body > :not(.ambient-stage){
+  visibility:hidden!important;
+}
+
 html::after{
   content:"";
   position:fixed;

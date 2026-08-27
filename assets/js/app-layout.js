@@ -6,8 +6,10 @@
   const hadServiceWorkerController=Boolean(navigator.serviceWorker?.controller);
   if("serviceWorker" in navigator){
     const reloadKey=`ecurie-pwa-controller-reload:${layoutVersion}`;
+    const openedAt=Date.now();
     if(hadServiceWorkerController){
       navigator.serviceWorker.addEventListener("controllerchange",()=>{
+        if(Date.now()-openedAt<4000)return;
         try{
           if(sessionStorage.getItem(reloadKey))return;
           sessionStorage.setItem(reloadKey,"1");
@@ -25,7 +27,7 @@
   const authPage=location.pathname.split("/").pop()==="connexion.html";
   const authToken=localStorage.getItem("ecurie_beta_session")||"";
   if(!authPage){
-    document.documentElement.style.visibility="hidden";
+    document.documentElement.classList.add("auth-checking");
     if(!authToken){
       location.replace("connexion.html");
       return;
@@ -35,14 +37,14 @@
     }).then(async response=>{
       if(!response.ok)throw new Error("Session invalide");
       const data=await response.json();
-      document.documentElement.style.visibility="";
+      document.documentElement.classList.remove("auth-checking");
       initializePushIdentity(data.user);
     }).catch(()=>{
       localStorage.removeItem("ecurie_beta_session");
       location.replace("connexion.html");
     });
   }else if(authToken){
-    document.documentElement.style.visibility="hidden";
+    document.documentElement.classList.add("auth-checking");
   }
 
   function initializePushIdentity(user){
