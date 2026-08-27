@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   compatibleAlert,validateAlert,parisNow,isPushEnabled,sendRequestedPush,plainTextMessage,
-  calculateStatus,publicSpace,publicSchedule,validateSpace,validateSchedules,timeToMinutes,findNextSpaceOpening,
+  calculateStatus,publicSpace,publicSchedule,validateSpace,validateSchedules,timeToMinutes,effectiveActivityValue,findNextSpaceOpening,
   normalizeEmail,validatePassword,validateNewUser,hashPassword,verifyPassword,validatePaddockBooking,
   reservationLocalMinute,duePaddockReminderTypes,validatePaddockRequestDate,
   validStaffMonth,staffMonthRange,staffMinutes,validateStaffShift,isStaffWeekStart,addIsoDays,
@@ -310,4 +310,13 @@ test("les champs d’un espace sont normalisés",()=>{
   assert.equal(value.longe,"non");
   assert.equal(value.info,"Test");
   assert.equal(value.specialHours,"Prévu 19h");
+});
+
+test("les activités programmées suivent leur plage horaire",()=>{
+  assert.equal(effectiveActivityValue({enabled:"oui",startsAt:"",endsAt:""},8*60),"oui");
+  assert.equal(effectiveActivityValue({enabled:"non",startsAt:"08:00",endsAt:"10:00"},9*60),"non");
+  assert.equal(effectiveActivityValue({enabled:"oui",startsAt:"08:00",endsAt:"10:00"},9*60),"oui");
+  assert.equal(effectiveActivityValue({enabled:"oui",startsAt:"08:00",endsAt:"10:00"},10*60),"non");
+  assert.equal(effectiveActivityValue({enabled:"oui",startsAt:"22:00",endsAt:"02:00"},23*60),"oui");
+  assert.equal(effectiveActivityValue({enabled:"oui",startsAt:"22:00",endsAt:"02:00"},3*60),"non");
 });

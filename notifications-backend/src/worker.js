@@ -1739,7 +1739,7 @@ function publicSpace(space,schedule,minutes,nextOpening=null,activity=null){
   const activityBlocked=["ferme","hors-service"].includes(status);
   const activityValue=field=>{
     if(activityBlocked)return"non";
-    if(space[field]==="auto")return activity?.[field]?.enabled||"";
+    if(space[field]==="auto")return effectiveActivityValue(activity?.[field],minutes);
     return space[field]||"";
   };
   const liberte=activityValue("liberte");
@@ -1757,8 +1757,8 @@ function publicSpace(space,schedule,minutes,nextOpening=null,activity=null){
     statut_auto:status,
     liberte,
     longe,
-    liberte_horaire:activityBlocked||space.liberte!=="auto"?"":(activity?.liberte?.hours||""),
-    longe_horaire:activityBlocked||space.longe!=="auto"?"":(activity?.longe?.hours||""),
+    liberte_horaire:activityBlocked||space.liberte!=="auto"||liberte!=="oui"?"":(activity?.liberte?.hours||""),
+    longe_horaire:activityBlocked||space.longe!=="auto"||longe!=="oui"?"":(activity?.longe?.hours||""),
     info:space.info||"",
     alerte:"",
     horaire_special:space.special_hours||"",
@@ -1766,6 +1766,18 @@ function publicSpace(space,schedule,minutes,nextOpening=null,activity=null){
     transition,
     urgent:""
   };
+}
+
+function effectiveActivityValue(activity,minutes){
+  if(!activity)return"";
+  if(activity.enabled!=="oui")return"non";
+  const opens=timeToMinutes(activity.startsAt);
+  const closes=timeToMinutes(activity.endsAt);
+  if(opens===null&&closes===null)return"oui";
+  if(opens===null||closes===null)return"non";
+  if(opens===closes)return"non";
+  if(closes>opens)return minutes>=opens&&minutes<closes?"oui":"non";
+  return minutes>=opens||minutes<closes?"oui":"non";
 }
 
 function findNextSpaceOpening(scheduleMap,slug,currentDay,minutes){
@@ -2033,6 +2045,8 @@ async function loadEffectiveActivityOptions(env,dateString=""){
     const space=result[row.space_slug]||{};
     space[row.activity]={
       enabled:row.enabled,
+      startsAt:row.starts_at||"",
+      endsAt:row.ends_at||"",
       hours:row.starts_at&&row.ends_at?`${row.starts_at} - ${row.ends_at}`:""
     };
     result[row.space_slug]=space;
@@ -3231,7 +3245,7 @@ export class RealtimeHub{
 
 export{
   compatibleAlert,validateAlert,validateScheduledNotification,parisNow,parisDateTime,isPushEnabled,sendRequestedPush,plainTextMessage,
-  calculateStatus,publicSpace,publicSchedule,validateSpace,validateSchedules,timeToMinutes,parisClock,findNextSpaceOpening,
+  calculateStatus,publicSpace,publicSchedule,validateSpace,validateSchedules,timeToMinutes,effectiveActivityValue,parisClock,findNextSpaceOpening,
   normalizeEmail,validatePassword,validateNewUser,hashPassword,verifyPassword,publicUser,validatePaddockBooking,validatePaddockHours,
   parisLocalMinute,reservationLocalMinute,duePaddockReminderTypes,isValidPushSubscriptionId,isValidPushInstallationId,processPaddockPushReminders,
   processScheduledNotifications,validatePaddockRequestDate,validStaffMonth,staffMonthRange,staffMinutes,validateStaffShift,isStaffWeekStart,addIsoDays,
