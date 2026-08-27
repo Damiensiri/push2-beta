@@ -109,7 +109,9 @@
   const configuredTheme=themes.includes(config.theme)?config.theme:"summer";
   let activeTheme=readStoredTheme()||seasonalFallbackTheme()||configuredTheme;
   let lastThemeConfigCheck=0;
+  let initialPaintSettled=false;
 
+  document.documentElement.classList.add("app-booting");
   document.documentElement.dataset.theme=activeTheme;
 
   function seasonalFallbackTheme(){
@@ -170,7 +172,7 @@
 
   function fadeCurrentStage(transitionDuration){
     const stage=document.querySelector(".ambient-stage");
-    if(!stage||!transitionDuration)return;
+    if(!stage||!transitionDuration||!initialPaintSettled)return;
 
     const style=getComputedStyle(stage);
     const fade=document.createElement("div");
@@ -213,7 +215,7 @@
     if(!themes.includes(themeName))return false;
 
     if(activeTheme!==themeName){
-      fadeCurrentStage(Number(settings.transitionDuration)||0);
+      fadeCurrentStage(initialPaintSettled ? Number(settings.transitionDuration)||0 : 0);
       activeTheme=themeName;
     }
 
@@ -445,7 +447,7 @@
       const previous=document.documentElement.dataset.daypart;
       const stage=document.querySelector(".ambient-stage");
 
-      if(previous && previous!==daypart && stage){
+      if(previous && previous!==daypart && stage && initialPaintSettled){
         fadeCurrentStage(transitionDuration||defaultTransition);
       }
 
@@ -505,7 +507,7 @@
       }
     }
 
-    syncThemeBackground(resumeTransition);
+    syncThemeBackground(0);
 
     document.addEventListener("visibilitychange",()=>{
       if(!document.hidden){
@@ -537,6 +539,14 @@
   window.addEventListener("DOMContentLoaded",()=>{
     document.body.dataset.theme=activeTheme;
     initializeThemeBackground();
-    syncRemoteTheme({transitionDuration:1000,force:true});
+    syncRemoteTheme({transitionDuration:0,force:true}).finally(()=>{
+      requestAnimationFrame(()=>{
+        requestAnimationFrame(()=>{
+          initialPaintSettled=true;
+          document.documentElement.classList.remove("app-booting");
+          document.documentElement.classList.add("app-ready");
+        });
+      });
+    });
   });
 })();

@@ -81,6 +81,15 @@ html{
     --solar-opacity 2.8s ease;
 }
 
+html.app-booting,
+html.app-booting *,
+html.app-booting *::before,
+html.app-booting *::after{
+  transition:none!important;
+  animation-duration:0s!important;
+  animation-delay:0s!important;
+}
+
 html::after{
   content:"";
   position:fixed;
