@@ -1468,6 +1468,44 @@ export default{
           return json({deleted:true},200,cors);
         }
 
+        if(request.method==="POST"&&url.pathname==="/api/admin/activity-programs"){
+          const input=await readJson(request);
+          const validated=validateActivityProgram(input);
+          if(validated.error)return json({error:validated.error},400,cors);
+          const now=parisNow().iso;
+          const result=await env.DB.prepare(`
+            INSERT INTO activity_programs(name,starts_on,ends_on,enabled,created_at,updated_at)
+            VALUES(?,?,?,?,?,?)
+          `).bind(validated.name,validated.startsOn,validated.endsOn,validated.enabled,now,now).run();
+          await saveActivityProgramEntries(env,result.meta.last_row_id,validated.entries);
+          await notifyRealtime(env,"statuses");
+          return json({program:await loadActivityProgram(env,result.meta.last_row_id)},201,cors);
+        }
+
+        const activityProgramMatch=url.pathname.match(/^\/api\/admin\/activity-programs\/(\d+)$/);
+        if(activityProgramMatch&&request.method==="PATCH"){
+          const id=Number(activityProgramMatch[1]);
+          const exists=await env.DB.prepare("SELECT id FROM activity_programs WHERE id=?").bind(id).first();
+          if(!exists)return json({error:"Programmation d’activité introuvable"},404,cors);
+          const input=await readJson(request);
+          const validated=validateActivityProgram(input);
+          if(validated.error)return json({error:validated.error},400,cors);
+          const now=parisNow().iso;
+          await env.DB.prepare(`
+            UPDATE activity_programs SET name=?,starts_on=?,ends_on=?,enabled=?,updated_at=? WHERE id=?
+          `).bind(validated.name,validated.startsOn,validated.endsOn,validated.enabled,now,id).run();
+          await saveActivityProgramEntries(env,id,validated.entries);
+          await notifyRealtime(env,"statuses");
+          return json({program:await loadActivityProgram(env,id)},200,cors);
+        }
+
+        if(activityProgramMatch&&request.method==="DELETE"){
+          const result=await env.DB.prepare("DELETE FROM activity_programs WHERE id=?").bind(Number(activityProgramMatch[1])).run();
+          if(!result.meta.changes)return json({error:"Programmation d’activité introuvable"},404,cors);
+          await notifyRealtime(env,"statuses");
+          return json({deleted:true},200,cors);
+        }
+
         if(request.method==="POST"&&url.pathname==="/api/admin/hour-exceptions"){
           const input=await readJson(request);
           const validated=await validateHourException(env,input);
@@ -1674,16 +1712,18 @@ async function loadPublicStatuses(env,date=new Date(),dateOverride=""){
   const paris=parisClock(date);
   const effectiveDate=dateOverride||parisDateTime(date).date;
   const effectiveDay=dayNumberFromIsoDate(effectiveDate)||paris.day;
-  const [spacesResult,schedulesResult,alert]=await Promise.all([
+  const [spacesResult,schedulesResult,activityOptions,alert]=await Promise.all([
     env.DB.prepare("SELECT * FROM spaces ORDER BY position").all(),
     loadEffectiveSpaceSchedules(env,effectiveDate),
+    loadEffectiveActivityOptions(env,effectiveDate),
     env.DB.prepare("SELECT message,urgent FROM home_alert WHERE id=1").first()
   ]);
   const scheduleMap=new Map(schedulesResult.map(row=>[`${row.space_slug}:${row.day}`,row]));
   const rows=spacesResult.results.map(space=>{
     const schedule=scheduleMap.get(`${space.slug}:${effectiveDay}`)||null;
     const nextOpening=findNextSpaceOpening(scheduleMap,space.slug,effectiveDay,paris.minutes);
-    return publicSpace(schedule?{...space,...spaceProgramFields(schedule,space)}:space,schedule,paris.minutes,nextOpening);
+    const activity=activityOptions[space.slug]||null;
+    return publicSpace(schedule?{...space,...spaceProgramFields(schedule,space)}:space,schedule,paris.minutes,nextOpening,activity);
   });
   rows.push({
     espace:"accueil",statut_manuel:"",statut_auto:"ferme",liberte:"",longe:"",info:"",
@@ -1692,10 +1732,18 @@ async function loadPublicStatuses(env,date=new Date(),dateOverride=""){
   return rows;
 }
 
-function publicSpace(space,schedule,minutes,nextOpening=null){
+function publicSpace(space,schedule,minutes,nextOpening=null,activity=null){
   const normalHours=schedule?`${schedule.opens_at} - ${schedule.closes_at}`:"";
   const status=calculateStatus(space.manual_status,schedule,minutes);
   const hidesHours=status==="ferme"||status==="hors-service";
+  const activityBlocked=["ferme","hors-service"].includes(status);
+  const activityValue=field=>{
+    if(activityBlocked)return"non";
+    if(space[field]==="auto")return activity?.[field]?.enabled||"";
+    return space[field]||"";
+  };
+  const liberte=activityValue("liberte");
+  const longe=activityValue("longe");
   let transition=null;
   if(space.manual_status==="ouvert"&&status==="ouvert"&&schedule){
     const opens=timeToMinutes(schedule.opens_at),closes=timeToMinutes(schedule.closes_at);
@@ -1707,8 +1755,10 @@ function publicSpace(space,schedule,minutes,nextOpening=null){
     espace:space.slug,
     statut_manuel:space.manual_status,
     statut_auto:status,
-    liberte:space.liberte||"",
-    longe:space.longe||"",
+    liberte,
+    longe,
+    liberte_horaire:activityBlocked||space.liberte!=="auto"?"":(activity?.liberte?.hours||""),
+    longe_horaire:activityBlocked||space.longe!=="auto"?"":(activity?.longe?.hours||""),
     info:space.info||"",
     alerte:"",
     horaire_special:space.special_hours||"",
@@ -1748,18 +1798,19 @@ function publicSchedule(row){
 }
 
 async function loadOperations(env){
-  const [spaces,schedules,general,exceptions,hourExceptions,homeAlert,hourPrograms]=await Promise.all([
+  const [spaces,schedules,general,exceptions,hourExceptions,homeAlert,hourPrograms,activityPrograms]=await Promise.all([
     env.DB.prepare("SELECT * FROM spaces ORDER BY position").all(),
     env.DB.prepare("SELECT * FROM space_schedules ORDER BY space_slug,day").all(),
     env.DB.prepare("SELECT * FROM general_schedules ORDER BY day").all(),
     env.DB.prepare("SELECT * FROM schedule_exceptions ORDER BY date DESC").all(),
     env.DB.prepare("SELECT * FROM hour_exceptions ORDER BY date DESC,scope,target_slug").all(),
     env.DB.prepare("SELECT * FROM home_alert WHERE id=1").first(),
-    loadHourPrograms(env)
+    loadHourPrograms(env),
+    loadActivityPrograms(env)
   ]);
   return{spaces:spaces.results,spaceSchedules:schedules.results,
     generalSchedules:general.results,exceptions:exceptions.results,homeAlert:homeAlert||{message:"",urgent:"non"},
-    hourPrograms,hourExceptions:hourExceptions.results.map(publicHourException)};
+    hourPrograms,hourExceptions:hourExceptions.results.map(publicHourException),activityPrograms};
 }
 
 async function loadEffectiveGeneralSchedules(env,dateString=""){
@@ -1947,6 +1998,48 @@ async function loadHourProgram(env,id){
   return{...publicHourProgram(row),entries:entries.results.map(publicHourProgramEntry)};
 }
 
+async function loadActivityPrograms(env){
+  const programs=await env.DB.prepare("SELECT * FROM activity_programs ORDER BY starts_on DESC,id DESC").all();
+  const entries=await env.DB.prepare("SELECT * FROM activity_program_entries ORDER BY program_id,space_slug,day,activity").all();
+  const byProgram=new Map();
+  entries.results.forEach(row=>{
+    const list=byProgram.get(Number(row.program_id))||[];
+    list.push(publicActivityProgramEntry(row));
+    byProgram.set(Number(row.program_id),list);
+  });
+  return programs.results.map(row=>({...publicActivityProgram(row),entries:byProgram.get(Number(row.id))||[]}));
+}
+
+async function loadActivityProgram(env,id){
+  const row=await env.DB.prepare("SELECT * FROM activity_programs WHERE id=?").bind(id).first();
+  if(!row)return null;
+  const entries=await env.DB.prepare("SELECT * FROM activity_program_entries WHERE program_id=? ORDER BY space_slug,day,activity").bind(id).all();
+  return{...publicActivityProgram(row),entries:entries.results.map(publicActivityProgramEntry)};
+}
+
+async function loadEffectiveActivityOptions(env,dateString=""){
+  const date=validIsoDate(dateString)||parisNow().date;
+  const day=dayNumberFromIsoDate(date);
+  const program=await env.DB.prepare(`
+    SELECT id FROM activity_programs
+    WHERE enabled='oui' AND starts_on<=? AND (ends_on IS NULL OR ends_on='' OR ends_on>=?)
+    ORDER BY starts_on DESC,id DESC LIMIT 1
+  `).bind(date,date).first();
+  if(!program||!day)return{};
+  const rows=await env.DB.prepare("SELECT * FROM activity_program_entries WHERE program_id=? AND day=?")
+    .bind(program.id,day).all();
+  const result={};
+  rows.results.forEach(row=>{
+    const space=result[row.space_slug]||{};
+    space[row.activity]={
+      enabled:row.enabled,
+      hours:row.starts_at&&row.ends_at?`${row.starts_at} - ${row.ends_at}`:""
+    };
+    result[row.space_slug]=space;
+  });
+  return result;
+}
+
 function publicHourProgram(row){
   return{id:row.id,name:row.name,scope:row.scope,startsOn:row.starts_on,endsOn:row.ends_on||"",createdAt:row.created_at,updatedAt:row.updated_at};
 }
@@ -1954,6 +2047,16 @@ function publicHourProgram(row){
 function publicHourProgramEntry(row){
   return{targetSlug:row.target_slug,day:row.day,manualStatus:row.manual_status,opensAt:row.opens_at,
     closesAt:row.closes_at,specialHours:row.special_hours||"",info:row.info||"",liberte:row.liberte||"",longe:row.longe||""};
+}
+
+function publicActivityProgram(row){
+  return{id:row.id,name:row.name,startsOn:row.starts_on,endsOn:row.ends_on||"",
+    enabled:row.enabled||"non",createdAt:row.created_at,updatedAt:row.updated_at};
+}
+
+function publicActivityProgramEntry(row){
+  return{spaceSlug:row.space_slug,day:row.day,activity:row.activity,enabled:row.enabled||"non",
+    startsAt:row.starts_at||"",endsAt:row.ends_at||""};
 }
 
 function publicHourException(row){
@@ -1968,7 +2071,7 @@ function validateSpace(input){
   const info=String(input?.info||"").trim();
   const specialHours=String(input?.specialHours||"").trim();
   if(info.length>500||specialHours.length>120)return{error:"Texte trop long"};
-  return{manualStatus,liberte:normalizeYesNo(input?.liberte,true),longe:normalizeYesNo(input?.longe,true),info,specialHours};
+  return{manualStatus,liberte:normalizeActivityMode(input?.liberte),longe:normalizeActivityMode(input?.longe),info,specialHours};
 }
 
 function validateSchedules(value){
@@ -2052,6 +2155,40 @@ async function validateHourException(env,input){
   return{date,scope,targetSlug,manualStatus,opensAt,closesAt};
 }
 
+function validateActivityProgram(input){
+  const name=String(input?.name||"").trim();
+  const startsOn=validIsoDate(input?.startsOn);
+  const endsOn=input?.endsOn?validIsoDate(input.endsOn):"";
+  const enabled=normalizeYesNo(input?.enabled,true)||"non";
+  if(!name||name.length>120)return{error:"Nom de programmation invalide"};
+  if(!startsOn)return{error:"Date de début invalide"};
+  if(input?.endsOn&&!endsOn)return{error:"Date de fin invalide"};
+  if(endsOn&&endsOn<startsOn)return{error:"La date de fin doit être après la date de début"};
+  const entries=Array.isArray(input?.entries)?input.entries:[];
+  if(!entries.length)return{error:"Ajoutez au moins une ligne d’option"};
+  const rows=[];
+  const keys=new Set();
+  for(const entry of entries){
+    const spaceSlug=String(entry?.spaceSlug||"").trim();
+    const day=Number(entry?.day);
+    const activity=String(entry?.activity||"").trim();
+    const optionEnabled=normalizeYesNo(entry?.enabled,true)||"non";
+    const startsAt=String(entry?.startsAt||"").trim();
+    const endsAt=String(entry?.endsAt||"").trim();
+    if(!["carriere","manege"].includes(spaceSlug))return{error:"Espace invalide dans les options"};
+    if(day<1||day>7)return{error:"Jour invalide dans les options"};
+    if(!["liberte","longe"].includes(activity))return{error:"Activité invalide"};
+    if(startsAt&&timeToMinutes(startsAt)===null)return{error:"Horaire d’activité invalide"};
+    if(endsAt&&timeToMinutes(endsAt)===null)return{error:"Horaire d’activité invalide"};
+    if((startsAt&&!endsAt)||(!startsAt&&endsAt))return{error:"Renseignez début et fin d’activité ensemble"};
+    const key=`${spaceSlug}:${day}:${activity}`;
+    if(keys.has(key))return{error:"Chaque option ne doit apparaître qu’une fois"};
+    keys.add(key);
+    rows.push({spaceSlug,day,activity,enabled:optionEnabled,startsAt,endsAt});
+  }
+  return{name,startsOn,endsOn,enabled,entries:rows};
+}
+
 async function saveHourProgramEntries(env,programId,entries){
   await env.DB.prepare("DELETE FROM hour_program_entries WHERE program_id=?").bind(programId).run();
   if(!entries.length)return;
@@ -2060,6 +2197,15 @@ async function saveHourProgramEntries(env,programId,entries){
     VALUES(?,?,?,?,?,?,?,?,?,?)
   `).bind(programId,entry.targetSlug,entry.day,entry.manualStatus,entry.opensAt,entry.closesAt,
     entry.specialHours,entry.info,entry.liberte,entry.longe)));
+}
+
+async function saveActivityProgramEntries(env,programId,entries){
+  await env.DB.prepare("DELETE FROM activity_program_entries WHERE program_id=?").bind(programId).run();
+  if(!entries.length)return;
+  await env.DB.batch(entries.map(entry=>env.DB.prepare(`
+    INSERT INTO activity_program_entries(program_id,space_slug,day,activity,enabled,starts_at,ends_at)
+    VALUES(?,?,?,?,?,?,?)
+  `).bind(programId,entry.spaceSlug,entry.day,entry.activity,entry.enabled,entry.startsAt,entry.endsAt)));
 }
 
 function validIsoDate(value){
@@ -2084,6 +2230,14 @@ function normalizeYesNo(value,allowEmpty){
   if(normalized==="oui"||value===true)return"oui";
   if(normalized==="non"||value===false)return"non";
   return allowEmpty?"":"non";
+}
+
+function normalizeActivityMode(value){
+  const normalized=String(value??"").trim().toLowerCase();
+  if(["oui","non","auto"].includes(normalized))return normalized;
+  if(value===true)return"oui";
+  if(value===false)return"non";
+  return"";
 }
 
 function timeToMinutes(value){
