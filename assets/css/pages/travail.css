@@ -156,6 +156,10 @@
   color:#ff4d4d;
 }
 
+.badge.neutral{
+  color:rgba(255,255,255,.58);
+}
+
 .card-info{
   margin-top:14px;
   padding:12px 13px;

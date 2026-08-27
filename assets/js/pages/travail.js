@@ -52,7 +52,9 @@ j[d.getDay()]+" "+d.getDate()+" "+m[d.getMonth()]+" "+d.getFullYear()
 
 }
 
-function makeBadge(val){
+function makeBadge(val,statut){
+
+if(String(statut||"").toLowerCase().trim()==="prevision") return `<span class="badge neutral">—</span>`
 
 if(!val) return ""
 
@@ -74,10 +76,10 @@ const row=data.find(e=>e.espace===espace)
 if(!row) return
 
 document.getElementById(espace+"-liberte").innerHTML=
-makeBadge(row.liberte)
+makeBadge(row.liberte,row.statut_auto)
 
 document.getElementById(espace+"-longe").innerHTML=
-makeBadge(row.longe)
+makeBadge(row.longe,row.statut_auto)
 
 const statut=(row.statut_auto || "").toLowerCase().trim()
 const statusWrap=document.getElementById(espace+"-statut").closest(".status-wrap")

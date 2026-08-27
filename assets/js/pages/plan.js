@@ -209,13 +209,18 @@ haloCircle.style.strokeDashoffset="0";
 
 let show=false;
 
+const activityLabel=value=>{
+if(status==="prevision") return `<span style="color:rgba(255,255,255,.58);font-weight:800">—</span>`;
+return `<span style="color:${value==="oui"?"#33d17a":"#ff4d4d"};font-weight:800">${value.toUpperCase()}</span>`;
+};
+
 if(e.liberte){
-liberte.innerHTML=`Liberté : <span style="color:${e.liberte==="oui"?"#33d17a":"#ff4d4d"};font-weight:800">${e.liberte.toUpperCase()}</span>`;
+liberte.innerHTML=`Liberté : ${activityLabel(e.liberte)}`;
 show=true;
 }
 
 if(e.longe){
-longe.innerHTML=`Longe : <span style="color:${e.longe==="oui"?"#33d17a":"#ff4d4d"};font-weight:800">${e.longe.toUpperCase()}</span>`;
+longe.innerHTML=`Longe : ${activityLabel(e.longe)}`;
 show=true;
 }
 
