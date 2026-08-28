@@ -491,6 +491,17 @@ export default{
       if(url.pathname.startsWith("/api/admin/")){
         if(!isAdmin(request,env))return json({error:"Non autorisé"},401,cors);
 
+        if(request.method==="GET"&&url.pathname==="/api/admin/theme"){
+          return json(await readThemeConfig(env),200,cors);
+        }
+
+        if(request.method==="POST"&&url.pathname==="/api/admin/theme"){
+          const input=await readJson(request);
+          const theme=String(input?.theme||"").trim().toLowerCase();
+          const result=await publishThemeConfig(env,theme);
+          return json(result,200,cors);
+        }
+
         if(url.pathname==="/api/admin/push/subscription"&&(request.method==="PUT"||request.method==="DELETE")){
           const input=await readJson(request);const subscriptionId=String(input?.subscriptionId||"").trim();
           if(!isValidPushSubscriptionId(subscriptionId))return json({error:"Abonnement push invalide"},400,cors);
@@ -3263,6 +3274,45 @@ function json(value,status,headers={}){
     status,
     headers:{...JSON_HEADERS,...headers}
   });
+}
+
+const THEME_NAMES=["summer","autumn","christmas","winter","spring"];
+
+function assertThemeConfig(env){
+  if(!env.THEME_CONFIG_URL)throw new Error("Configuration thème non branchée");
+}
+
+function appScriptUrl(env){
+  const url=new URL(env.THEME_CONFIG_URL);
+  url.searchParams.set("_",String(Date.now()));
+  return url.toString();
+}
+
+async function readThemeConfig(env){
+  assertThemeConfig(env);
+  const response=await fetch(appScriptUrl(env),{cache:"no-store"});
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok||data?.ok===false)throw new Error(data?.error||"Lecture du thème impossible");
+  const theme=String(data?.theme||data?.activeTheme||data?.currentTheme||"").trim().toLowerCase();
+  if(!THEME_NAMES.includes(theme))throw new Error("Thème publié inconnu");
+  return{theme,updatedAt:data?.updatedAt||""};
+}
+
+async function publishThemeConfig(env,theme){
+  assertThemeConfig(env);
+  if(!THEME_NAMES.includes(theme))throw new Error("Thème invalide");
+  if(!env.THEME_ADMIN_TOKEN)throw new Error("Code thème non configuré côté Worker");
+  const response=await fetch(appScriptUrl(env),{
+    method:"POST",
+    headers:{"content-type":"text/plain;charset=UTF-8"},
+    body:JSON.stringify({action:"setTheme",theme,token:env.THEME_ADMIN_TOKEN}),
+    cache:"no-store"
+  });
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok||data?.ok===false)throw new Error(data?.error||"Publication du thème impossible");
+  const publishedTheme=String(data?.theme||theme).trim().toLowerCase();
+  if(!THEME_NAMES.includes(publishedTheme))throw new Error("Thème publié invalide");
+  return{theme:publishedTheme,updatedAt:data?.updatedAt||new Date().toISOString()};
 }
 
 function realtimeStub(env){
