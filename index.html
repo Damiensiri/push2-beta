@@ -9,7 +9,7 @@
 <title>Ecurie Damien Siri</title>
 
 <script>
-const APP_VERSION="20260828-1";
+const APP_VERSION="20260828-2";
 const APP_BASE_URL=new URL("./",window.location.href);
 const IS_BETA=window.location.hostname==="damiensiri.github.io" &&
               APP_BASE_URL.pathname==="/push2-beta/";
@@ -42,19 +42,19 @@ setTimeout(()=>registration?.update?.(),3000);
 
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700&display=swap" rel="stylesheet">
 
-<script src="assets/js/app-config.js?v=20260828-1"></script>
-<script src="assets/js/app-layout.js?v=20260828-1"></script>
-<script src="assets/js/profile-store.js?v=20260828-1" defer></script>
-<script src="assets/js/pages/index-profile.js?v=20260828-1" defer></script>
-<script src="assets/js/pages/index-install-prompt.js?v=20260828-1" defer></script>
+<script src="assets/js/app-config.js?v=20260828-2"></script>
+<script src="assets/js/app-layout.js?v=20260828-2"></script>
+<script src="assets/js/profile-store.js?v=20260828-2" defer></script>
+<script src="assets/js/pages/index-profile.js?v=20260828-2" defer></script>
+<script src="assets/js/pages/index-install-prompt.js?v=20260828-2" defer></script>
 
-<link rel="stylesheet" href="assets/css/app.css?v=20260828-1">
-<link rel="stylesheet" href="assets/css/themes/summer.css?v=20260828-1">
-<link rel="stylesheet" href="assets/css/themes/autumn.css?v=20260828-1">
-<link rel="stylesheet" href="assets/css/themes/christmas.css?v=20260828-1">
-<link rel="stylesheet" href="assets/css/themes/winter.css?v=20260828-1">
-<link rel="stylesheet" href="assets/css/themes/spring.css?v=20260828-1">
-<link rel="stylesheet" href="assets/css/pages/index.css?v=20260828-1">
+<link rel="stylesheet" href="assets/css/app.css?v=20260828-2">
+<link rel="stylesheet" href="assets/css/themes/summer.css?v=20260828-2">
+<link rel="stylesheet" href="assets/css/themes/autumn.css?v=20260828-2">
+<link rel="stylesheet" href="assets/css/themes/christmas.css?v=20260828-2">
+<link rel="stylesheet" href="assets/css/themes/winter.css?v=20260828-2">
+<link rel="stylesheet" href="assets/css/themes/spring.css?v=20260828-2">
+<link rel="stylesheet" href="assets/css/pages/index.css?v=20260828-2">
 </head>
 
 <!-- REMPLACE UNIQUEMENT ÇA -->
@@ -197,6 +197,30 @@ return val.substring(0,5);
 
 }
 
+function minutesFromTime(value){
+const formatted=formatTime(value);
+if(!/^\d{2}:\d{2}$/.test(formatted))return null;
+const [hours,minutes]=formatted.split(":").map(Number);
+return hours*60+minutes;
+}
+
+function timeRangeContains(rangeOpen,rangeClose,currentMinutes){
+const openMinutes=minutesFromTime(rangeOpen);
+const closeMinutes=minutesFromTime(rangeClose);
+if(openMinutes===null||closeMinutes===null)return false;
+if(openMinutes===closeMinutes)return false;
+if(closeMinutes<openMinutes){
+return currentMinutes>=openMinutes||currentMinutes<closeMinutes;
+}
+return currentMinutes>=openMinutes&&currentMinutes<closeMinutes;
+}
+
+function activeClosedInterval(row,currentMinutes){
+return (row.closedIntervals||[]).find(interval=>
+interval&&interval.open&&interval.close&&timeRangeContains(interval.open,interval.close,currentMinutes)
+);
+}
+
 function normalizeSheetKey(value){
 return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim().toLowerCase();
 }
@@ -274,18 +298,32 @@ const h=horaires.find(r=>r.jour.toLowerCase()===todayName);
 
 if(!h)return;
 
+const scheduleStatus=String(h.statut||"").toLowerCase();
+if(scheduleStatus==="ferme"){
+status.classList.add("closed");
+status.textContent="Écuries fermées";
+return;
+}
+if(scheduleStatus==="hors-service"){
+status.classList.add("closed");
+status.textContent="Écuries hors service";
+return;
+}
+
 const open=formatTime(h.ouvert);
 const close=formatTime(h.ferme);
 
-const [oh,om]=open.split(":");
-const [ch,cm]=close.split(":");
-
 const nowTime=new Date();
+const currentMinutes=nowTime.getHours()*60+nowTime.getMinutes();
+const closedInterval=activeClosedInterval(h,currentMinutes);
 
-const o=new Date();o.setHours(oh,om,0,0);
-const c=new Date();c.setHours(ch,cm,0,0);
+if(closedInterval){
+status.classList.add("closed");
+status.textContent=`Écuries fermées ${formatTime(closedInterval.open)} – ${formatTime(closedInterval.close)}`;
+return;
+}
 
-if(nowTime>=o && nowTime<=c){
+if(timeRangeContains(h.ouvert,h.ferme,currentMinutes)){
 status.classList.add("open");
 status.textContent=`Écuries ouvertes ${open} – ${close}`;
 }else{
@@ -391,7 +429,7 @@ setInterval(updateBell,60000);
 
 </script>
 
-<script src="assets/js/status-realtime.js?v=20260828-1"></script>
+<script src="assets/js/status-realtime.js?v=20260828-2"></script>
 
 </body>
 </html>
