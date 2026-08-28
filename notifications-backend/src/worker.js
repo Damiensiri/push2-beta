@@ -1747,7 +1747,10 @@ function publicSpace(space,schedule,minutes,nextOpening=null,activity=null){
   let transition=null;
   if(space.manual_status==="ouvert"&&status==="ouvert"&&schedule){
     const opens=timeToMinutes(schedule.opens_at),closes=timeToMinutes(schedule.closes_at);
-    transition={type:"closing",time:schedule.closes_at,dayOffset:closes<=opens&&minutes>=opens?1:0};
+    const partialClose=nextClosedInterval(schedule,minutes);
+    transition=partialClose
+      ? {type:"closing",time:partialClose.open,dayOffset:0}
+      : {type:"closing",time:schedule.closes_at,dayOffset:closes<=opens&&minutes>=opens?1:0};
   }else if(space.manual_status==="ouvert"&&status==="prevision"&&nextOpening){
     transition={type:"opening",time:nextOpening.time,dayOffset:nextOpening.dayOffset};
   }
@@ -1794,6 +1797,7 @@ function findNextSpaceOpening(scheduleMap,slug,currentDay,minutes){
 
 function calculateStatus(manualStatus,schedule,minutes){
   if(["ferme","prevision","hors-service"].includes(manualStatus))return manualStatus;
+  if(isPartialClosedNow(schedule,minutes))return schedule.exception_partial_status||"ferme";
   if(!schedule)return"prevision";
   const opens=timeToMinutes(schedule.opens_at);
   const closes=timeToMinutes(schedule.closes_at);
@@ -1802,10 +1806,49 @@ function calculateStatus(manualStatus,schedule,minutes){
   return open?"ouvert":"prevision";
 }
 
+function hasValidTimeRange(open,close){
+  return timeToMinutes(open)!==null&&timeToMinutes(close)!==null;
+}
+
+function isPartialClosureException(exception){
+  return exception&&["ferme","hors-service"].includes(exception.manualStatus)&&hasValidTimeRange(exception.opensAt,exception.closesAt);
+}
+
+function normalizeClosedIntervals(intervals=[]){
+  return intervals
+    .map(item=>({open:String(item?.open||""),close:String(item?.close||""),status:String(item?.status||"ferme")}))
+    .filter(item=>hasValidTimeRange(item.open,item.close)&&timeToMinutes(item.open)!==timeToMinutes(item.close));
+}
+
+function addClosedInterval(schedule,exception){
+  if(!isPartialClosureException(exception))return schedule;
+  return{...schedule,exception_partial_status:exception.manualStatus,
+    closed_intervals:normalizeClosedIntervals([...(schedule?.closed_intervals||[]),{open:exception.opensAt,close:exception.closesAt,status:exception.manualStatus}])};
+}
+
+function minutesInRange(minutes,open,close){
+  const opens=timeToMinutes(open),closes=timeToMinutes(close);
+  if(opens===null||closes===null||opens===closes)return false;
+  return closes>opens?minutes>=opens&&minutes<closes:minutes>=opens||minutes<closes;
+}
+
+function isPartialClosedNow(schedule,minutes){
+  return normalizeClosedIntervals(schedule?.closed_intervals).some(item=>minutesInRange(minutes,item.open,item.close));
+}
+
+function nextClosedInterval(schedule,minutes){
+  return normalizeClosedIntervals(schedule?.closed_intervals)
+    .map(item=>({...item,opens:timeToMinutes(item.open)}))
+    .filter(item=>item.opens!==null&&item.opens>minutes)
+    .sort((a,b)=>a.opens-b.opens)[0]||null;
+}
+
 function publicSchedule(row){
   const value={jour:DAY_NAMES[row.day],ouvert:row.opens_at,ferme:row.closes_at};
   const status=row.exception_manual_status||row.program_manual_status||"ouvert";
   if(status!=="ouvert")value.statut=status;
+  const closedIntervals=normalizeClosedIntervals(row.closed_intervals);
+  if(closedIntervals.length)value.closedIntervals=closedIntervals;
   return value;
 }
 
@@ -1835,7 +1878,11 @@ async function loadEffectiveGeneralSchedules(env,dateString=""){
     map.set(Number(row.day),{day:row.day,opens_at:row.opens_at,closes_at:row.closes_at,program_manual_status:row.manual_status});
   });
   const exception=await loadHourException(env,date,"general","general");
-  if(exception&&day)map.set(day,{day,opens_at:exception.opensAt,closes_at:exception.closesAt,exception_manual_status:exception.manualStatus});
+  if(exception&&day){
+    const current=map.get(day)||{day};
+    if(isPartialClosureException(exception))map.set(day,addClosedInterval(current,exception));
+    else map.set(day,{day,opens_at:exception.opensAt,closes_at:exception.closesAt,exception_manual_status:exception.manualStatus});
+  }
   return [...map.values()].sort((a,b)=>Number(a.day)-Number(b.day));
 }
 
@@ -1871,14 +1918,11 @@ async function loadEffectiveSpaceSchedules(env,dateString=""){
     const exceptions=await loadHourExceptionsForDate(env,date);
     exceptions.filter(item=>item.scope==="work"||item.scope==="paddocks").forEach(item=>{
       const spaceSlug=item.scope==="paddocks"&&item.targetSlug==="grande"?"grande-voie":item.targetSlug;
-      map.set(`${spaceSlug}:${day}`,{
-        space_slug:spaceSlug,
-        day,
-        opens_at:item.opensAt,
-        closes_at:item.closesAt,
-        program_manual_status:item.manualStatus,
-        hour_exception:true
-      });
+      const key=`${spaceSlug}:${day}`;
+      const current=map.get(key)||{space_slug:spaceSlug,day};
+      if(isPartialClosureException(item))map.set(key,addClosedInterval(current,item));
+      else map.set(key,{space_slug:spaceSlug,day,opens_at:item.opensAt,closes_at:item.closesAt,
+        program_manual_status:item.manualStatus,hour_exception:true});
     });
   }
   return [...map.values()].sort((a,b)=>String(a.space_slug).localeCompare(String(b.space_slug))||Number(a.day)-Number(b.day));
@@ -1930,6 +1974,15 @@ async function loadEffectivePaddockHours(env,dateString=""){
     const exceptions=await loadHourExceptionsForDate(env,date);
     exceptions.filter(item=>item.scope==="paddocks"&&["maison","grande","beudot"].includes(item.targetSlug)).forEach(item=>{
       const paddockHours=hours[item.targetSlug]||{};
+      if(isPartialClosureException(item)){
+        paddockHours[dayName]={
+          ...(paddockHours[dayName]||{}),
+          closed:false,
+          closedIntervals:normalizeClosedIntervals([...(paddockHours[dayName]?.closedIntervals||[]),{open:item.opensAt,close:item.closesAt,status:item.manualStatus}])
+        };
+        hours[item.targetSlug]=paddockHours;
+        return;
+      }
       paddockHours[dayName]={
         closed:["ferme","hors-service"].includes(item.manualStatus),
         open:item.opensAt,
@@ -2158,7 +2211,12 @@ async function validateHourException(env,input){
   if(!date)return{error:"Date invalide"};
   if(!["general","work","paddocks"].includes(scope))return{error:"Type d’exception invalide"};
   if(!["ouvert","ferme","hors-service"].includes(manualStatus))return{error:"Statut invalide"};
-  if(timeToMinutes(opensAt)===null||timeToMinutes(closesAt)===null)return{error:"Horaire invalide"};
+  if(scope==="general"&&manualStatus==="hors-service")return{error:"Hors service ne s’applique pas aux horaires des écuries"};
+  const hasOpen=Boolean(opensAt);
+  const hasClose=Boolean(closesAt);
+  if(hasOpen!==hasClose)return{error:"Renseignez les deux horaires ou aucun horaire"};
+  if(hasOpen&&(timeToMinutes(opensAt)===null||timeToMinutes(closesAt)===null))return{error:"Horaire invalide"};
+  if(!hasOpen&&manualStatus==="ouvert")return{error:"Une exception ouverte doit avoir des horaires"};
   const spaces=scope==="work"?await env.DB.prepare("SELECT slug FROM spaces").all():{results:[]};
   const allowedTargets=new Set(
     scope==="general"?["general"]:
@@ -2889,12 +2947,37 @@ function validatePaddockBooking(input){
 }
 
 async function paddockBookingPolicyError(env,booking){
+  const hours=await loadEffectivePaddockHours(env,booking.date);
+  const dayName=DAY_NAMES[dayNumberFromIsoDate(booking.date)];
+  const config=hours?.[booking.paddock]?.[dayName];
+  if(!config||config.closed)return"Ce paddock est fermé ce jour";
+  const openMinutes=timeToMinutes(config.open);
+  const closeMinutes=timeToMinutes(config.close);
+  if(openMinutes===null||closeMinutes===null)return"Les horaires du paddock sont indisponibles";
+  if(!fitsWithinRange(booking.startMinutes,booking.duration,openMinutes,closeMinutes)){
+    return"Ce créneau ne permet pas de terminer avant la fermeture du paddock";
+  }
+  if(normalizeClosedIntervals(config.closedIntervals).some(interval=>rangesOverlap(
+    booking.startMinutes,booking.startMinutes+booking.duration,timeToMinutes(interval.open),timeToMinutes(interval.close)
+  )))return"Ce paddock est fermé sur cette tranche horaire";
   if(booking.duration!==90)return"";
   const restriction=await env.DB.prepare(`SELECT block_grande_90,block_beudot_90
     FROM paddock_restrictions WHERE date=?`).bind(booking.date).first();
   if(booking.paddock==="grande"&&restriction?.block_grande_90)return"Les réservations de 1 h 30 sont indisponibles à Grande voie ce jour";
   if(booking.paddock==="beudot"&&restriction?.block_beudot_90)return"Les réservations de 1 h 30 sont indisponibles à Beudot ce jour";
   return"";
+}
+
+function fitsWithinRange(start,duration,open,close){
+  if(!Number.isFinite(start)||!Number.isFinite(duration)||open===null||close===null)return false;
+  if(close>open)return start>=open&&start+duration<=close;
+  return start>=open||start+duration<=close;
+}
+
+function rangesOverlap(start,end,blockedStart,blockedEnd){
+  if(blockedStart===null||blockedEnd===null||blockedStart===blockedEnd)return false;
+  if(blockedEnd>blockedStart)return start<blockedEnd&&end>blockedStart;
+  return start<blockedEnd||end>blockedStart;
 }
 
 function validatePaddockRequestDate(date,{now=new Date(),exception=null,ignoreDeadline=false,allowToday=false}={}){

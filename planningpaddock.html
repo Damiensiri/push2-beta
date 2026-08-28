@@ -11,16 +11,16 @@
 
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
 
-<script src="assets/js/app-config.js?v=20260724-11"></script>
-<script src="assets/js/app-layout.js?v=20260827-6"></script>
+<script src="assets/js/app-config.js?v=20260828-1"></script>
+<script src="assets/js/app-layout.js?v=20260828-1"></script>
 
-<link rel="stylesheet" href="assets/css/app.css?v=20260827-6">
-<link rel="stylesheet" href="assets/css/themes/summer.css?v=20260724-11">
-<link rel="stylesheet" href="assets/css/themes/autumn.css?v=20260724-11">
-<link rel="stylesheet" href="assets/css/themes/christmas.css?v=20260724-11">
-<link rel="stylesheet" href="assets/css/themes/winter.css?v=20260724-11">
-<link rel="stylesheet" href="assets/css/themes/spring.css?v=20260724-11">
-<link rel="stylesheet" href="assets/css/pages/planningpaddock.css?v=20260724-11">
+<link rel="stylesheet" href="assets/css/app.css?v=20260828-1">
+<link rel="stylesheet" href="assets/css/themes/summer.css?v=20260828-1">
+<link rel="stylesheet" href="assets/css/themes/autumn.css?v=20260828-1">
+<link rel="stylesheet" href="assets/css/themes/christmas.css?v=20260828-1">
+<link rel="stylesheet" href="assets/css/themes/winter.css?v=20260828-1">
+<link rel="stylesheet" href="assets/css/themes/spring.css?v=20260828-1">
+<link rel="stylesheet" href="assets/css/pages/planningpaddock.css?v=20260828-1">
 </head>
 
 <body class="app-page planningpaddock-page">
@@ -126,7 +126,7 @@
 </div>
 </div>
 
-<script src="assets/js/app-mailer.js?v=20260724-11"></script>
+<script src="assets/js/app-mailer.js?v=20260828-1"></script>
 
 <script>
 
@@ -548,6 +548,19 @@ const day=dayNameFromDateKey(dateKey)
 return horairesParDate?.[dateKey]?.[paddock]?.[day] || horaires?.[paddock]?.[day]
 }
 
+function rangeOverlaps(start,end,blockedStart,blockedEnd){
+if(!Number.isFinite(blockedStart) || !Number.isFinite(blockedEnd) || blockedStart===blockedEnd)return false
+if(blockedEnd>blockedStart)return start<blockedEnd && end>blockedStart
+return start<blockedEnd || end>blockedStart
+}
+
+function overlapsClosedInterval(config,start,duration){
+const end=start+duration
+return (config?.closedIntervals||[]).some(interval=>{
+return rangeOverlaps(start,end,timeToMinutes(interval.open),timeToMinutes(interval.close))
+})
+}
+
 function requestDateError(date,now=new Date()){
 const exception=requestExceptions[date]
 if(exception&&!exception.open)return exception.comment||"Les demandes sont exceptionnellement fermées pour cette date"
@@ -602,6 +615,7 @@ return current<reservationEnd && current+60>reservationStart
 
 if(!startsSoon &&
    fitsBeforeClosing(current,60,closeMinutes) &&
+   !overlapsClosedInterval(config,current,60) &&
    !conflict){
 return {state:"free",label:minutesToTime(current)}
 }
@@ -692,7 +706,7 @@ let current=startMinutes
 
 while(current < closeMinutes){
 
-if(fitsBeforeClosing(current,duration,closeMinutes)){
+if(fitsBeforeClosing(current,duration,closeMinutes) && !overlapsClosedInterval(config,current,duration)){
 slots.push(minutesToTime(current))
 }
 
@@ -736,6 +750,7 @@ if(diff<10) return
 }
 
 if(!fitsBeforeClosing(slotStartMinutes,duration,closeMinutes)) return
+if(overlapsClosedInterval(config,slotStartMinutes,duration)) return
 
 let conflict=false
 let mine=false
@@ -788,7 +803,7 @@ if(conflict && duration === 90){
 
         return slotStartMinutes < resEnd && slotEnd > resStart
 
-    }) && fitsBeforeClosing(slotStartMinutes,60,closeMinutes)
+    }) && fitsBeforeClosing(slotStartMinutes,60,closeMinutes) && !overlapsClosedInterval(config,slotStartMinutes,60)
 
 }
 
@@ -1008,6 +1023,15 @@ if(!fitsBeforeClosing(slotStartMinutes,Number(selected.duration),selectedClosing
     return;
 }
 
+if(overlapsClosedInterval(selectedHours,slotStartMinutes,Number(selected.duration))){
+    alert("Ce paddock est fermé sur cette tranche horaire.");
+    selected=null;
+    generate();
+    hideStep("stepDetails");
+    hideStep("stepButton");
+    return;
+}
+
 const conflit = reservations.some(r => {
 
     if(r.date !== selected.date) return false;
@@ -1128,7 +1152,7 @@ if(event.detail?.type==="paddocks"||event.detail?.type==="all")loadDataRealtime(
 })
   
 </script>
-<script src="assets/js/status-realtime.js?v=20260724-11"></script>
+<script src="assets/js/status-realtime.js?v=20260828-1"></script>
 <div id="confirmSheet">
 
 <div class="sheetContent">

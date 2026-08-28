@@ -113,6 +113,15 @@ body.horaires-page .page{
   text-shadow:0 1px 10px rgba(0,0,0,.16);
 }
 
+.time .partial-closure{
+  display:block;
+  margin-top:2px;
+  color:#ffd29b;
+  font-size:.72em;
+  line-height:1.15;
+  white-space:nowrap;
+}
+
 @keyframes slideIn{
   to{transform:none;}
 }

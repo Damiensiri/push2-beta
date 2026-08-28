@@ -89,7 +89,12 @@ function renderHoraires(data){
     }else if(row.statut==="hors-service"){
       contenu="Hors service";
     }else{
-      contenu=`${formatTime(row.ouvert)} - ${formatTime(row.ferme)}`;
+      const partialClosures=(row.closedIntervals||[])
+        .filter(item=>item.open&&item.close)
+        .map(item=>`Fermé ${formatTime(item.open)} - ${formatTime(item.close)}`);
+      contenu=`${formatTime(row.ouvert)} - ${formatTime(row.ferme)}${
+        partialClosures.length?`<small class="partial-closure">${partialClosures.join(" · ")}</small>`:""
+      }`;
     }
 
     card.innerHTML=`
