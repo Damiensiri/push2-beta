@@ -9,7 +9,7 @@
 <title>Ecurie Damien Siri</title>
 
 <script>
-const APP_VERSION="20260828-3";
+const APP_VERSION="20260830-1";
 const APP_BASE_URL=new URL("./",window.location.href);
 const IS_BETA=window.location.hostname==="damiensiri.github.io" &&
               APP_BASE_URL.pathname==="/push2-beta/";
@@ -221,6 +221,52 @@ interval&&interval.open&&interval.close&&timeRangeContains(interval.open,interva
 );
 }
 
+function localIsoDate(date=new Date()){
+return date.getFullYear()+"-"+String(date.getMonth()+1).padStart(2,"0")+"-"+String(date.getDate()).padStart(2,"0");
+}
+
+function addLocalDays(date,count){
+const copy=new Date(date);
+copy.setDate(copy.getDate()+count);
+return copy;
+}
+
+function nextScheduleDates(count=8){
+const now=new Date();
+return Array.from({length:count},(_,index)=>localIsoDate(addLocalDays(now,index)));
+}
+
+function scheduleForDate(schedulesByDate,date){
+const list=Array.isArray(schedulesByDate)?schedulesByDate:(schedulesByDate?.[date]||[]);
+const dayName=["dimanche","lundi","mardi","mercredi","jeudi","vendredi","samedi"][new Date(date+"T12:00:00").getDay()];
+return list.find(row=>String(row.jour||"").toLowerCase()===dayName)||null;
+}
+
+function isOpenSchedule(row){
+if(!row)return false;
+const status=String(row.statut||"ouvert").toLowerCase();
+return status==="ouvert"&&minutesFromTime(row.ouvert)!==null&&minutesFromTime(row.ferme)!==null;
+}
+
+function nextGeneralOpening(schedulesByDate,today,currentMinutes){
+const dates=nextScheduleDates(8);
+for(let index=0;index<dates.length;index++){
+const date=dates[index];
+const row=scheduleForDate(schedulesByDate,date);
+if(!isOpenSchedule(row))continue;
+const opens=minutesFromTime(row.ouvert);
+if(index===0&&opens!==null&&currentMinutes>=opens)continue;
+return{date,row,dayOffset:index};
+}
+return null;
+}
+
+function openingDayLabel(dayOffset,date){
+if(dayOffset===1)return"demain";
+if(dayOffset>1)return new Date(date+"T12:00:00").toLocaleDateString("fr-FR",{weekday:"long"});
+return"aujourd’hui";
+}
+
 function normalizeSheetKey(value){
 return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim().toLowerCase();
 }
@@ -234,8 +280,9 @@ return key ? row[key] : "";
 
 async function load(){
 
+const scheduleDates=nextScheduleDates(8);
 const [horaires,exceptions,statuts]=await Promise.all([
-fetch(HORAIRES_URL,{cache:"no-store"}).then(r=>r.json()),
+fetch(`${HORAIRES_URL}?dates=${encodeURIComponent(scheduleDates.join(","))}`,{cache:"no-store"}).then(r=>r.json()),
 fetch(EXCEPTIONS_URL,{cache:"no-store"}).then(r=>r.json()),
 fetch(STATUTS_URL,{cache:"no-store"}).then(r=>r.json())
 ]);
@@ -270,8 +317,7 @@ alertBox.classList.remove("urgent");
 
 const now=new Date();
 
-const today=
-now.getFullYear()+"-"+String(now.getMonth()+1).padStart(2,"0")+"-"+String(now.getDate()).padStart(2,"0");
+const today=localIsoDate(now);
 
 const ex = exceptions.find(e=>{
   if(!e.date) return false;
@@ -292,9 +338,7 @@ status.textContent=ex.message;
 return;
 }
 
-const todayName=["dimanche","lundi","mardi","mercredi","jeudi","vendredi","samedi"][new Date().getDay()];
-
-const h=horaires.find(r=>r.jour.toLowerCase()===todayName);
+const h=scheduleForDate(horaires,today);
 
 if(!h)return;
 
@@ -328,7 +372,15 @@ status.classList.add("open");
 status.textContent=`Écuries ouvertes ${open} – ${close}`;
 }else{
 status.classList.add("closed");
+const opens=minutesFromTime(h.ouvert);
+if(opens!==null&&currentMinutes<opens){
 status.textContent=`Écuries fermées ${open} – ${close}`;
+}else{
+const next=nextGeneralOpening(horaires,today,currentMinutes);
+status.textContent=next
+? `Ouverture ${openingDayLabel(next.dayOffset,next.date)} : ${formatTime(next.row.ouvert)} – ${formatTime(next.row.ferme)}`
+: "Écuries fermées";
+}
 }
 
 }

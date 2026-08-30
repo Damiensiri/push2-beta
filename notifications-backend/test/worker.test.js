@@ -278,6 +278,15 @@ test("la prochaine ouverture d’un espace distingue aujourd’hui et demain",()
   assert.deepEqual(findNextSpaceOpening(schedules,"carriere",1,22*60),{time:"09:30",dayOffset:1});
 });
 
+test("la prochaine ouverture ignore les journées fermées",()=>{
+  const schedules=new Map([
+    ["carriere:7",{opens_at:"09:00",closes_at:"12:00"}],
+    ["carriere:1",{opens_at:"",closes_at:"",program_manual_status:"ferme"}],
+    ["carriere:2",{opens_at:"09:30",closes_at:"20:00"}]
+  ]);
+  assert.deepEqual(findNextSpaceOpening(schedules,"carriere",7,12*60),{time:"09:30",dayOffset:2});
+});
+
 test("le statut automatique expose sa prochaine transition",()=>{
   const base={slug:"carriere",manual_status:"ouvert",liberte:"oui",longe:"non",info:"",special_hours:""};
   const schedule={opens_at:"08:00",closes_at:"21:00"};
@@ -300,6 +309,9 @@ test("les sept jours sont validés",()=>{
   assert.equal(timeToMinutes("24:00"),null);
   assert.deepEqual(publicSchedule({day:1,opens_at:"08:00",closes_at:"21:00"}),{
     jour:"lundi",ouvert:"08:00",ferme:"21:00"
+  });
+  assert.deepEqual(publicSchedule({day:2,opens_at:"09:00",closes_at:"12:00",program_manual_status:"ferme"}),{
+    jour:"mardi",ouvert:"",ferme:"",statut:"ferme"
   });
 });
 
