@@ -27,7 +27,8 @@
   const authPage=location.pathname.split("/").pop()==="connexion.html";
   const authToken=localStorage.getItem("ecurie_beta_session")||"";
   if(!authPage){
-    document.documentElement.classList.add("auth-checking");
+    // La session est vérifiée en arrière-plan : ne bloque pas l'affichage de la page
+    // pendant le délai réseau de l'API (notamment sur iOS).
     if(!authToken){
       location.replace("connexion.html");
       return;
@@ -37,7 +38,6 @@
     }).then(async response=>{
       if(!response.ok)throw new Error("Session invalide");
       const data=await response.json();
-      document.documentElement.classList.remove("auth-checking");
       initializePushIdentity(data.user);
     }).catch(()=>{
       localStorage.removeItem("ecurie_beta_session");
