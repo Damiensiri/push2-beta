@@ -914,6 +914,50 @@ export default{
           return json({orders:await loadOrders(env,"",[])},200,cors);
         }
 
+        if(request.method==="POST"&&url.pathname==="/api/admin/orders"){
+          const input=await readJson(request);
+          const userId=Number(input?.userId);
+          const source=String(input?.source||"panier");
+          const status=String(input?.status||"pending");
+          const comment=String(input?.comment||"").trim();
+          const billed=Boolean(input?.billed);
+          const sendEmail=Boolean(input?.sendEmail);
+          if(!Number.isInteger(userId)||userId<1)return json({error:"Client invalide"},400,cors);
+          if(!["services","soins","laverie","panier"].includes(source))return json({error:"Origine invalide"},400,cors);
+          if(!["pending","validated","refused","ready","completed","cancelled"].includes(status))return json({error:"Statut invalide"},400,cors);
+          if(comment.length>500)return json({error:"Commentaire trop long"},400,cors);
+          const requested=Array.isArray(input?.items)?input.items:[];
+          if(!requested.length||requested.length>50)return json({error:"Panier invalide"},400,cors);
+          const user=await env.DB.prepare(`SELECT * FROM users WHERE id=? AND status='active'
+            AND COALESCE(approval_status,'approved')='approved'`).bind(userId).first();
+          if(!user)return json({error:"Client introuvable ou non validé"},404,cors);
+          const quantities=new Map();
+          for(const item of requested){
+            const id=String(item?.productId||"").trim();
+            const quantity=Number(item?.quantity);
+            if(!id||!Number.isInteger(quantity)||quantity<1||quantity>99)return json({error:"Article invalide"},400,cors);
+            quantities.set(id,(quantities.get(id)||0)+quantity);
+          }
+          const products=await Promise.all([...quantities.keys()].map(id=>env.DB.prepare(
+            "SELECT id,name,price_cents,category FROM catalog_products WHERE id=? AND active=1").bind(id).first()));
+          if(products.some(product=>!product))return json({error:"Un article n’est plus disponible"},409,cors);
+          const items=products.map(product=>({productId:product.id,name:product.name,quantity:quantities.get(product.id),
+            unitPriceCents:Number(product.price_cents),lineTotalCents:Number(product.price_cents)*quantities.get(product.id)}));
+          const totalCents=items.reduce((sum,item)=>sum+item.lineTotalCents,0);
+          const now=new Date().toISOString();
+          const publicId=`M${Date.now()}${Math.floor(Math.random()*900)+100}`;
+          const result=await env.DB.prepare(`INSERT INTO orders(public_id,user_id,source,status,comment,total_cents,billed,billed_at,created_at,updated_at)
+            VALUES(?,?,?,?,?,?,?,?,?,?)`).bind(publicId,user.id,source,status,comment,totalCents,billed?1:0,billed?now:null,now,now).run();
+          try{
+            await env.DB.batch(items.map(item=>env.DB.prepare(`INSERT INTO order_items(order_id,product_id,name,unit_price_cents,quantity,line_total_cents)
+              VALUES(?,?,?,?,?,?)`).bind(result.meta.last_row_id,item.productId,item.name,item.unitPriceCents,item.quantity,item.lineTotalCents)));
+          }catch(error){await env.DB.prepare("DELETE FROM orders WHERE id=?").bind(result.meta.last_row_id).run();throw error;}
+          const order=(await loadOrders(env,"WHERE o.id=?",[result.meta.last_row_id]))[0];
+          await notifyRealtime(env,"orders");
+          const email=sendEmail?await sendOrderEmail(env,"order_confirmation",order,user):{requested:false,sent:false};
+          return json({order,email},201,cors);
+        }
+
         if(request.method==="GET"&&url.pathname==="/api/admin/billing"){
           const [usageResult,orders]=await Promise.all([
             env.DB.prepare(`SELECT pu.id,pu.user_id,pu.request_id,pu.usage_date,pu.created_at,
@@ -999,7 +1043,7 @@ export default{
           const ids=Array.isArray(input?.ids)?input.ids.map(String):[];
           if(!["services","soins","laverie"].includes(category)||!ids.length||new Set(ids).size!==ids.length||
             ids.some(id=>!/^[A-Za-z0-9_-]{1,40}$/.test(id)))return json({error:"Ordre invalide"},400,cors);
-          const rows=await env.DB.prepare("SELECT id FROM catalog_products WHERE category=? ORDER BY position,id").bind(category).all();
+          const rows=await env.DB.prepare("SELECT id FROM catalog_products WHERE category=? AND active=1 ORDER BY position,id").bind(category).all();
           const expected=rows.results.map(row=>row.id);
           if(expected.length!==ids.length||expected.some(id=>!ids.includes(id)))return json({error:"Liste d’articles incomplète"},400,cors);
           const now=new Date().toISOString();
