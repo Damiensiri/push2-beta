@@ -151,7 +151,7 @@ function cacheIsFresh(){
 
 function fetchJson(url){
   const separator=url.includes("?")?"&":"?";
-  return fetch(url+separator+"t="+Date.now(),{cache:"no-store"}).then(response=>{
+  return fetch(url,{cache:"default"}).then(response=>{
     if(!response.ok) throw new Error("Réponse réseau invalide");
     return response.json();
   });

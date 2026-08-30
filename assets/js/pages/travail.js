@@ -142,7 +142,7 @@ return false
 
 function loadData(){
 
-fetch(API_URL+"?t="+Date.now(),{cache:"no-store"})
+fetch(API_URL,{cache:"default"})
 .then(r=>{
 if(!r.ok) throw new Error("Réponse réseau invalide")
 return r.json()

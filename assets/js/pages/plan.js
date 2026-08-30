@@ -65,7 +65,7 @@ return transition.type==="closing"?`Fermeture${day} à ${time}`:`Ouverture${day}
 }
 
 function loadData(){
-fetch(SHEET_URL+"?t="+Date.now(),{cache:"no-store"})
+fetch(SHEET_URL,{cache:"default"})
 .then(r=>{
 if(!r.ok) throw new Error("Réponse réseau invalide");
 return r.json();
