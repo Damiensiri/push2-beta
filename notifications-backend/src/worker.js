@@ -1976,7 +1976,16 @@ async function loadEffectiveGeneralSchedulesByDate(env,dateList=[]){
   return result;
 }
 
+const effectiveSpaceScheduleCache=new Map();
 async function loadEffectiveSpaceSchedules(env,dateString=""){
+  const date=validIsoDate(dateString)||parisNow().date;
+  const cached=effectiveSpaceScheduleCache.get(date);
+  if(cached&&Date.now()-cached.at<10000)return cached.value;
+  const value=await loadEffectiveSpaceSchedulesUncached(env,date);
+  effectiveSpaceScheduleCache.set(date,{at:Date.now(),value});
+  return value;
+}
+async function loadEffectiveSpaceSchedulesUncached(env,dateString=""){
   const date=validIsoDate(dateString)||parisNow().date;
   const day=dayNumberFromIsoDate(date);
   const base=await env.DB.prepare("SELECT * FROM space_schedules ORDER BY space_slug,day").all();
