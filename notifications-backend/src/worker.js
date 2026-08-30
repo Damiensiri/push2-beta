@@ -1790,7 +1790,10 @@ async function loadPublicStatuses(env,date=new Date(),dateOverride=""){
 
 function publicSpace(space,schedule,minutes,nextOpening=null,activity=null){
   const normalHours=schedule?`${schedule.opens_at} - ${schedule.closes_at}`:"";
-  const status=calculateStatus(space.manual_status,schedule,minutes);
+  let status=calculateStatus(space.manual_status,schedule,minutes);
+  // Un statut « prévu » n'a de sens que s'il existe une ouverture future.
+  // Lorsque toutes les journées à venir sont fermées, l'espace reste fermé.
+  if(status==="prevision"&&!nextOpening&&space.manual_status!=="prevision")status="ferme";
   const hidesHours=status==="ferme"||status==="hors-service";
   const activityBlocked=["ferme","hors-service"].includes(status);
   const activityValue=field=>{
