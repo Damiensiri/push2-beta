@@ -217,13 +217,13 @@ if(status==="prevision") return `<span style="color:rgba(255,255,255,.58);font-w
 return `<span style="color:${value==="oui"?"#33d17a":"#ff4d4d"};font-weight:800">${value.toUpperCase()}</span>`;
 };
 
-if(showActivities&&e.liberte){
-liberte.innerHTML=`Liberté : ${activityLabel(e.liberte)}`;
+if(showActivities){
+liberte.innerHTML=`Liberté : ${activityLabel(e.liberte||"non")}`;
 show=true;
 }
 
-if(showActivities&&e.longe){
-longe.innerHTML=`Longe : ${activityLabel(e.longe)}`;
+if(showActivities){
+longe.innerHTML=`Longe : ${activityLabel(e.longe||"non")}`;
 show=true;
 }
 

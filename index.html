@@ -385,6 +385,13 @@ status.textContent=next
 
 }
 
+/* Affichage immédiat depuis le dernier état connu, puis actualisation réseau. */
+try{
+  const cachedSchedules=JSON.parse(localStorage.getItem("horaires")||"null");
+  const cachedExceptions=JSON.parse(localStorage.getItem("horaires_exceptions")||"null");
+  const cachedStatuses=JSON.parse(localStorage.getItem("statuts")||"null");
+  if(cachedSchedules&&cachedStatuses) updateUI(cachedSchedules,cachedExceptions||[],cachedStatuses);
+}catch(error){}
 load();
 setInterval(load,10000);
 window.addEventListener("pwa-data-changed",load);
