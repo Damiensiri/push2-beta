@@ -1807,7 +1807,7 @@ function publicSpace(space,schedule,minutes,nextOpening=null,activity=null){
     transition=partialClose
       ? {type:"closing",time:partialClose.open,dayOffset:0}
       : {type:"closing",time:schedule.closes_at,dayOffset:closes<=opens&&minutes>=opens?1:0};
-  }else if(space.manual_status==="ouvert"&&status==="prevision"&&nextOpening){
+  }else if(status==="prevision"&&nextOpening){
     transition={type:"opening",time:nextOpening.time,dayOffset:nextOpening.dayOffset};
   }
   return{
