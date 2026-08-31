@@ -330,14 +330,14 @@ export default{
         const viewer=await authenticatedUser(request,env);
         if(!viewer)return json({error:"Non autorisé"},401,cors);
         const today=parisNow().date;
-        const [reservationResult,hours,datedHours,restrictionResult,requestExceptionResult]=await Promise.all([
+        const [reservationResult,datedHours,restrictionResult,requestExceptionResult]=await Promise.all([
           env.DB.prepare(`SELECT id,user_id,name,paddock,date,time,duration FROM paddock_reservations
             WHERE date>=? AND date<=date(?,'+3 days') ORDER BY date,time`).bind(today,today).all(),
-          loadEffectivePaddockHours(env,today),
           loadEffectivePaddockHoursByDate(env,4),
           env.DB.prepare("SELECT date,block_grande_90,block_beudot_90 FROM paddock_restrictions WHERE date>=? AND date<=date(?,'+3 days')").bind(today,today).all(),
           env.DB.prepare("SELECT date,is_open,comment FROM paddock_request_exceptions WHERE date>=? AND date<=date(?,'+3 days')").bind(today,today).all()
         ]);
+        const hours=datedHours[today]||await loadEffectivePaddockHours(env,today);
         const restrictions={};
         for(const row of restrictionResult.results)restrictions[row.date]={blockGrande90:Boolean(row.block_grande_90),blockBeudot90:Boolean(row.block_beudot_90)};
         const requestExceptions={};
@@ -3469,16 +3469,26 @@ async function loadOrders(env,whereClause,bindings){
   const statement=env.DB.prepare(`SELECT o.id,o.public_id,o.user_id,o.source,o.status,o.comment,o.total_cents,o.billed,
     o.billed_at,o.created_at,o.updated_at,u.first_name,u.last_name,u.email
     FROM orders o JOIN users u ON u.id=o.user_id ${whereClause} ORDER BY o.created_at DESC,o.id DESC`);
-  const result=(bindings.length?await statement.bind(...bindings).all():await statement.all()).results;
-  return Promise.all(result.map(async row=>{
-    const itemResult=await env.DB.prepare(`SELECT product_id,name,unit_price_cents,quantity,line_total_cents
-      FROM order_items WHERE order_id=? ORDER BY id`).bind(row.id).all();
-    return{id:Number(row.id),publicId:row.public_id,userId:Number(row.user_id),source:row.source,status:row.status,
+  const rows=(bindings.length?await statement.bind(...bindings).all():await statement.all()).results;
+  if(!rows.length)return[];
+  const itemsByOrder=new Map();
+  const chunkSize=80;
+  for(let index=0;index<rows.length;index+=chunkSize){
+    const chunk=rows.slice(index,index+chunkSize);
+    const placeholders=chunk.map(() => "?").join(",");
+    const itemResult=await env.DB.prepare(`SELECT order_id,product_id,name,unit_price_cents,quantity,line_total_cents
+      FROM order_items WHERE order_id IN (${placeholders}) ORDER BY order_id,id`).bind(...chunk.map(row=>row.id)).all();
+    for(const item of itemResult.results){
+      const orderId=Number(item.order_id);
+      if(!itemsByOrder.has(orderId))itemsByOrder.set(orderId,[]);
+      itemsByOrder.get(orderId).push({productId:item.product_id,name:item.name,price:Number(item.unit_price_cents)/100,
+        quantity:Number(item.quantity),lineTotal:Number(item.line_total_cents)/100});
+    }
+  }
+  return rows.map(row=>({id:Number(row.id),publicId:row.public_id,userId:Number(row.user_id),source:row.source,status:row.status,
       comment:row.comment||"",total:Number(row.total_cents)/100,billed:Boolean(row.billed),billedAt:row.billed_at||null,
       createdAt:row.created_at,updatedAt:row.updated_at,customer:{firstName:row.first_name,lastName:row.last_name,email:row.email},
-      items:itemResult.results.map(item=>({productId:item.product_id,name:item.name,price:Number(item.unit_price_cents)/100,
-        quantity:Number(item.quantity),lineTotal:Number(item.line_total_cents)/100}))};
-  }));
+      items:itemsByOrder.get(Number(row.id))||[]}));
 }
 
 async function sendOrderEmail(env,type,order,user){
