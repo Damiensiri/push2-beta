@@ -7,7 +7,7 @@ import {
   normalizeEmail,validatePassword,validateNewUser,hashPassword,verifyPassword,validatePaddockBooking,
   reservationLocalMinute,duePaddockReminderTypes,validatePaddockRequestDate,
   validStaffMonth,staffMonthRange,staffMinutes,validateStaffShift,isStaffWeekStart,addIsoDays,
-  parseIcsCalendar,googleCalendarIcalUrls
+  parseIcsCalendar,googleCalendarIcalUrls,sendPaddockReservationCancellationPush
 } from "../src/worker.js";
 
 test("les comptes utilisateurs normalisent et valident l’identité",()=>{
@@ -236,6 +236,46 @@ test("une notification programmée ouvre le détail de l’alerte et non celui d
     });
     assert.equal(result.status,"sent");
     assert.equal(payload.url,"https://damiensiri.github.io/push2-beta/detail.html?id=178");
+  }finally{
+    globalThis.fetch=originalFetch;
+  }
+});
+
+test("une annulation de réservation paddock peut envoyer un push ciblé au client",async()=>{
+  const originalFetch=globalThis.fetch;
+  let payload=null;
+  globalThis.fetch=async(_url,options)=>{
+    payload=JSON.parse(options.body);
+    return new Response(JSON.stringify({id:"onesignal-cancel"}),{
+      status:200,
+      headers:{"content-type":"application/json"}
+    });
+  };
+  const env={
+    PUSH_ENABLED:"true",
+    ONESIGNAL_APP_ID:"app",
+    ONESIGNAL_REST_API_KEY:"secret",
+    DB:{
+      prepare(){
+        return{
+          bind(){
+            return{all:async()=>({results:[{subscription_id:"subscription-cible-1234567890"}]})};
+          }
+        };
+      }
+    }
+  };
+  try{
+    const result=await sendPaddockReservationCancellationPush(env,{
+      id:42,user_id:7,lock_key:"lock-42",paddock:"maison",date:"2026-08-31",time:"14:00"
+    },"Météo");
+    assert.equal(result.status,"sent");
+    assert.equal(payload.app_id,"app");
+    assert.deepEqual(payload.include_subscription_ids,["subscription-cible-1234567890"]);
+    assert.equal(payload.headings.fr,"Réservation paddock annulée");
+    assert.match(payload.contents.fr,/Maison/);
+    assert.match(payload.contents.fr,/Météo/);
+    assert.equal(payload.url,"https://damiensiri.github.io/push2-beta/mesreservations.html");
   }finally{
     globalThis.fetch=originalFetch;
   }

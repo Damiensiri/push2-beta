@@ -1295,8 +1295,9 @@ export default{
           await notifyRealtime(env,"paddocks");
           let email={requested:false,sent:false};
           if(reservation.email&&reservation.email.includes("@"))email=await sendPaddockReservationCancellationEmail(env,reservation,comment);
+          const push=await sendPaddockReservationCancellationPush(env,reservation,comment);
           await sendAdminEventPush(env,"Réservation paddock annulée",`${reservation.name} — ${reservation.date} à ${reservation.time}`,"paddocks.html");
-          return json({deleted:true,email},200,cors);
+          return json({deleted:true,email,push},200,cors);
         }
 
         if(request.method==="PUT"&&url.pathname==="/api/admin/paddocks/restrictions"){
@@ -2559,6 +2560,58 @@ async function sendPaddockReminderPush(env,reservation,type,subscriptionIds,deli
   }catch(error){return{sent:false,error:String(error?.message||error)};}
 }
 
+async function sendUserPush(env,userId,{title,message,url,deliveryKey}){
+  if(!isPushEnabled(env))return{enabled:false,status:"disabled"};
+  if(!userId)return{enabled:true,status:"no-user"};
+  const subscriptions=await env.DB.prepare("SELECT subscription_id FROM user_push_subscriptions WHERE user_id=?")
+    .bind(userId).all();
+  const subscriptionIds=(subscriptions.results||[]).map(item=>item.subscription_id).filter(Boolean);
+  if(!subscriptionIds.length)return{enabled:true,status:"no-subscribers"};
+  try{
+    const controller=new AbortController();
+    const timeout=setTimeout(()=>controller.abort(),8000);
+    let response;
+    try{
+      response=await fetch("https://api.onesignal.com/notifications",{
+        method:"POST",
+        signal:controller.signal,
+        headers:{
+          "authorization":`Key ${env.ONESIGNAL_REST_API_KEY}`,
+          "content-type":"application/json; charset=utf-8"
+        },
+        body:JSON.stringify({
+          app_id:env.ONESIGNAL_APP_ID,
+          include_subscription_ids:subscriptionIds,
+          idempotency_key:deliveryKey||crypto.randomUUID(),
+          headings:{fr:title,en:title},
+          contents:{fr:message,en:message},
+          url
+        })
+      });
+    }finally{
+      clearTimeout(timeout);
+    }
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok||data.errors)return{enabled:true,status:"failed",error:data.errors||`HTTP ${response.status}`};
+    return{enabled:true,status:"sent",id:data.id||null};
+  }catch(error){
+    return{enabled:true,status:"failed",error:String(error?.message||error)};
+  }
+}
+
+async function sendPaddockReservationCancellationPush(env,reservation,comment=""){
+  const paddock=({maison:"Maison",grande:"Grande voie",beudot:"Beudot"})[reservation.paddock]||reservation.paddock;
+  const title="Réservation paddock annulée";
+  const suffix=comment?` Motif : ${comment}`:"";
+  const message=`Votre réservation au paddock ${paddock} du ${reservation.date} à ${reservation.time} a été annulée.${suffix}`;
+  return sendUserPush(env,reservation.user_id,{
+    title,
+    message:message.slice(0,450),
+    url:"https://damiensiri.github.io/push2-beta/mesreservations.html",
+    deliveryKey:`paddock-cancelled:${reservation.id}:${reservation.lock_key||""}`
+  });
+}
+
 async function attachSchedules(env,alerts){
   if(!alerts.length)return alerts;
   const schedules=await env.DB.prepare(`
@@ -3465,5 +3518,5 @@ export{
   normalizeEmail,validatePassword,validateNewUser,hashPassword,verifyPassword,publicUser,validatePaddockBooking,validatePaddockHours,
   parisLocalMinute,reservationLocalMinute,duePaddockReminderTypes,isValidPushSubscriptionId,isValidPushInstallationId,processPaddockPushReminders,
   processScheduledNotifications,validatePaddockRequestDate,validStaffMonth,staffMonthRange,staffMinutes,validateStaffShift,isStaffWeekStart,addIsoDays,
-  parseIcsCalendar,googleCalendarIcalUrls
+  parseIcsCalendar,googleCalendarIcalUrls,sendUserPush,sendPaddockReservationCancellationPush
 };
