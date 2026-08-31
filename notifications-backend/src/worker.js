@@ -1164,15 +1164,16 @@ export default{
         }
 
         if(request.method==="GET"&&url.pathname==="/api/admin/paddocks"){
-          const [reservationResult,hours,datedHours,restrictionResult,requestResult]=await Promise.all([
+          const today=parisNow().date;
+          const [reservationResult,datedHours,restrictionResult,requestResult]=await Promise.all([
             env.DB.prepare(`SELECT id,name,email,paddock,date,time,duration FROM paddock_reservations
               WHERE date>=date('now') ORDER BY date,time`).all(),
-            loadEffectivePaddockHours(env,parisNow().date),
             loadEffectivePaddockHoursByDate(env,31),
             env.DB.prepare("SELECT date,block_grande_90,block_beudot_90 FROM paddock_restrictions WHERE date>=date('now')").all(),
             env.DB.prepare(`SELECT id,user_id,name,email,date,status,comment,created_at,updated_at
               FROM paddock_requests ORDER BY date DESC,id DESC`).all()
           ]);
+          const hours=datedHours[today]||await loadEffectivePaddockHours(env,today);
           const restrictions={};for(const row of restrictionResult.results)restrictions[row.date]={blockGrande90:Boolean(row.block_grande_90),blockBeudot90:Boolean(row.block_beudot_90)};
           return json({reservations:reservationResult.results.map(row=>({...row,id:String(row.id),duration:Number(row.duration)})),
             requests:requestResult.results.map(publicPaddockRequest),horaires:hours,horairesParDate:datedHours,restrictions},200,cors);
@@ -2173,14 +2174,80 @@ async function loadEffectivePaddockHours(env,dateString=""){
 async function loadEffectivePaddockHoursByDate(env,daysAhead=14){
   const days=Math.max(1,Math.min(Number(daysAhead)||14,180));
   const today=parisNow().date;
-  const result={};
+  const dates=[];
   for(let index=0;index<days;index++){
     const date=new Date(`${today}T12:00:00`);
     date.setDate(date.getDate()+index);
-    const key=date.toISOString().slice(0,10);
-    result[key]=await loadEffectivePaddockHours(env,key);
+    dates.push(date.toISOString().slice(0,10));
+  }
+  const [base,programs,exceptions]=await Promise.all([
+    env.DB.prepare("SELECT paddock,schedule_json FROM paddock_hours").all(),
+    loadApplicableHourProgramsWithEntries(env,"paddocks",dates[0],dates[dates.length-1]),
+    env.DB.prepare("SELECT * FROM hour_exceptions WHERE date>=? AND date<=? ORDER BY date,scope,target_slug")
+      .bind(dates[0],dates[dates.length-1]).all()
+  ]);
+  const exceptionsByDate=new Map();
+  exceptions.results.map(publicHourException).forEach(item=>{
+    const list=exceptionsByDate.get(item.date)||[];
+    list.push(item);
+    exceptionsByDate.set(item.date,list);
+  });
+  const result={};
+  for(const date of dates){
+    result[date]=buildEffectivePaddockHoursForDate(base.results,applicableEntriesForDate(programs,date),exceptionsByDate.get(date)||[],date);
   }
   return result;
+}
+
+async function loadApplicableHourProgramsWithEntries(env,scope,startDate,endDate){
+  const programResult=await env.DB.prepare(`
+    SELECT * FROM hour_programs
+    WHERE scope=? AND starts_on<=? AND (ends_on IS NULL OR ends_on='' OR ends_on>=?)
+    ORDER BY starts_on DESC,id DESC
+  `).bind(scope,endDate,startDate).all();
+  const programs=programResult.results;
+  if(!programs.length)return[];
+  const entryResult=await env.DB.prepare(
+    `SELECT * FROM hour_program_entries WHERE program_id IN (${programs.map(()=>"?").join(",")}) ORDER BY program_id,target_slug,day`
+  ).bind(...programs.map(program=>program.id)).all();
+  const byProgram=new Map();
+  entryResult.results.forEach(row=>{
+    const list=byProgram.get(Number(row.program_id))||[];
+    list.push(row);
+    byProgram.set(Number(row.program_id),list);
+  });
+  return programs.map(program=>({...program,entries:byProgram.get(Number(program.id))||[]}));
+}
+
+function applicableEntriesForDate(programs,date){
+  const program=programs.find(item=>item.starts_on<=date&&(!item.ends_on||item.ends_on>=date));
+  return program?.entries||[];
+}
+
+function buildEffectivePaddockHoursForDate(baseRows,entries,exceptions,date){
+  const day=dayNumberFromIsoDate(date);
+  const hours={};
+  for(const row of baseRows)hours[row.paddock]=JSON.parse(row.schedule_json);
+  const dayNames=["","lundi","mardi","mercredi","jeudi","vendredi","samedi","dimanche"];
+  for(const row of entries){
+    if(!["maison","grande","beudot"].includes(row.target_slug))continue;
+    const dayName=dayNames[Number(row.day)];
+    if(!dayName)continue;
+    const paddockHours=hours[row.target_slug]||{};
+    const closed=["ferme","hors-service"].includes(String(row.manual_status||""));
+    paddockHours[dayName]={closed,open:closed?"":row.opens_at,close:closed?"":row.closes_at};
+    hours[row.target_slug]=paddockHours;
+  }
+  if(day){
+    const dayName=DAY_NAMES[day];
+    exceptions.filter(item=>item.scope==="paddocks"&&["maison","grande","beudot"].includes(item.targetSlug)).forEach(item=>{
+      const paddockHours=hours[item.targetSlug]||{};
+      const closed=["ferme","hors-service"].includes(item.manualStatus);
+      paddockHours[dayName]={closed,open:closed?"":item.opensAt,close:closed?"":item.closesAt};
+      hours[item.targetSlug]=paddockHours;
+    });
+  }
+  return hours;
 }
 
 function spaceProgramFields(schedule,space={}){
