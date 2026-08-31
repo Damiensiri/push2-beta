@@ -281,6 +281,44 @@ test("une annulation de réservation paddock peut envoyer un push ciblé au clie
   }
 });
 
+test("une annulation paddock retrouve aussi le push client par email",async()=>{
+  const originalFetch=globalThis.fetch;
+  let sql="";
+  let bound=[];
+  globalThis.fetch=async(_url,options)=>{
+    return new Response(JSON.stringify({id:"onesignal-email"}),{
+      status:200,
+      headers:{"content-type":"application/json"}
+    });
+  };
+  const env={
+    PUSH_ENABLED:"true",
+    ONESIGNAL_APP_ID:"app",
+    ONESIGNAL_REST_API_KEY:"secret",
+    DB:{
+      prepare(statement){
+        sql=statement;
+        return{
+          bind(...values){
+            bound=values;
+            return{all:async()=>({results:[{subscription_id:"subscription-email-1234567890"}]})};
+          }
+        };
+      }
+    }
+  };
+  try{
+    const result=await sendPaddockReservationCancellationPush(env,{
+      id:43,user_id:null,lock_key:"lock-43",email:"Client@Exemple.fr",paddock:"beudot",date:"2026-08-31",time:"15:00"
+    });
+    assert.equal(result.status,"sent");
+    assert.match(sql,/JOIN users/);
+    assert.deepEqual(bound,["client@exemple.fr"]);
+  }finally{
+    globalThis.fetch=originalFetch;
+  }
+});
+
 test("le mode ouvert suit les horaires propres à l’espace",()=>{
   const schedule={opens_at:"10:00",closes_at:"20:00"};
   assert.equal(calculateStatus("ouvert",schedule,9*60),"prevision");

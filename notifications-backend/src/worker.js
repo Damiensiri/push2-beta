@@ -2560,12 +2560,21 @@ async function sendPaddockReminderPush(env,reservation,type,subscriptionIds,deli
   }catch(error){return{sent:false,error:String(error?.message||error)};}
 }
 
-async function sendUserPush(env,userId,{title,message,url,deliveryKey}){
+async function sendUserPush(env,userId,{title,message,url,deliveryKey,email}){
   if(!isPushEnabled(env))return{enabled:false,status:"disabled"};
-  if(!userId)return{enabled:true,status:"no-user"};
-  const subscriptions=await env.DB.prepare("SELECT subscription_id FROM user_push_subscriptions WHERE user_id=?")
-    .bind(userId).all();
-  const subscriptionIds=(subscriptions.results||[]).map(item=>item.subscription_id).filter(Boolean);
+  const cleanEmail=normalizeEmail(email);
+  if(!userId&&!cleanEmail)return{enabled:true,status:"no-user"};
+  const subscriptions=userId&&cleanEmail
+    ?await env.DB.prepare(`SELECT DISTINCT s.subscription_id FROM user_push_subscriptions s
+      LEFT JOIN users u ON u.id=s.user_id WHERE s.user_id=? OR u.email=? COLLATE NOCASE`)
+      .bind(userId,cleanEmail).all()
+    :userId
+      ?await env.DB.prepare("SELECT subscription_id FROM user_push_subscriptions WHERE user_id=?")
+        .bind(userId).all()
+      :await env.DB.prepare(`SELECT s.subscription_id FROM user_push_subscriptions s
+        JOIN users u ON u.id=s.user_id WHERE u.email=? COLLATE NOCASE`)
+        .bind(cleanEmail).all();
+  const subscriptionIds=[...new Set((subscriptions.results||[]).map(item=>item.subscription_id).filter(Boolean))];
   if(!subscriptionIds.length)return{enabled:true,status:"no-subscribers"};
   try{
     const controller=new AbortController();
@@ -2608,6 +2617,7 @@ async function sendPaddockReservationCancellationPush(env,reservation,comment=""
     title,
     message:message.slice(0,450),
     url:"https://damiensiri.github.io/push2-beta/mesreservations.html",
+    email:reservation.email,
     deliveryKey:`paddock-cancelled:${reservation.id}:${reservation.lock_key||""}`
   });
 }
