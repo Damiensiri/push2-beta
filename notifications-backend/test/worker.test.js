@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   compatibleAlert,validateAlert,parisNow,isPushEnabled,sendRequestedPush,plainTextMessage,
   calculateStatus,publicSpace,publicSchedule,validateSpace,validateSchedules,timeToMinutes,effectiveActivityValue,findNextSpaceOpening,
+  spaceProgramFields,
   normalizeEmail,validatePassword,validateNewUser,hashPassword,verifyPassword,validatePaddockBooking,
   reservationLocalMinute,duePaddockReminderTypes,validatePaddockRequestDate,
   validStaffMonth,staffMonthRange,staffMinutes,validateStaffShift,isStaffWeekStart,addIsoDays,
@@ -278,13 +279,13 @@ test("la prochaine ouverture d’un espace distingue aujourd’hui et demain",()
   assert.deepEqual(findNextSpaceOpening(schedules,"carriere",1,22*60),{time:"09:30",dayOffset:1});
 });
 
-test("la prochaine ouverture ignore les journées fermées",()=>{
+test("la prochaine ouverture ne dépasse pas demain",()=>{
   const schedules=new Map([
     ["carriere:7",{opens_at:"09:00",closes_at:"12:00"}],
     ["carriere:1",{opens_at:"",closes_at:"",program_manual_status:"ferme"}],
     ["carriere:2",{opens_at:"09:30",closes_at:"20:00"}]
   ]);
-  assert.deepEqual(findNextSpaceOpening(schedules,"carriere",7,12*60),{time:"09:30",dayOffset:2});
+  assert.equal(findNextSpaceOpening(schedules,"carriere",7,12*60),null);
 });
 
 test("le statut automatique expose sa prochaine transition",()=>{
@@ -293,6 +294,12 @@ test("le statut automatique expose sa prochaine transition",()=>{
   assert.deepEqual(publicSpace(base,schedule,10*60).transition,{type:"closing",time:"21:00",dayOffset:0});
   assert.deepEqual(publicSpace(base,schedule,7*60,{time:"08:00",dayOffset:0}).transition,{type:"opening",time:"08:00",dayOffset:0});
   assert.equal(publicSpace({...base,manual_status:"prevision",special_hours:"Après entretien"},schedule,10*60).transition,null);
+});
+
+test("le texte personnalisé manuel prime sur une programmation vide",()=>{
+  const space={manual_status:"prevision",special_hours:"Retard prévu 9h",info:"Info manuelle"};
+  const schedule={program_special_hours:null,program_info:""};
+  assert.deepEqual(spaceProgramFields(schedule,space),{});
 });
 
 test("les horaires de nuit sont acceptés",()=>{

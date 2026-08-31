@@ -1846,7 +1846,7 @@ function findNextSpaceOpening(scheduleMap,slug,currentDay,minutes){
   const today=scheduleMap.get(`${slug}:${currentDay}`)||null;
   const todayOpening=isOpenSchedule(today)?timeToMinutes(today?.opens_at):null;
   if(todayOpening!==null&&minutes<todayOpening)return{time:today.opens_at,dayOffset:0};
-  for(let dayOffset=1;dayOffset<=7;dayOffset++){
+  for(let dayOffset=1;dayOffset<=1;dayOffset++){
     const day=((currentDay-1+dayOffset)%7)+1;
     const schedule=scheduleMap.get(`${slug}:${day}`)||null;
     if(isOpenSchedule(schedule)&&timeToMinutes(schedule?.opens_at)!==null)return{time:schedule.opens_at,dayOffset};
@@ -1862,7 +1862,7 @@ function isOpenSchedule(schedule){
 
 async function findNextSpaceOpeningForDate(env,slug,dateString,minutes){
   const today=validIsoDate(dateString)||parisNow().date;
-  for(let dayOffset=0;dayOffset<=7;dayOffset++){
+  for(let dayOffset=0;dayOffset<=1;dayOffset++){
     const date=addIsoDays(today,dayOffset);
     const day=dayNumberFromIsoDate(date);
     if(!day)continue;
@@ -2094,8 +2094,8 @@ async function loadEffectivePaddockHoursByDate(env,daysAhead=14){
 function spaceProgramFields(schedule,space={}){
   const fields={};
   if(schedule.program_manual_status&&space.manual_status==="ouvert")fields.manual_status=schedule.program_manual_status;
-  if(schedule.program_special_hours!==undefined)fields.special_hours=schedule.program_special_hours;
-  if(schedule.program_info!==undefined)fields.info=schedule.program_info;
+  if(schedule.program_special_hours!==undefined&&!String(space.special_hours||"").trim())fields.special_hours=schedule.program_special_hours;
+  if(schedule.program_info!==undefined&&!String(space.info||"").trim())fields.info=schedule.program_info;
   if(schedule.program_liberte)fields.liberte=schedule.program_liberte;
   if(schedule.program_longe)fields.longe=schedule.program_longe;
   return fields;
@@ -3461,6 +3461,7 @@ export class RealtimeHub{
 export{
   compatibleAlert,validateAlert,validateScheduledNotification,parisNow,parisDateTime,isPushEnabled,sendRequestedPush,plainTextMessage,
   calculateStatus,publicSpace,publicSchedule,validateSpace,validateSchedules,timeToMinutes,effectiveActivityValue,parisClock,findNextSpaceOpening,
+  spaceProgramFields,
   normalizeEmail,validatePassword,validateNewUser,hashPassword,verifyPassword,publicUser,validatePaddockBooking,validatePaddockHours,
   parisLocalMinute,reservationLocalMinute,duePaddockReminderTypes,isValidPushSubscriptionId,isValidPushInstallationId,processPaddockPushReminders,
   processScheduledNotifications,validatePaddockRequestDate,validStaffMonth,staffMonthRange,staffMinutes,validateStaffShift,isStaffWeekStart,addIsoDays,
