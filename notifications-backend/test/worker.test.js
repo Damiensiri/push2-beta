@@ -270,8 +270,10 @@ test("une annulation de réservation paddock peut envoyer un push ciblé au clie
       id:42,user_id:7,lock_key:"lock-42",paddock:"maison",date:"2026-08-31",time:"14:00"
     },"Météo");
     assert.equal(result.status,"sent");
+    assert.equal(result.method,"alias");
     assert.equal(payload.app_id,"app");
-    assert.deepEqual(payload.include_subscription_ids,["subscription-cible-1234567890"]);
+    assert.deepEqual(payload.include_aliases,{external_id:["beta-user-7"]});
+    assert.equal(payload.target_channel,"push");
     assert.equal(payload.headings.fr,"Réservation paddock annulée");
     assert.match(payload.contents.fr,/Maison/);
     assert.doesNotMatch(payload.contents.fr,/Météo/);
@@ -325,7 +327,13 @@ test("une annulation paddock retente appareil par appareil si le lot OneSignal n
   const calls=[];
   globalThis.fetch=async(_url,options)=>{
     const payload=JSON.parse(options.body);
-    calls.push(payload.include_subscription_ids);
+    calls.push(payload.include_aliases?.external_id||payload.include_subscription_ids);
+    if(payload.include_aliases){
+      return new Response(JSON.stringify({id:"empty-alias",recipients:0}),{
+        status:200,
+        headers:{"content-type":"application/json"}
+      });
+    }
     if(payload.include_subscription_ids.length>1){
       return new Response(JSON.stringify({id:"empty-lot",recipients:0}),{
         status:200,
@@ -362,6 +370,7 @@ test("une annulation paddock retente appareil par appareil si le lot OneSignal n
     assert.equal(result.status,"sent");
     assert.equal(result.recipients,1);
     assert.deepEqual(calls,[
+      ["beta-user-7"],
       ["subscription-ko-1234567890","subscription-ok-1234567890"],
       ["subscription-ko-1234567890"],
       ["subscription-ok-1234567890"]

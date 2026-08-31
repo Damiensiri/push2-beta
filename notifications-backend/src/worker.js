@@ -241,6 +241,7 @@ export default{
       if(url.pathname==="/api/push/subscription"){
         const viewer=await authenticatedUser(request,env);
         if(!viewer)return json({error:"Non autorisé"},401,cors);
+        if(viewer.role!=="client")return json({registered:false,ignored:true,reason:"client-push-only"},200,cors);
         if(request.method==="PUT"||request.method==="DELETE"){
           const input=await readJson(request);const subscriptionId=String(input?.subscriptionId||"").trim();
           const installationId=String(input?.installationId||"").trim();
@@ -2578,22 +2579,29 @@ async function sendUserPush(env,userId,{title,message,url,deliveryKey,email}){
         JOIN users u ON u.id=s.user_id WHERE u.email=? COLLATE NOCASE`)
         .bind(cleanEmail).all();
   const subscriptionIds=[...new Set((subscriptions.results||[]).map(item=>item.subscription_id).filter(Boolean))];
-  if(!subscriptionIds.length)return{enabled:true,status:"no-subscribers"};
   const payload={
     app_id:env.ONESIGNAL_APP_ID,
     headings:{fr:title,en:title},
     contents:{fr:message,en:message},
     url
   };
+  const externalId=userId?`${env.ENVIRONMENT==="production"?"prod":"beta"}-user-${userId}`:"";
+  const sendAlias=async key=>sendOneSignalPush(env,{...payload,
+    include_aliases:{external_id:[externalId]},target_channel:"push",idempotency_key:key});
   const sendTo=async(ids,key)=>sendOneSignalPush(env,{...payload,include_subscription_ids:ids,idempotency_key:key});
   try{
     const baseKey=deliveryKey||crypto.randomUUID();
-    const result=await sendTo(subscriptionIds,baseKey);
-    if(result.sent)return{enabled:true,status:"sent",id:result.id||null,recipients:result.recipients};
+    if(externalId){
+      const aliasResult=await sendAlias(baseKey);
+      if(aliasResult.sent)return{enabled:true,status:"sent",id:aliasResult.id||null,recipients:aliasResult.recipients,method:"alias"};
+    }
+    if(!subscriptionIds.length)return{enabled:true,status:"no-subscribers"};
+    const result=await sendTo(subscriptionIds,crypto.randomUUID());
+    if(result.sent)return{enabled:true,status:"sent",id:result.id||null,recipients:result.recipients,method:"subscriptions"};
     if(subscriptionIds.length>1){
       const sent=[];const errors=[];
       for(const id of subscriptionIds){
-        const single=await sendTo([id],`${baseKey}:${id}`);
+        const single=await sendTo([id],crypto.randomUUID());
         if(single.sent)sent.push(single.id||id);
         else errors.push(single.error||"Échec OneSignal");
       }
