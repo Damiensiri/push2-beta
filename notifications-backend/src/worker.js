@@ -1298,7 +1298,6 @@ export default{
           let email={requested:false,sent:false};
           if(reservation.email&&reservation.email.includes("@"))email=await sendPaddockReservationCancellationEmail(env,reservation,comment);
           const push=await sendPaddockReservationCancellationPush(env,reservation,comment);
-          await sendAdminEventPush(env,"Réservation paddock annulée",`${reservation.name} — ${reservation.date} à ${reservation.time}`,"paddocks.html");
           return json({deleted:true,email,push},200,cors);
         }
 
@@ -2570,33 +2569,26 @@ async function sendUserPush(env,userId,{title,message,url,deliveryKey,email}){
   if(!userId&&!cleanEmail)return{enabled:true,status:"no-user"};
   const subscriptions=userId&&cleanEmail
     ?await env.DB.prepare(`SELECT DISTINCT s.subscription_id FROM user_push_subscriptions s
-      LEFT JOIN users u ON u.id=s.user_id WHERE s.user_id=? OR u.email=? COLLATE NOCASE`)
+      LEFT JOIN users u ON u.id=s.user_id WHERE s.user_id=? OR u.email=? COLLATE NOCASE
+      ORDER BY s.updated_at DESC`)
       .bind(userId,cleanEmail).all()
     :userId
-      ?await env.DB.prepare("SELECT subscription_id FROM user_push_subscriptions WHERE user_id=?")
+      ?await env.DB.prepare("SELECT subscription_id FROM user_push_subscriptions WHERE user_id=? ORDER BY updated_at DESC")
         .bind(userId).all()
       :await env.DB.prepare(`SELECT s.subscription_id FROM user_push_subscriptions s
-        JOIN users u ON u.id=s.user_id WHERE u.email=? COLLATE NOCASE`)
+        JOIN users u ON u.id=s.user_id WHERE u.email=? COLLATE NOCASE ORDER BY s.updated_at DESC`)
         .bind(cleanEmail).all();
-  const subscriptionIds=[...new Set((subscriptions.results||[]).map(item=>item.subscription_id).filter(Boolean))];
+  const subscriptionIds=[...new Set((subscriptions.results||[]).map(item=>item.subscription_id).filter(Boolean))].slice(0,2);
   const payload={
     app_id:env.ONESIGNAL_APP_ID,
     headings:{fr:title,en:title},
     contents:{fr:message,en:message},
     url
   };
-  const externalId=userId?`${env.ENVIRONMENT==="production"?"prod":"beta"}-user-${userId}`:"";
-  const sendAlias=async key=>sendOneSignalPush(env,{...payload,
-    include_aliases:{external_id:[externalId]},target_channel:"push",idempotency_key:key});
   const sendTo=async(ids,key)=>sendOneSignalPush(env,{...payload,include_subscription_ids:ids,idempotency_key:key});
   try{
-    const baseKey=deliveryKey||crypto.randomUUID();
-    if(externalId){
-      const aliasResult=await sendAlias(baseKey);
-      if(aliasResult.sent)return{enabled:true,status:"sent",id:aliasResult.id||null,recipients:aliasResult.recipients,method:"alias"};
-    }
     if(!subscriptionIds.length)return{enabled:true,status:"no-subscribers"};
-    const result=await sendTo(subscriptionIds,crypto.randomUUID());
+    const result=await sendTo(subscriptionIds,deliveryKey||crypto.randomUUID());
     if(result.sent)return{enabled:true,status:"sent",id:result.id||null,recipients:result.recipients,method:"subscriptions"};
     if(subscriptionIds.length>1){
       const sent=[];const errors=[];
