@@ -325,13 +325,14 @@ export default{
       if(url.pathname==="/api/paddocks/planning"&&request.method==="GET"){
         const viewer=await authenticatedUser(request,env);
         if(!viewer)return json({error:"Non autorisé"},401,cors);
+        const today=parisNow().date;
         const [reservationResult,hours,datedHours,restrictionResult,requestExceptionResult]=await Promise.all([
           env.DB.prepare(`SELECT id,user_id,name,paddock,date,time,duration FROM paddock_reservations
-            WHERE date>=date('now') ORDER BY date,time`).all(),
-          loadEffectivePaddockHours(env,parisNow().date),
-          loadEffectivePaddockHoursByDate(env,14),
-          env.DB.prepare("SELECT date,block_grande_90,block_beudot_90 FROM paddock_restrictions WHERE date>=date('now')").all(),
-          env.DB.prepare("SELECT date,is_open,comment FROM paddock_request_exceptions WHERE date>=date('now')").all()
+            WHERE date>=? AND date<=date(?,'+3 days') ORDER BY date,time`).bind(today,today).all(),
+          loadEffectivePaddockHours(env,today),
+          loadEffectivePaddockHoursByDate(env,4),
+          env.DB.prepare("SELECT date,block_grande_90,block_beudot_90 FROM paddock_restrictions WHERE date>=? AND date<=date(?,'+3 days')").bind(today,today).all(),
+          env.DB.prepare("SELECT date,is_open,comment FROM paddock_request_exceptions WHERE date>=? AND date<=date(?,'+3 days')").bind(today,today).all()
         ]);
         const restrictions={};
         for(const row of restrictionResult.results)restrictions[row.date]={blockGrande90:Boolean(row.block_grande_90),blockBeudot90:Boolean(row.block_beudot_90)};
@@ -1163,7 +1164,7 @@ export default{
             env.DB.prepare(`SELECT id,name,email,paddock,date,time,duration FROM paddock_reservations
               WHERE date>=date('now') ORDER BY date,time`).all(),
             loadEffectivePaddockHours(env,parisNow().date),
-            loadEffectivePaddockHoursByDate(env,120),
+            loadEffectivePaddockHoursByDate(env,31),
             env.DB.prepare("SELECT date,block_grande_90,block_beudot_90 FROM paddock_restrictions WHERE date>=date('now')").all(),
             env.DB.prepare(`SELECT id,user_id,name,email,date,status,comment,created_at,updated_at
               FROM paddock_requests ORDER BY date DESC,id DESC`).all()
@@ -2493,7 +2494,9 @@ async function processPaddockPushReminders(env,now=new Date()){
   if(!isPushEnabled(env))return{processed:0,sent:0,disabled:true};
   const parisDate=new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Paris",year:"numeric",month:"2-digit",day:"2-digit"}).format(now);
   const result=await env.DB.prepare(`SELECT id,user_id,paddock,date,time,duration FROM paddock_reservations
-    WHERE user_id IS NOT NULL AND date BETWEEN date(?,'-1 day') AND date(?,'+1 day')`).bind(parisDate,parisDate).all();
+    WHERE user_id IS NOT NULL AND date BETWEEN date(?,'-1 day') AND date(?,'+1 day')
+    AND EXISTS(SELECT 1 FROM users WHERE users.id=paddock_reservations.user_id AND users.role='client')`)
+    .bind(parisDate,parisDate).all();
   const currentMinute=parisLocalMinute(now);let sent=0;
   for(const reservation of result.results){
     const subscriptions=await env.DB.prepare("SELECT subscription_id FROM user_push_subscriptions WHERE user_id=?")
@@ -2576,6 +2579,33 @@ async function sendUserPush(env,userId,{title,message,url,deliveryKey,email}){
         .bind(cleanEmail).all();
   const subscriptionIds=[...new Set((subscriptions.results||[]).map(item=>item.subscription_id).filter(Boolean))];
   if(!subscriptionIds.length)return{enabled:true,status:"no-subscribers"};
+  const payload={
+    app_id:env.ONESIGNAL_APP_ID,
+    headings:{fr:title,en:title},
+    contents:{fr:message,en:message},
+    url
+  };
+  const sendTo=async(ids,key)=>sendOneSignalPush(env,{...payload,include_subscription_ids:ids,idempotency_key:key});
+  try{
+    const baseKey=deliveryKey||crypto.randomUUID();
+    const result=await sendTo(subscriptionIds,baseKey);
+    if(result.sent)return{enabled:true,status:"sent",id:result.id||null,recipients:result.recipients};
+    if(subscriptionIds.length>1){
+      const sent=[];const errors=[];
+      for(const id of subscriptionIds){
+        const single=await sendTo([id],`${baseKey}:${id}`);
+        if(single.sent)sent.push(single.id||id);
+        else errors.push(single.error||"Échec OneSignal");
+      }
+      if(sent.length)return{enabled:true,status:"sent",id:sent[0]||null,recipients:sent.length,partialErrors:errors.slice(0,3)};
+    }
+    return{enabled:true,status:"failed",error:result.error||"Échec OneSignal"};
+  }catch(error){
+    return{enabled:true,status:"failed",error:String(error?.message||error)};
+  }
+}
+
+async function sendOneSignalPush(env,payload){
   try{
     const controller=new AbortController();
     const timeout=setTimeout(()=>controller.abort(),8000);
@@ -2588,23 +2618,17 @@ async function sendUserPush(env,userId,{title,message,url,deliveryKey,email}){
           "authorization":`Key ${env.ONESIGNAL_REST_API_KEY}`,
           "content-type":"application/json; charset=utf-8"
         },
-        body:JSON.stringify({
-          app_id:env.ONESIGNAL_APP_ID,
-          include_subscription_ids:subscriptionIds,
-          idempotency_key:deliveryKey||crypto.randomUUID(),
-          headings:{fr:title,en:title},
-          contents:{fr:message,en:message},
-          url
-        })
+        body:JSON.stringify(payload)
       });
     }finally{
       clearTimeout(timeout);
     }
     const data=await response.json().catch(()=>({}));
-    if(!response.ok||data.errors)return{enabled:true,status:"failed",error:data.errors||`HTTP ${response.status}`};
-    return{enabled:true,status:"sent",id:data.id||null};
+    if(!response.ok||data.errors)return{sent:false,error:data.errors||`HTTP ${response.status}`};
+    if(Number(data.recipients)===0)return{sent:false,error:"Aucun destinataire OneSignal actif"};
+    return{sent:true,id:data.id||null,recipients:Number(data.recipients)||null};
   }catch(error){
-    return{enabled:true,status:"failed",error:String(error?.message||error)};
+    return{sent:false,error:String(error?.message||error)};
   }
 }
 

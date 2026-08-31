@@ -319,6 +319,57 @@ test("une annulation paddock retrouve aussi le push client par email",async()=>{
   }
 });
 
+test("une annulation paddock retente appareil par appareil si le lot OneSignal ne cible personne",async()=>{
+  const originalFetch=globalThis.fetch;
+  const calls=[];
+  globalThis.fetch=async(_url,options)=>{
+    const payload=JSON.parse(options.body);
+    calls.push(payload.include_subscription_ids);
+    if(payload.include_subscription_ids.length>1){
+      return new Response(JSON.stringify({id:"empty-lot",recipients:0}),{
+        status:200,
+        headers:{"content-type":"application/json"}
+      });
+    }
+    const active=payload.include_subscription_ids[0]==="subscription-ok-1234567890";
+    return new Response(JSON.stringify({id:active?"single-ok":"single-empty",recipients:active?1:0}),{
+      status:200,
+      headers:{"content-type":"application/json"}
+    });
+  };
+  const env={
+    PUSH_ENABLED:"true",
+    ONESIGNAL_APP_ID:"app",
+    ONESIGNAL_REST_API_KEY:"secret",
+    DB:{
+      prepare(){
+        return{
+          bind(){
+            return{all:async()=>({results:[
+              {subscription_id:"subscription-ko-1234567890"},
+              {subscription_id:"subscription-ok-1234567890"}
+            ]})};
+          }
+        };
+      }
+    }
+  };
+  try{
+    const result=await sendPaddockReservationCancellationPush(env,{
+      id:44,user_id:7,lock_key:"lock-44",email:"client@example.fr",paddock:"grande",date:"2026-08-31",time:"16:00"
+    });
+    assert.equal(result.status,"sent");
+    assert.equal(result.recipients,1);
+    assert.deepEqual(calls,[
+      ["subscription-ko-1234567890","subscription-ok-1234567890"],
+      ["subscription-ko-1234567890"],
+      ["subscription-ok-1234567890"]
+    ]);
+  }finally{
+    globalThis.fetch=originalFetch;
+  }
+});
+
 test("le mode ouvert suit les horaires propres à l’espace",()=>{
   const schedule={opens_at:"10:00",closes_at:"20:00"};
   assert.equal(calculateStatus("ouvert",schedule,9*60),"prevision");
