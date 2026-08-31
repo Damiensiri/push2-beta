@@ -1860,17 +1860,19 @@ async function loadPublicStatuses(env,date=new Date(),dateOverride=""){
   const paris=parisClock(date);
   const effectiveDate=dateOverride||parisDateTime(date).date;
   const effectiveDay=dayNumberFromIsoDate(effectiveDate)||paris.day;
+  const tomorrow=addIsoDays(effectiveDate,1);
   const [spacesResult,schedulesResult,activityOptions,alert]=await Promise.all([
     env.DB.prepare("SELECT * FROM spaces ORDER BY position").all(),
-    loadEffectiveSpaceSchedules(env,effectiveDate),
+    loadEffectiveSpaceSchedulesByDateRange(env,[effectiveDate,tomorrow]),
     loadEffectiveActivityOptions(env,effectiveDate),
     env.DB.prepare("SELECT message,urgent FROM home_alert WHERE id=1").first()
   ]);
-  const scheduleMap=new Map(schedulesResult.map(row=>[`${row.space_slug}:${row.day}`,row]));
+  const scheduleMap=new Map((schedulesResult[effectiveDate]||[]).map(row=>[`${row.space_slug}:${row.day}`,row]));
+  const tomorrowMap=new Map((schedulesResult[tomorrow]||[]).map(row=>[`${row.space_slug}:${row.day}`,row]));
   const rows=[];
   for(const space of spacesResult.results){
     const schedule=scheduleMap.get(`${space.slug}:${effectiveDay}`)||null;
-    const nextOpening=await findNextSpaceOpeningForDate(env,space.slug,effectiveDate,paris.minutes);
+    const nextOpening=findNextSpaceOpeningFromMaps(scheduleMap,tomorrowMap,space.slug,effectiveDay,paris.minutes);
     const activity=activityOptions[space.slug]||null;
     rows.push(publicSpace(schedule?{...space,...spaceProgramFields(schedule,space)}:space,schedule,paris.minutes,nextOpening,activity));
   }
@@ -1944,6 +1946,16 @@ function findNextSpaceOpening(scheduleMap,slug,currentDay,minutes){
     const schedule=scheduleMap.get(`${slug}:${day}`)||null;
     if(isOpenSchedule(schedule)&&timeToMinutes(schedule?.opens_at)!==null)return{time:schedule.opens_at,dayOffset};
   }
+  return null;
+}
+
+function findNextSpaceOpeningFromMaps(todayMap,tomorrowMap,slug,currentDay,minutes){
+  const today=todayMap.get(`${slug}:${currentDay}`)||null;
+  const todayOpening=isOpenSchedule(today)?timeToMinutes(today?.opens_at):null;
+  if(todayOpening!==null&&minutes<todayOpening)return{time:today.opens_at,dayOffset:0};
+  const tomorrowDay=(currentDay%7)+1;
+  const tomorrow=tomorrowMap.get(`${slug}:${tomorrowDay}`)||null;
+  if(isOpenSchedule(tomorrow)&&timeToMinutes(tomorrow?.opens_at)!==null)return{time:tomorrow.opens_at,dayOffset:1};
   return null;
 }
 
@@ -2062,11 +2074,36 @@ async function loadEffectiveGeneralSchedules(env,dateString=""){
 }
 
 async function loadEffectiveGeneralSchedulesByDate(env,dateList=[]){
+  const dates=[...new Set(dateList.map(validIsoDate).filter(Boolean))];
+  if(!dates.length)return{};
+  const sorted=[...dates].sort();
+  const [base,programs,exceptions]=await Promise.all([
+    env.DB.prepare("SELECT day,opens_at,closes_at FROM general_schedules ORDER BY day").all(),
+    loadApplicableHourProgramsWithEntries(env,"general",sorted[0],sorted[sorted.length-1]),
+    env.DB.prepare("SELECT * FROM hour_exceptions WHERE date>=? AND date<=? AND scope='general' AND target_slug='general' ORDER BY date")
+      .bind(sorted[0],sorted[sorted.length-1]).all()
+  ]);
+  const exceptionsByDate=new Map();
+  exceptions.results.map(publicHourException).forEach(item=>exceptionsByDate.set(item.date,item));
   const result={};
-  for(const date of dateList){
-    result[date]=(await loadEffectiveGeneralSchedules(env,date)).map(publicSchedule);
+  for(const date of dates){
+    result[date]=buildEffectiveGeneralSchedulesForDate(base.results,applicableEntriesForDate(programs,date),exceptionsByDate.get(date),date).map(publicSchedule);
   }
   return result;
+}
+
+function buildEffectiveGeneralSchedulesForDate(baseRows,entries,exception,date){
+  const day=dayNumberFromIsoDate(date);
+  const map=new Map(baseRows.map(row=>[Number(row.day),{...row}]));
+  entries.filter(row=>row.target_slug==="general").forEach(row=>{
+    const closed=String(row.manual_status||"ouvert")!=="ouvert";
+    map.set(Number(row.day),{day:row.day,opens_at:closed?"":row.opens_at,closes_at:closed?"":row.closes_at,program_manual_status:row.manual_status});
+  });
+  if(exception&&day){
+    const closed=exception.manualStatus!=="ouvert";
+    map.set(day,{day,opens_at:closed?"":exception.opensAt,closes_at:closed?"":exception.closesAt,exception_manual_status:exception.manualStatus});
+  }
+  return [...map.values()].sort((a,b)=>Number(a.day)-Number(b.day));
 }
 
 const effectiveSpaceScheduleCache=new Map();
@@ -2101,6 +2138,72 @@ async function loadEffectiveSpaceSchedulesUncached(env,dateString=""){
   });
   if(day){
     const exceptions=await loadHourExceptionsForDate(env,date);
+    exceptions.filter(item=>item.scope==="work"||item.scope==="paddocks").forEach(item=>{
+      const spaceSlug=item.scope==="paddocks"&&item.targetSlug==="grande"?"grande-voie":item.targetSlug;
+      const key=`${spaceSlug}:${day}`;
+      const closed=item.manualStatus!=="ouvert";
+      map.set(key,{space_slug:spaceSlug,day,opens_at:closed?"":item.opensAt,closes_at:closed?"":item.closesAt,
+        program_manual_status:item.manualStatus,hour_exception:true});
+    });
+  }
+  return [...map.values()].sort((a,b)=>String(a.space_slug).localeCompare(String(b.space_slug))||Number(a.day)-Number(b.day));
+}
+
+async function loadEffectiveSpaceSchedulesByDateRange(env,dateList=[]){
+  const dates=[...new Set(dateList.map(validIsoDate).filter(Boolean))];
+  if(!dates.length)return{};
+  const result={};
+  const missing=[];
+  for(const date of dates){
+    const cached=effectiveSpaceScheduleCache.get(date);
+    if(cached&&Date.now()-cached.at<10000)result[date]=cached.value;
+    else missing.push(date);
+  }
+  if(!missing.length)return result;
+  const sorted=[...missing].sort();
+  const [base,workPrograms,paddockPrograms,exceptions]=await Promise.all([
+    env.DB.prepare("SELECT * FROM space_schedules ORDER BY space_slug,day").all(),
+    loadApplicableHourProgramsWithEntries(env,"work",sorted[0],sorted[sorted.length-1]),
+    loadApplicableHourProgramsWithEntries(env,"paddocks",sorted[0],sorted[sorted.length-1]),
+    env.DB.prepare("SELECT * FROM hour_exceptions WHERE date>=? AND date<=? ORDER BY date,scope,target_slug")
+      .bind(sorted[0],sorted[sorted.length-1]).all()
+  ]);
+  const exceptionsByDate=new Map();
+  exceptions.results.map(publicHourException).forEach(item=>{
+    const list=exceptionsByDate.get(item.date)||[];
+    list.push(item);
+    exceptionsByDate.set(item.date,list);
+  });
+  for(const date of missing){
+    const value=buildEffectiveSpaceSchedulesForDate(base.results,[
+      ...applicableEntriesForDate(workPrograms,date),
+      ...applicableEntriesForDate(paddockPrograms,date)
+    ],exceptionsByDate.get(date)||[],date);
+    effectiveSpaceScheduleCache.set(date,{at:Date.now(),value});
+    result[date]=value;
+  }
+  return result;
+}
+
+function buildEffectiveSpaceSchedulesForDate(baseRows,entries,exceptions,date){
+  const day=dayNumberFromIsoDate(date);
+  const map=new Map(baseRows.map(row=>[`${row.space_slug}:${row.day}`,{...row}]));
+  entries.forEach(row=>{
+    const spaceSlug=row.target_slug==="grande"?"grande-voie":row.target_slug;
+    const closed=String(row.manual_status||"ouvert")!=="ouvert";
+    map.set(`${spaceSlug}:${row.day}`,{
+      space_slug:spaceSlug,
+      day:row.day,
+      opens_at:closed?"":row.opens_at,
+      closes_at:closed?"":row.closes_at,
+      program_manual_status:row.manual_status,
+      program_special_hours:row.special_hours,
+      program_info:row.info,
+      program_liberte:row.liberte,
+      program_longe:row.longe
+    });
+  });
+  if(day){
     exceptions.filter(item=>item.scope==="work"||item.scope==="paddocks").forEach(item=>{
       const spaceSlug=item.scope==="paddocks"&&item.targetSlug==="grande"?"grande-voie":item.targetSlug;
       const key=`${spaceSlug}:${day}`;
