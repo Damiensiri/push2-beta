@@ -9,13 +9,16 @@ export default{
     ctx.waitUntil(processPaddockPushReminders(env,new Date(controller.scheduledTime)));
     ctx.waitUntil(processScheduledNotifications(env,new Date(controller.scheduledTime)));
   },
-  async fetch(request,env){
+  async fetch(request,env,ctx){
     const url=new URL(request.url);
     const cors=corsHeaders(request,env);
 
     if(request.method==="OPTIONS"){
       return new Response(null,{status:204,headers:cors});
     }
+
+    const diagnostics=createRequestDiagnostics(request,url);
+    if(diagnostics.enabled)env={...env,DB:instrumentD1(env.DB,diagnostics)};
 
     try{
       if(request.method==="GET"&&url.pathname==="/api/health"){
@@ -1745,9 +1748,96 @@ export default{
       return json({error:"Route introuvable"},404,cors);
     }catch(error){
       return json({error:"Erreur interne",detail:String(error?.message||error)},500,cors);
+    }finally{
+      if(diagnostics.enabled)logRequestDiagnostics(diagnostics,ctx);
     }
   }
 };
+
+function createRequestDiagnostics(request,url){
+  const enabled=url.pathname.startsWith("/api/");
+  return{
+    enabled,
+    id:crypto.randomUUID(),
+    method:request.method,
+    path:url.pathname,
+    query:url.search||"",
+    startedAt:Date.now(),
+    d1Count:0,
+    d1Ms:0,
+    statements:[]
+  };
+}
+
+function instrumentD1(db,diagnostics){
+  return new Proxy(db,{
+    get(target,prop,receiver){
+      if(prop==="prepare"){
+        return sql=>instrumentD1Statement(Reflect.apply(target.prepare,target,[sql]),diagnostics,sql);
+      }
+      if(prop==="batch"){
+        return async statements=>{
+          const count=Array.isArray(statements)?statements.length:0;
+          const start=Date.now();
+          try{
+            return await Reflect.apply(target.batch,target,[statements]);
+          }finally{
+            const elapsed=Date.now()-start;
+            diagnostics.d1Count+=count||1;
+            diagnostics.d1Ms+=elapsed;
+            diagnostics.statements.push({op:"batch",count:count||1,ms:elapsed,sql:"D1 batch"});
+          }
+        };
+      }
+      return Reflect.get(target,prop,receiver);
+    }
+  });
+}
+
+function instrumentD1Statement(statement,diagnostics,sql){
+  return new Proxy(statement,{
+    get(target,prop,receiver){
+      if(prop==="bind"){
+        return(...args)=>instrumentD1Statement(Reflect.apply(target.bind,target,args),diagnostics,sql);
+      }
+      if(["all","first","run","raw"].includes(prop)){
+        return async(...args)=>{
+          const start=Date.now();
+          try{
+            return await Reflect.apply(target[prop],target,args);
+          }finally{
+            const elapsed=Date.now()-start;
+            diagnostics.d1Count+=1;
+            diagnostics.d1Ms+=elapsed;
+            diagnostics.statements.push({op:String(prop),count:1,ms:elapsed,sql:compactSql(sql)});
+          }
+        };
+      }
+      return Reflect.get(target,prop,receiver);
+    }
+  });
+}
+
+function compactSql(sql){
+  return String(sql||"").replace(/\s+/g," ").trim().slice(0,180);
+}
+
+function logRequestDiagnostics(diagnostics,ctx){
+  const payload={
+    type:"d1-diagnostics",
+    requestId:diagnostics.id,
+    method:diagnostics.method,
+    path:diagnostics.path,
+    query:diagnostics.query,
+    d1Queries:diagnostics.d1Count,
+    d1Ms:diagnostics.d1Ms,
+    totalMs:Date.now()-diagnostics.startedAt,
+    statements:diagnostics.statements
+  };
+  const write=()=>console.log(JSON.stringify(payload));
+  if(ctx?.waitUntil)ctx.waitUntil(Promise.resolve().then(write));
+  else write();
+}
 
 function compatibleAlert(row){
   return{
