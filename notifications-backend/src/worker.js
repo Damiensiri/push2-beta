@@ -2632,17 +2632,16 @@ async function sendOneSignalPush(env,payload){
   }
 }
 
-async function sendPaddockReservationCancellationPush(env,reservation,comment=""){
+async function sendPaddockReservationCancellationPush(env,reservation){
   const paddock=({maison:"Maison",grande:"Grande voie",beudot:"Beudot"})[reservation.paddock]||reservation.paddock;
   const title="Réservation paddock annulée";
-  const suffix=comment?` Motif : ${comment}`:"";
-  const message=`Votre réservation au paddock ${paddock} du ${reservation.date} à ${reservation.time} a été annulée.${suffix}`;
+  const message=`Votre réservation au paddock ${paddock} du ${reservation.date} à ${reservation.time} a été annulée.`;
   return sendUserPush(env,reservation.user_id,{
     title,
     message:message.slice(0,450),
     url:"https://damiensiri.github.io/push2-beta/mesreservations.html",
     email:reservation.email,
-    deliveryKey:`paddock-cancelled:${reservation.id}:${reservation.lock_key||""}`
+    deliveryKey:crypto.randomUUID()
   });
 }
 

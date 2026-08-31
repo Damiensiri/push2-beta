@@ -274,7 +274,8 @@ test("une annulation de réservation paddock peut envoyer un push ciblé au clie
     assert.deepEqual(payload.include_subscription_ids,["subscription-cible-1234567890"]);
     assert.equal(payload.headings.fr,"Réservation paddock annulée");
     assert.match(payload.contents.fr,/Maison/);
-    assert.match(payload.contents.fr,/Météo/);
+    assert.doesNotMatch(payload.contents.fr,/Météo/);
+    assert.match(payload.idempotency_key,/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
     assert.equal(payload.url,"https://damiensiri.github.io/push2-beta/mesreservations.html");
   }finally{
     globalThis.fetch=originalFetch;
