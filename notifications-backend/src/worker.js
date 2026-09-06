@@ -494,6 +494,26 @@ export default{
         if(!admin&&Number(reservation.user_id)!==Number(viewer.id))return json({error:'Action interdite'},403,cors);
         const input=await readJson(request);
         if(!Number.isSafeInteger(input?.version)||input.version!==reservation.version)return json({error:'La réservation a changé. Actualisez la page.'},409,cors);
+        if(!admin){
+          if(Object.keys(input).some(key=>!['version','horseIds'].includes(key)))return json({error:'Seuls les chevaux peuvent être modifiés depuis Mes réservations'},403,cors);
+          if(!Array.isArray(input.horseIds))return json({error:'Sélection de chevaux requise'},400,cors);
+          const selection=await validateBookingHorses(env,input.horseIds,viewer.id);
+          if(selection.error)return json({error:selection.error},selection.status,cors);
+          try{
+            const results=await env.DB.batch([
+              env.DB.prepare(`UPDATE paddock_reservations SET version=CASE WHEN version=? THEN version+1 ELSE NULL END WHERE id=?`).bind(input.version,reservation.id),
+              env.DB.prepare('DELETE FROM paddock_booking_horses WHERE booking_id=?').bind(reservation.id),
+              bookingHorseInsert(env,reservation.lock_key,selection.ids)
+            ]);
+            if(!results[0].meta.changes)return json({error:'La réservation a été supprimée'},409,cors);
+          }catch(error){
+            if(String(error?.message||error).includes('NOT NULL'))return json({error:'La réservation a changé. Actualisez la page.'},409,cors);
+            throw error;
+          }
+          await notifyRealtime(env,'paddocks');await notifyRealtime(env,'planning');
+          return json({reservation:{id:String(reservation.id),date:reservation.date,time:reservation.time,paddock:reservation.paddock,
+            duration:reservation.duration,horseIds:selection.ids,version:input.version+1}},200,cors);
+        }
         const booking=validatePaddockBooking({...reservation,...input});
         if(booking.error)return json({error:booking.error},400,cors);
         const horseSelection=await validateBookingHorses(env,input.horseIds,reservation.user_id);

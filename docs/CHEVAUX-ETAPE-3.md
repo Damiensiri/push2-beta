@@ -6,7 +6,7 @@ Une réservation paddock peut lier zéro, un ou plusieurs chevaux actifs du comp
 
 Les réservations restent exclusivement dans `paddock_reservations`. Le planning client et le planning Backstage les agrègent par `UNION ALL`, sans copie dans `planning_tasks`. Les réponses de planning exposent des événements génériques. L'ancien champ `tasks` reste disponible pour les commandes de gestion et la compatibilité des interfaces. Une réservation est en lecture seule dans le planning ; sa modification passe par l'écran paddocks. L'écran tablette affiche également ces événements sans bouton de validation de tâche.
 
-La modification conserve l'identifiant de réservation et change date, heure, paddock, durée et chevaux dans une transaction. Un numéro de version empêche l'écrasement par un écran obsolète. L'annulation supprime les liens par cascade. Archiver un cheval ou le retirer de la vue hebdomadaire ne supprime pas son événement.
+Depuis Mes réservations, le client peut uniquement modifier les chevaux. Le Worker refuse les autres champs et ne touche pas aux verrous de créneau. Backstage conserve la modification administrative de la date, de l’heure, du paddock et de la durée. Ces modifications conservent l’identifiant de réservation. Un numéro de version empêche l'écrasement par un écran obsolète. L'annulation supprime les liens par cascade. Archiver un cheval ou le retirer de la vue hebdomadaire ne supprime pas son événement.
 
 ## Migration réellement appliquée
 

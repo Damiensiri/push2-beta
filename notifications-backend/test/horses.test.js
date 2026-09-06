@@ -80,13 +80,18 @@ test('fondations chevaux sur D1 : migration, permissions, conservation, concurre
   assert.equal(detail.data.events.length,1);assert.equal(detail.data.events[0].source,'paddock_booking');assert.equal(detail.data.events[0].canEdit,false);assert.equal(detail.data.events[0].endsAt,'10:00');
   assert.equal((await call('/api/me/horses/'+h2+'?week=2026-09-07',{token:'client1'})).data.events.length,1);
   const list=await call('/api/paddocks/reservations',{token:'client1'});assert.equal(list.data.reservations[0].horses.length,2);assert.equal(list.data.reservations[0].version,1);
+  const unchanged=await DB.prepare('SELECT * FROM paddock_reservations WHERE id=?').bind(bookingId).first();
+  for(const extra of [{time:'12:00'},{date:'2026-09-20'},{paddock:'grande'},{duration:90},{userId:2}]){
+    assert.equal((await call('/api/paddocks/reservations/'+bookingId,{method:'PATCH',token:'client1',body:{version:1,horseIds:[h1],...extra}})).status,403);
+  }
+  assert.deepEqual(await DB.prepare('SELECT * FROM paddock_reservations WHERE id=?').bind(bookingId).first(),unchanged);
   const move={...booking,date:'2026-09-15',time:'11:00',horseIds:[h2],version:1};
   const path='/api/paddocks/reservations/'+bookingId;
   assert.equal((await call(path,{method:'PATCH',token:'client2',body:move})).status,403);
   assert.equal((await call(path,{method:'PATCH',token:'client1',body:{...move,horseIds:[h2,foreign]}})).status,403);
   assert.equal((await DB.prepare('SELECT date FROM paddock_reservations WHERE id=?').bind(bookingId).first()).date,booking.date);
-  assert.equal((await call(path,{method:'PATCH',token:'client1',body:move})).status,200);
-  assert.equal((await call(path,{method:'PATCH',token:'client1',body:move})).status,409);
+  assert.equal((await call('/api/admin/paddocks/reservations/'+bookingId,{method:'PATCH',body:move})).status,200);
+  assert.equal((await call('/api/admin/paddocks/reservations/'+bookingId,{method:'PATCH',body:move})).status,409);
   assert.equal((await call('/api/me/horses/'+h1+'?week=2026-09-07',{token:'client1'})).data.events.length,0);
   assert.equal((await call('/api/me/horses/'+h2+'?week=2026-09-14',{token:'client1'})).data.events[0].startsAt,'11:00');
   assert.equal((await DB.prepare('SELECT COUNT(*) n FROM paddock_slot_locks WHERE date=?').bind(booking.date).first()).n,0);
@@ -95,14 +100,21 @@ test('fondations chevaux sur D1 : migration, permissions, conservation, concurre
   const excluded=await call('/api/admin/planning?week=2026-09-14&horse_ids='+h1);assert.equal(excluded.data.events.length,0);
   // No association is valid and leaves no copied task behind.
   const empty=await call('/api/paddocks/reservations',{method:'POST',token:'client1',body:{...booking,date:'2026-09-16',horseIds:[]}});assert.equal(empty.status,201);
-  const conflict=await call(path,{method:'PATCH',token:'client1',body:{...move,date:'2026-09-16',version:2}});assert.equal(conflict.status,409);
-  const concurrentPath='/api/paddocks/reservations/'+empty.data.reservation.id;
-  const raced=await Promise.all(['2026-09-17','2026-09-18'].map(date=>call(concurrentPath,{method:'PATCH',token:'client1',body:{...booking,date,horseIds:[],version:1}})));
+  const conflict=await call('/api/admin/paddocks/reservations/'+bookingId,{method:'PATCH',body:{...move,date:'2026-09-16',version:2}});assert.equal(conflict.status,409);
+  const concurrentPath='/api/admin/paddocks/reservations/'+empty.data.reservation.id;
+  const raced=await Promise.all(['2026-09-17','2026-09-18'].map(date=>call(concurrentPath,{method:'PATCH',body:{...booking,date,horseIds:[],version:1}})));
   assert.deepEqual(raced.map(r=>r.status).sort(),[200,409]);
   const winner=await DB.prepare('SELECT * FROM paddock_reservations WHERE id=?').bind(empty.data.reservation.id).first();
   const locks=(await DB.prepare('SELECT date FROM paddock_slot_locks WHERE reservation_key=?').bind(winner.lock_key).all()).results;
   assert.equal(locks.length,2);assert.ok(locks.every(lock=>lock.date===winner.date));
   assert.equal((await DB.prepare('SELECT COUNT(*) n FROM planning_tasks').first()).n,tasksBefore);
+  const beforeHorsesOnly=await DB.prepare('SELECT * FROM paddock_reservations WHERE id=?').bind(bookingId).first();
+  const beforeLocks=(await DB.prepare('SELECT * FROM paddock_slot_locks WHERE reservation_key=?').bind(beforeHorsesOnly.lock_key).all()).results;
+  assert.equal((await call(path,{method:'PATCH',token:'client1',body:{version:2,horseIds:[h1,h2]}})).status,200);
+  const afterHorsesOnly=await DB.prepare('SELECT * FROM paddock_reservations WHERE id=?').bind(bookingId).first();
+  assert.deepEqual(afterHorsesOnly,{...beforeHorsesOnly,version:3});
+  assert.deepEqual((await DB.prepare('SELECT * FROM paddock_slot_locks WHERE reservation_key=?').bind(beforeHorsesOnly.lock_key).all()).results,beforeLocks);
+  assert.equal((await call(path,{method:'PATCH',token:'client1',body:{version:3,horseIds:[foreign]}})).status,403);
   await DB.prepare("UPDATE planning_horses SET status='archived' WHERE id=?").bind(h2).run();
   await DB.prepare("DELETE FROM planning_week_horses WHERE horse_id=?").bind(h2).run();
   assert.equal((await call('/api/me/horses/'+h2+'?week=2026-09-14',{token:'client1'})).data.events.length,1);
