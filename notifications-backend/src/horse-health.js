@@ -1,4 +1,4 @@
-export const healthTypes=Object.freeze({vaccine:'Vaccination',deworming:'Vermifuge',farriery:'Ferrure / parage',dental:'Dentiste'});
+export const healthTypes=Object.freeze({farriery:'Ferrure / parage',deworming:'Vermifuge',vaccine:'Vaccination',dental:'Dentiste',osteopathy:'Ostéopathe'});
 const fail=(message,status=400)=>Object.assign(new Error(message),{status});
 const today=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Paris',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
 export function reminderOffsets(env){const offsets=String(env.HORSE_REMINDER_OFFSETS??'7,0').split(',').map(Number);if(!offsets.length||offsets.length>4||offsets.some(n=>!Number.isInteger(n)||n<0||n>365)||new Set(offsets).size!==offsets.length)throw fail('Configuration des rappels invalide',503);return offsets;}

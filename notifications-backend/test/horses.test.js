@@ -26,6 +26,7 @@ test('fondations chevaux sur D1 : migration, permissions, conservation, concurre
  await execute(DB,await read('0024_horse_planning.sql'));
  await execute(DB,await read('0025_paddock_booking_horses.sql'));
  await execute(DB,await read('0026_horse_health.sql'));
+ await execute(DB,await read('0027_horse_health_osteopathy.sql'));
  const afterPlanning=(await DB.prepare('SELECT * FROM planning_tasks').all()).results;
  assert.deepEqual(afterPlanning.map(({source,created_by_user_id,...row})=>row),before);
  assert.equal(afterPlanning[0].source,'backstage');assert.equal(afterPlanning[0].created_by_user_id,null);
@@ -171,6 +172,7 @@ test('fondations chevaux sur D1 : migration, permissions, conservation, concurre
   assert.equal((await call(client+'/health/'+next.id,{method:'DELETE',token:'client2',body:{version:1}})).status,200);
   assert.equal((await DB.prepare("SELECT COUNT(*) n FROM horse_notifications WHERE record_id=? AND status IN ('pending','failed','uncertain')").bind(next.id).first()).n,0);
   assert.ok(await DB.prepare('SELECT deleted_at FROM horse_health_records WHERE id=?').bind(next.id).first());
+  const osteo=await call(client+'/health',{method:'POST',token:'client2',body:{...input,type:'osteopathy',label:'Ostéopathe',nextDueOn:null}});assert.equal(osteo.status,201);assert.equal(osteo.data.record.type,'osteopathy');
   const dental=await call(base,{method:'POST',body:{...input,type:'dental',label:'Dentiste'}});assert.equal(dental.status,201);
   assert.equal((await call('/api/admin/horses/'+healthHorse,{method:'PATCH',body:{...payload,name:'Santé',status:'archived',ownerIds:[2,3],version:2}})).status,200);
   assert.equal((await DB.prepare("SELECT COUNT(*) n FROM horse_notifications WHERE horse_id=? AND status='pending'").bind(healthHorse).first()).n,0);

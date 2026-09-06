@@ -1,6 +1,6 @@
 (() => {
- const types={vaccine:'Vaccination',deworming:'Vermifuge',farriery:'Ferrure / parage',dental:'Dentiste'};
- const dueOptions={vaccine:[['1 mois',1,0],['6 mois',6,0],['1 an',12,0]],deworming:[],farriery:[['5 semaines',0,35],['6 semaines',0,42],['7 semaines',0,49]],dental:[['1 an',12,0]]};
+ const types={farriery:'Ferrure / parage',deworming:'Vermifuge',vaccine:'Vaccination',dental:'Dentiste',osteopathy:'Ostéopathe'};
+ const dueOptions={vaccine:[['1 mois',1,0],['6 mois',6,0],['1 an',12,0]],deworming:[],farriery:[['5 semaines',0,35],['6 semaines',0,42],['7 semaines',0,49]],dental:[['1 an',12,0]],osteopathy:[]};
  function suggestedDue(performedOn,type,index){
   const option=dueOptions[type]?.[index];if(!option||!/^\d{4}-\d{2}-\d{2}$/.test(performedOn))return '';
   const date=new Date(performedOn+'T12:00:00Z');if(!Number.isFinite(date.getTime())||date.toISOString().slice(0,10)!==performedOn)return '';
@@ -27,7 +27,7 @@
      }catch(error){status.textContent=error.message;}}
     function edit(record=null,previous=null){const d=modal(record?'Corriger l’intervention':'Nouvelle intervention'),box=d.querySelector('[data-content]'),message=d.querySelector('[role=status]');const selected=record||previous;
      box.innerHTML=`<form><label>Type<select name="type">${Object.entries(types).map(([id,label])=>`<option value="${id}">${label}</option>`).join('')}</select></label><label>Libellé du suivi<input name="label" maxlength="100" required></label><small>Réutilisez le même libellé pour le prochain rappel de ce soin (ex. vaccin grippe).</small><label>Date réalisée<input name="performedOn" type="date" max="${day()}" required></label><label>Prochaine échéance (facultative)<input name="nextDueOn" type="date"></label><div class="health-due-options" data-due-options></div><label>Commentaire (partagé avec l’écurie et les propriétaires)<textarea name="comment" maxlength="1500" rows="3"></textarea></label><button type="submit">Enregistrer</button></form>`;
-     const form=box.querySelector('form');form.elements.type.value=selected?.type||'vaccine';form.elements.label.value=selected?.label||types.vaccine;form.elements.type.disabled=Boolean(record);form.elements.label.readOnly=Boolean(record);
+     const form=box.querySelector('form');form.elements.type.value=selected?.type||'farriery';form.elements.label.value=selected?.label||types.farriery;form.elements.type.disabled=Boolean(record);form.elements.label.readOnly=Boolean(record);
      form.elements.performedOn.value=record?.performedOn||day();form.elements.nextDueOn.value=record?.nextDueOn||'';form.elements.comment.value=record?.comment||'';
      const shortcuts=form.querySelector('[data-due-options]');let selectedOffset=null;
      function showShortcuts(){const options=dueOptions[form.elements.type.value]||[];shortcuts.innerHTML=options.length?`<small>Calculer depuis la date réalisée :</small><div class="health-actions">${options.map((option,index)=>`<button type="button" data-offset="${index}" aria-pressed="${selectedOffset===index}">${option[0]}</button>`).join('')}</div><small>Vous pouvez aussi saisir ou ajuster la date manuellement.</small>`:'<small>Échéance à renseigner manuellement, si nécessaire.</small>';shortcuts.querySelectorAll('[data-offset]').forEach(button=>button.onclick=()=>{const index=Number(button.dataset.offset),value=suggestedDue(form.elements.performedOn.value,form.elements.type.value,index);if(!value){form.elements.performedOn.reportValidity();return;}selectedOffset=index;form.elements.nextDueOn.value=value;showShortcuts();});}
