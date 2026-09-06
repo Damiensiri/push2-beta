@@ -3207,7 +3207,7 @@ function validHorseIds(value){
 
 function publicPlanningTask(row){
   return{id:Number(row.id),weekStart:row.week_start,horseId:Number(row.horse_id),dayIndex:Number(row.day_index),
-    pwaVisible:Boolean(row.pwa_visible),pwaAutomatic:["cours","concours"].includes(row.type)||(row.type==="paddock"&&row.request_id!=null),
+    pwaVisible:Boolean(row.pwa_visible),pwaAutomatic:["cours","concours","proprietaire"].includes(row.type)||(row.type==="paddock"&&row.request_id!=null),
     type:row.type,description:row.description||"",paddock:row.paddock||"",startsAt:row.starts_at||"",
     endsAt:row.ends_at||"",requestId:row.request_id===null?null:Number(row.request_id),position:Number(row.position||0),
     employeeId:row.employee_id===null||row.employee_id===undefined?null:Number(row.employee_id),
@@ -3271,7 +3271,7 @@ function validatePlanningTask(input){
   const requestId=input?.requestId?Number(input.requestId):null;
   const employeeId=input?.employeeId?Number(input.employeeId):null;
   if(input?.pwaVisible!==undefined&&typeof input.pwaVisible!=="boolean")return{error:"Visibilité PWA invalide"};
-  const pwaVisible=input?.pwaVisible!==false;
+  const pwaVisible=input?.pwaVisible===true;
   if(!weekStart||!Number.isInteger(horseId)||horseId<1||!Number.isInteger(dayIndex)||dayIndex<0||dayIndex>6)return{error:"Semaine, cheval ou jour invalide"};
   if(!["paddock","travail","longe","repos","concours","cours","proprietaire","autre"].includes(type))return{error:"Type de tâche invalide"};
   if(description.length>300)return{error:"Description trop longue"};

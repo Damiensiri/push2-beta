@@ -100,7 +100,7 @@ async function horseEvents(env,horseId,viewerId,week){
     SELECT id,horse_id,week_start,day_index,type,description,starts_at,ends_at,source,created_by_user_id,
       date(week_start,printf('+%d days',day_index)) AS event_date,position
     FROM planning_tasks WHERE horse_id=? AND week_start=?
-      AND (source='client' OR type IN ('cours','concours') OR (type='paddock' AND request_id IS NOT NULL) OR pwa_visible=1)
+      AND (source='client' OR type IN ('cours','concours','proprietaire') OR (type='paddock' AND request_id IS NOT NULL) OR pwa_visible=1)
     UNION ALL
     SELECT r.id,bh.horse_id,?,CAST(julianday(r.date)-julianday(?) AS INTEGER),'paddock',
       CASE r.paddock WHEN 'maison' THEN 'Maison' WHEN 'grande' THEN 'Grande voie' ELSE 'Beudot' END,

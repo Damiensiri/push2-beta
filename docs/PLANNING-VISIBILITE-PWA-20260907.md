@@ -1,6 +1,6 @@
 # Visibilité du planning dans la PWA — 7 septembre 2026
 
-**Correction demandée après publication : ON par défaut pour les nouvelles tâches Backstage (interface et API). OFF explicite reste respecté et les choix existants restent inchangés. Aucune nouvelle migration. Les paragraphes ci-dessous décrivent la bascule initiale.**
+**Règle finale : OFF par défaut pour travail, longe, repos, autre et paddock sans demande. Propriétaire, cours, concours et paddock avec demande sont automatiquement visibles. ON manuel reste possible pour les autres tâches. Les choix déjà enregistrés sont conservés ; aucune migration supplémentaire. Une infobulle dans la fiche PWA explique la publication selon la pension. Les paragraphes suivants décrivent la bascule initiale.**
 
 Migration 0028 : ajout du type cours et de pwa_visible (0 par défaut), conservation des données, identifiants, indexes, séquence et relations. Aucun changement des réservations paddock ni des activités personnelles.
 
