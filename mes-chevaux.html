@@ -15,7 +15,7 @@
 <link rel="stylesheet" href="assets/css/themes/winter.css?v=20260906-5">
 <link rel="stylesheet" href="assets/css/themes/spring.css?v=20260906-5">
 <link rel="stylesheet" href="assets/css/pages/mes-chevaux.css?v=20260906-16">
-<link rel="stylesheet" href="assets/css/horse-health.css?v=20260906-17"><script src="assets/js/horse-health.js?v=20260906-18"></script></head>
+<link rel="stylesheet" href="assets/css/horse-health.css?v=20260906-17"><script src="assets/js/horse-health.js?v=20260906-18"></script><script src="assets/js/horse-photo.js?v=20260906-22"></script></head>
 <body class="app-page horses-page">
 <div class="ambient-stage" aria-hidden="true"></div>
 <div class="page" id="page">
@@ -26,7 +26,7 @@
     <section id="horseDetail" hidden>
       <article class="horse-identity">
         <img id="horsePhoto" alt="" hidden><div id="horsePhotoFallback" class="horse-photo-fallback"><img src="image/horse.svg?v=20260906-21" alt=""></div>
-        <div><p class="horse-kicker">Ma fiche cheval</p><h2 id="horseName"></h2><p id="horseBirth" class="horse-muted"></p><label class="horse-photo-upload" title="JPEG, PNG ou WebP · 3 Mo maximum"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h4l2-3h4l2 3h4v13H4z"/><circle cx="12" cy="13" r="4"/></svg><span>Modifier la photo</span><input id="ownerPhotoFile" type="file" accept="image/jpeg,image/png,image/webp" aria-label="Modifier la photo du cheval"></label></div>
+        <div><p class="horse-kicker">Ma fiche cheval</p><h2 id="horseName"></h2><p id="horseBirth" class="horse-muted"></p><label class="horse-photo-upload" title="Photos jusqu’à 20 Mo · compression automatique"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h4l2-3h4l2 3h4v13H4z"/><circle cx="12" cy="13" r="4"/></svg><span>Modifier la photo</span><input id="ownerPhotoFile" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif" aria-label="Modifier la photo du cheval"></label></div>
       </article>
       <article id="horseNotes" class="horse-panel" hidden><h3>Informations</h3><p></p></article>
       <section id="horseHealth" class="horse-panel horse-health-summary"></section>
@@ -50,6 +50,6 @@
     <button id="saveActivity" class="primary-action" type="submit">Enregistrer</button>
   </form>
 </dialog>
-<script src="assets/js/pages/mes-chevaux.js?v=20260906-21"></script>
+<script src="assets/js/pages/mes-chevaux.js?v=20260906-22"></script>
 </body>
 </html>
