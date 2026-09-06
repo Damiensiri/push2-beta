@@ -42,6 +42,8 @@ test('fondations chevaux sur D1 : migration, permissions, conservation, concurre
  await t.test('modification obsolète refusée sans perte des propriétaires',async()=>{assert.equal((await call('/api/admin/horses/'+id,{method:'PATCH',body:{...payload,ownerIds:[2],version:1}})).status,200);assert.equal((await call('/api/admin/horses/'+id,{method:'PATCH',body:{...payload,ownerIds:[3],version:1}})).status,409);assert.equal((await call('/api/me/horses/'+id,{token:'client1'})).status,404);assert.equal((await call('/api/me/horses/'+id,{token:'client2'})).status,200);});
  await t.test('planning client agrégé, horaires facultatifs et droits selon la source',async()=>{
   const initial=await call('/api/me/horses/'+id+'?week=2026-09-07',{token:'client2'});assert.equal(initial.status,200);assert.equal(initial.data.events.length,0);
+  assert.ok(initial.data.activityTypes.every(type=>type.value!=='proprietaire'));
+  assert.equal((await call('/api/me/horses/'+id+'/planning/tasks',{method:'POST',token:'client2',body:{date:'2026-09-08',type:'proprietaire'}})).status,400);
   const createdActivity=await call('/api/me/horses/'+id+'/planning/tasks',{method:'POST',token:'client2',body:{date:'2026-09-08',type:'travail',startsAt:'14:00',endsAt:'15:00',description:'Séance légère'}});
   assert.equal(createdActivity.status,201);assert.equal(createdActivity.data.event.source,'client');assert.equal(createdActivity.data.event.canEdit,true);
   const taskId=createdActivity.data.event.sourceId;

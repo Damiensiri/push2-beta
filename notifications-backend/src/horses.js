@@ -2,7 +2,7 @@ import { AwsClient } from 'aws4fetch';
 
 const statuses = new Set(['active', 'departed', 'archived']);
 const activityLabels = Object.freeze({travail:'Travail',longe:'Longe',repos:'Repos',concours:'Concours',proprietaire:'Propriétaire',autre:'Autre'});
-const clientActivityTypes = new Set(Object.keys(activityLabels));
+const clientActivityTypes = new Set(Object.keys(activityLabels).filter(type=>type!=='proprietaire'));
 const fail = (message, status = 400) => Object.assign(new Error(message), { status });
 const placeholders = ids => ids.map(() => '?').join(',');
 export function validateHorse(input) {
@@ -202,7 +202,7 @@ export async function handleHorses(request, env, { json, cors, readJson, isAdmin
       if (admin) horse.owners = await ownersFor(env,id);
       if(!admin&&url.searchParams.has('week')){
         const week=validWeek(url.searchParams.get('week'));if(!week)throw fail('Semaine invalide');
-        return json({horse,weekStart:week,events:await horseEvents(env,id,viewer.id,week),activityTypes:Object.entries(activityLabels).map(([value,label])=>({value,label}))},200,cors);
+        return json({horse,weekStart:week,events:await horseEvents(env,id,viewer.id,week),activityTypes:Object.entries(activityLabels).filter(([value])=>clientActivityTypes.has(value)).map(([value,label])=>({value,label}))},200,cors);
       }
       return json({ horse,...(admin ? {photosReady:photoConfig(env).ready}: {}) },200,cors);
     }
