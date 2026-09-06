@@ -1,5 +1,7 @@
 # Visibilité du planning dans la PWA — 7 septembre 2026
 
+**Correction demandée après publication : ON par défaut pour les nouvelles tâches Backstage (interface et API). OFF explicite reste respecté et les choix existants restent inchangés. Aucune nouvelle migration. Les paragraphes ci-dessous décrivent la bascule initiale.**
+
 Migration 0028 : ajout du type cours et de pwa_visible (0 par défaut), conservation des données, identifiants, indexes, séquence et relations. Aucun changement des réservations paddock ni des activités personnelles.
 
 L’API propriétaire ne renvoie que les tâches personnelles, les cours, les concours, les paddocks avec request_id et les tâches explicitement publiées. La publication automatique est calculée, indépendante du drapeau manuel. Un ancien client Backstage qui ne transmet pas le drapeau conserve sa valeur sur PATCH ; POST reste OFF. Une création en lot applique le même choix à chaque jour. Les réservations paddock restent visibles comme auparavant.

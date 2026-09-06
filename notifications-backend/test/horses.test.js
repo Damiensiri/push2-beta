@@ -62,12 +62,13 @@ test('fondations chevaux sur D1 : migration, permissions, conservation, concurre
   assert.equal((await call('/api/admin/planning/horses',{method:'POST',body:{weekStart:'2026-09-07',horseId:id}})).status,201);
   const filtered=await call('/api/admin/planning?week=2026-09-07&horse_ids='+id);assert.equal(filtered.status,200);assert.deepEqual(filtered.data.horses.map(h=>h.id),[id]);assert.ok(filtered.data.tasks.every(task=>task.horseId===id));
  });
- await t.test('publication PWA : défaut OFF, exceptions, bascule, lots et conservation',async()=>{
+ await t.test('publication PWA : défaut ON, exceptions, bascule, lots et conservation',async()=>{
   const horseId=(await call('/api/admin/horses',{method:'POST',body:{...payload,name:'Visibilité',ownerIds:[1]}})).data.id;
   const base={weekStart:'2026-09-07',horseId,dayIndex:0};
   const create=async(extra)=>{const r=await call('/api/admin/planning/tasks',{method:'POST',body:{...base,...extra}});assert.equal(r.status,201,JSON.stringify(r.data));return r.data.task};
   const events=async()=>{const r=await call('/api/me/horses/'+horseId+'?week=2026-09-07',{token:'client1'});assert.equal(r.status,200);return r.data.events};
-  const work=await create({type:'travail'});assert.equal(work.pwaVisible,false);assert.equal((await events()).length,0);
+  const work=await create({type:'travail'});assert.equal(work.pwaVisible,true);assert.equal((await events()).length,1);
+  await call('/api/admin/planning/tasks/'+work.id,{method:'PATCH',body:{pwaVisible:false}});assert.equal((await events()).length,0);
   assert.equal((await call('/api/admin/planning/tasks/'+work.id,{method:'PATCH',body:{pwaVisible:true}})).status,200);assert.equal((await events()).length,1);
   await call('/api/admin/planning/tasks/'+work.id,{method:'PATCH',body:{description:'Conserver le choix'}});assert.equal((await events()).length,1);
   await call('/api/admin/planning/tasks/'+work.id,{method:'PATCH',body:{pwaVisible:false}});assert.equal((await events()).length,0);
@@ -75,9 +76,9 @@ test('fondations chevaux sur D1 : migration, permissions, conservation, concurre
   const lesson=await create({type:'cours',pwaVisible:false});assert.equal(lesson.pwaAutomatic,true);
   const competition=await create({type:'concours'});assert.equal((await events()).length,2);
   await call('/api/admin/planning/tasks/'+lesson.id,{method:'PATCH',body:{type:'repos'}});assert.equal((await events()).length,1);
-  const manual=await create({type:'paddock',paddock:'Maison',startsAt:'09:00',endsAt:'10:00'});assert.equal(manual.pwaAutomatic,false);assert.equal((await events()).length,1);
+  const manual=await create({type:'paddock',pwaVisible:false,paddock:'Maison',startsAt:'09:00',endsAt:'10:00'});assert.equal(manual.pwaAutomatic,false);assert.equal((await events()).length,1);
   const request=await DB.prepare("INSERT INTO paddock_requests(user_id,name,email,date,status,created_at,updated_at) VALUES(1,'Test','test@example.invalid','2026-09-13','accepted','now','now') RETURNING id").first();
-  const linked=await create({type:'paddock',paddock:'Maison',startsAt:'10:00',endsAt:'11:00',requestId:request.id});assert.equal(linked.pwaAutomatic,true);assert.equal((await events()).length,2);
+  const linked=await create({type:'paddock',pwaVisible:false,paddock:'Maison',startsAt:'10:00',endsAt:'11:00',requestId:request.id});assert.equal(linked.pwaAutomatic,true);assert.equal((await events()).length,2);
   await call('/api/admin/planning/tasks/'+linked.id,{method:'PATCH',body:{requestId:null}});assert.equal((await events()).length,1);
   for(const pwaVisible of [false,true]){const r=await call('/api/admin/planning/tasks/batch',{method:'POST',body:{...base,type:'longe',dayIndexes:[1,2],pwaVisible}});assert.equal(r.status,201,JSON.stringify(r.data));}
   assert.equal((await events()).length,3);

@@ -3271,7 +3271,7 @@ function validatePlanningTask(input){
   const requestId=input?.requestId?Number(input.requestId):null;
   const employeeId=input?.employeeId?Number(input.employeeId):null;
   if(input?.pwaVisible!==undefined&&typeof input.pwaVisible!=="boolean")return{error:"Visibilité PWA invalide"};
-  const pwaVisible=input?.pwaVisible===true;
+  const pwaVisible=input?.pwaVisible!==false;
   if(!weekStart||!Number.isInteger(horseId)||horseId<1||!Number.isInteger(dayIndex)||dayIndex<0||dayIndex>6)return{error:"Semaine, cheval ou jour invalide"};
   if(!["paddock","travail","longe","repos","concours","cours","proprietaire","autre"].includes(type))return{error:"Type de tâche invalide"};
   if(description.length>300)return{error:"Description trop longue"};
