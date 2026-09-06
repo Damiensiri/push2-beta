@@ -29,7 +29,7 @@ export async function handleHorseHealth(request,env,{json,cors,readJson,isAdmin,
  const url=new URL(request.url),match=url.pathname.match(/^\/api\/(admin|me)\/horses\/(\d+)\/health(?:\/(\d+))?$/);if(!match)return null;
  try{
   const admin=match[1]==='admin',horseId=Number(match[2]),recordId=match[3]?Number(match[3]):null;
-  let viewer;if(admin){if(!isAdmin(request,env))throw fail('Non autorisé',401);}else{viewer=await authenticatedUser(request,env);if(!viewer)throw fail('Non autorisé',401);if(request.method!=='GET')throw fail('Le suivi sanitaire est géré par l’écurie',403);}
+  let viewer;if(admin){if(!isAdmin(request,env))throw fail('Non autorisé',401);}else{viewer=await authenticatedUser(request,env);if(!viewer)throw fail('Non autorisé',401);}
   const horse=await env.DB.prepare(`SELECT h.id,h.status FROM planning_horses h WHERE h.id=?${admin?'':' AND EXISTS(SELECT 1 FROM horse_owners o WHERE o.horse_id=h.id AND o.user_id=?)'}`).bind(horseId,...(admin?[]:[viewer.id])).first();
   if(!horse)throw fail('Cheval introuvable',404);
   if(request.method==='GET'&&!recordId){
@@ -37,7 +37,6 @@ export async function handleHorseHealth(request,env,{json,cors,readJson,isAdmin,
    const result=await env.DB.prepare(`SELECT r.*${admin?`,(SELECT json_group_array(json_object('status',status,'count',total)) FROM (SELECT status,COUNT(*) total FROM horse_notifications WHERE record_id=r.id GROUP BY status)) AS notifications_json`:''} FROM horse_health_records r WHERE horse_id=? AND deleted_at IS NULL AND id<? ORDER BY id DESC LIMIT 51`).bind(horseId,cursor).all();
    return json({records:result.results.slice(0,50).map(r=>({...publicRecord(r),...(admin?{notificationStatus:JSON.parse(r.notifications_json||'[]').map(n=>`${mailStatuses[n.status]} (${n.count})`).join(' · ')}:{})})),nextCursor:result.results.length>50?result.results[49].id:null,types:healthTypes},200,cors);
   }
-  if(!admin)throw fail('Route introuvable',404);
   const raw=await readJson(request),now=new Date().toISOString();
   let old;if(recordId){old=await env.DB.prepare('SELECT * FROM horse_health_records WHERE id=? AND horse_id=? AND deleted_at IS NULL').bind(recordId,horseId).first();if(!old)throw fail('Intervention introuvable',404);if(raw?.version!==old.version)throw fail('Intervention modifiée ailleurs. Rechargez.',409);}
   if(request.method==='DELETE'&&old){

@@ -1,6 +1,6 @@
 # CHEVAUX — Étape 4, bêta — 6 septembre 2026
 
-Suivi sanitaire éditable dans Backstage et consultable par les propriétaires dans Mes chevaux : vaccination, vermifuge, ferrure/parage et dentiste. Dates réalisées, échéances et commentaires saisis manuellement ; aucun intervalle médical calculé. Historique chargé à la demande, 50 interventions par page. Les échéances courantes sont intégrées à la requête de fiche (30 maximum).
+Suivi sanitaire éditable dans Backstage et par les propriétaires dans Mes chevaux : vaccination, vermifuge, ferrure/parage et dentiste. Dates réalisées, échéances et commentaires saisis manuellement ; aucun intervalle médical calculé. Historique chargé à la demande, 50 interventions par page. Les échéances courantes sont intégrées à la requête de fiche (30 maximum).
 
 ## Livraison
 
@@ -39,6 +39,6 @@ Ces petits échantillons ne démontrent pas une accélération. Les volumes sani
 
 - Vérifier la réception du premier rappel réel, le quota MailApp et les états « À vérifier » / « Envoi en cours ». Un envoi interrompu après prise en charge ne sera pas relancé automatiquement, pour éviter les doublons.
 - Un retour au statut actif ne réarme pas automatiquement une notification déjà annulée pour la même version ; corriger l’échéance pour préparer une nouvelle version si nécessaire.
-- Les propriétaires consultent le suivi ; les écritures sont réservées à Backstage. Les métadonnées d’envoi restent administratives.
+- Les propriétaires peuvent ajouter, corriger et supprimer les interventions de leurs chevaux ; les autorisations sont vérifiées côté Worker. Les métadonnées d’envoi restent administratives.
 - Une vaccination de libellé différent constitue un suivi indépendant. Le libellé d’un suivi existant n’est pas interchangeable : créer une nouvelle intervention pour un autre suivi.
 - Aucun changement au TTL configurable des photos R2. Aucune étape supplémentaire démarrée.
