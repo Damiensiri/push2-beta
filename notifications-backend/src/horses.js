@@ -39,7 +39,7 @@ export async function signedHorsePhoto(env, key, now = new Date()) {
 }
 async function publicHorse(env, row, admin = false) {
   const horse = { id: Number(row.id), name: row.name, status: row.status, birthDate: row.birth_date,
-    publicNotes: row.public_notes, photo: await signedHorsePhoto(env, row.photo_key) };
+    publicNotes: row.public_notes, photo: await signedHorsePhoto(env, row.photo_key), ...(!admin?{photoVersion:row.version}:{}) };
   if (admin) Object.assign(horse, { adminNotes: row.admin_notes, version: row.version, updatedAt: row.updated_at });
   return horse;
 }
@@ -110,7 +110,7 @@ export async function handleHorses(request, env, { json, cors, readJson, isAdmin
     if (admin) { if (!isAdmin(request, env)) throw fail('Non autorisé', 401); }
     else { viewer = await authenticatedUser(request, env); if (!viewer) throw fail('Non autorisé', 401); }
     const method = request.method;
-    if (!admin && method !== 'GET' && !url.pathname.includes('/planning/tasks')) throw fail('Lecture uniquement', 403);
+    if (!admin && method !== 'GET' && !url.pathname.includes('/planning/tasks') && !(/^\/api\/me\/horses\/\d+\/photo$/.test(url.pathname)&&method==='PUT')) throw fail('Lecture uniquement', 403);
     if (admin && url.pathname === base + '/owner-options' && method === 'GET') {
       const q = (url.searchParams.get('q') || '').trim().slice(0,80);
       const rows = await env.DB.prepare(`SELECT id,first_name AS firstName,last_name AS lastName,email,status FROM users
@@ -209,7 +209,7 @@ export async function handleHorses(request, env, { json, cors, readJson, isAdmin
       if (!result.at(-1).results.length) throw fail('Fiche modifiée ailleurs. Rechargez-la.',409);
       return json({ saved:true,version:row.version+1 },200,cors);
     }
-    if (admin && match[2] && ['PUT','DELETE'].includes(method)) {
+    if (match[2] && (admin ? ['PUT','DELETE'].includes(method) : method==='PUT')) {
       if (Number(request.headers.get('if-match')) !== row.version) throw fail('Fiche modifiée ailleurs. Rechargez-la.',409);
       let newKey = null;
       if (method === 'PUT') {

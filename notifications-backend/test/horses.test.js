@@ -62,6 +62,11 @@ test('fondations chevaux sur D1 : migration, permissions, conservation, concurre
   const brokenDB=new Proxy(DB,{get(target,key){if(key==='prepare')return sql=>{const stmt=target.prepare(sql);if(!sql.startsWith('UPDATE planning_horses SET photo_key'))return stmt;return {bind(){return {all:async()=>{throw Error('D1 unavailable');}}}};};return typeof target[key]==='function'?target[key].bind(target):target[key];}});
   assert.equal((await put([255,216,255,224,3],3,{...env,DB:brokenDB})).status,503);assert.equal((await DB.prepare('SELECT photo_key FROM planning_horses WHERE id=?').bind(id).first()).photo_key,first);assert.ok(await PRODUCT_IMAGES.get(first));
   r=await put([255,216,255,224,4],3);assert.equal(r.status,200);assert.equal(await PRODUCT_IMAGES.get(first),null);
+  const ownerPut=token=>worker.fetch(new Request(`https://test/api/me/horses/${id}/photo`,{method:'PUT',headers:{authorization:'Bearer '+token,'content-type':'image/jpeg','if-match':'4'},body:new Uint8Array([255,216,255,224,5])}),env,{waitUntil(){}});
+  assert.equal((await ownerPut('client3')).status,404);
+  assert.equal((await ownerPut('client2')).status,200);
+  assert.equal((await ownerPut('client2')).status,409);
+
  });
 });
 
