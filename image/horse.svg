@@ -1,4 +1,20 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
-  <path d="M17 52c3-11 2-20 8-27 5-6 13-8 19-13l5 12-5 5c5 4 6 10 2 15-5 7-18 7-29 8Z" stroke="#BF4231" stroke-width="4" stroke-linejoin="round"/>
-  <path d="m39 16-3-8 10 5M27 27c-7-1-11 2-13 7M38 28h.1" stroke="#BF4231" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" fill="none">
+  <title>Sabot de cheval</title>
+  <g stroke="#E33E28" stroke-width="64" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M 562 112
+             C 543 228 516 337 439 435
+             C 392 495 332 542 288 588
+             C 264 613 244 641 228 673
+             L 116 902
+             C 287 931 477 924 650 884
+             L 680 803
+             C 680 777 660 750 655 722
+             C 642 665 664 610 704 579
+             C 728 560 751 551 780 551
+             C 828 551 852 520 851 473
+             C 850 434 830 389 823 348
+             C 808 269 828 186 852 112"/>
+    <path d="M 228 684
+             C 373 694 543 748 680 820" stroke-width="48"/>
+  </g>
 </svg>
