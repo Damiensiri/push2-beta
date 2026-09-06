@@ -9,3 +9,5 @@
 .activity-dialog input[type="date"],.activity-dialog input[type="time"]{-webkit-appearance:none;appearance:none;min-height:48px}
 .activity-dialog input::-webkit-date-and-time-value{min-height:1.25em;text-align:left}
 .dialog-heading .icon-button{flex:0 0 46px}
+
+.activity-personal-notice{margin:0;padding:12px 14px;border-left:4px solid #f8c66b;border-radius:10px;background:rgba(248,198,107,.12);color:#fff0d2;font-size:13px;line-height:1.5;overflow-wrap:break-word}.activity-personal-notice>strong:first-child{display:block;margin-bottom:4px}

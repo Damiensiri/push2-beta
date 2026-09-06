@@ -14,7 +14,7 @@
 <link rel="stylesheet" href="assets/css/themes/christmas.css?v=20260906-5">
 <link rel="stylesheet" href="assets/css/themes/winter.css?v=20260906-5">
 <link rel="stylesheet" href="assets/css/themes/spring.css?v=20260906-5">
-<link rel="stylesheet" href="assets/css/pages/mes-chevaux.css?v=20260906-12">
+<link rel="stylesheet" href="assets/css/pages/mes-chevaux.css?v=20260906-16">
 <link rel="stylesheet" href="assets/css/horse-health.css?v=20260906-14"><script src="assets/js/horse-health.js?v=20260906-15"></script></head>
 <body class="app-page horses-page">
 <div class="ambient-stage" aria-hidden="true"></div>
@@ -38,9 +38,10 @@
     </section>
   </main>
 </div>
-<dialog id="activityDialog" class="activity-dialog">
+<dialog id="activityDialog" class="activity-dialog" aria-labelledby="activityTitle" aria-describedby="activityPersonalNotice">
   <form id="activityForm">
     <div class="dialog-heading"><div><p class="horse-kicker">Planning personnel</p><h2 id="activityTitle">Ajouter une activité</h2></div><button id="closeActivity" class="icon-button" type="button" aria-label="Fermer">×</button></div>
+    <p id="activityPersonalNotice" class="activity-personal-notice"><strong>Ce planning est strictement personnel.</strong> L’écurie n’y a pas accès : ajouter une activité ici <strong>ne constitue pas une demande et ne déclenche aucune intervention de sa part.</strong></p>
     <label>Jour<input id="activityDate" type="date" required></label>
     <label>Activité<select id="activityType" required></select></label>
     <div class="time-fields"><label>Début <span>(facultatif)</span><input id="activityStart" type="time"></label><label>Fin <span>(facultatif)</span><input id="activityEnd" type="time"></label></div>
