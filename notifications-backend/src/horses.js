@@ -1,6 +1,8 @@
 import { AwsClient } from 'aws4fetch';
 
 const statuses = new Set(['active', 'departed', 'archived']);
+const activityLabels = Object.freeze({travail:'Travail',longe:'Longe',repos:'Repos',concours:'Concours',proprietaire:'Propriétaire',autre:'Autre'});
+const clientActivityTypes = new Set(Object.keys(activityLabels));
 const fail = (message, status = 400) => Object.assign(new Error(message), { status });
 const placeholders = ids => ids.map(() => '?').join(',');
 export function validateHorse(input) {
@@ -51,6 +53,53 @@ async function validOwners(env, ids) {
   if (result.results.length !== ids.length) throw fail('Tous les propriétaires doivent être des comptes clients existants');
 }
 
+function validWeek(value) {
+  const week=String(value||'');
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(week))return '';
+  const date=new Date(week+'T12:00:00Z');
+  return !Number.isNaN(date.getTime())&&date.getUTCDay()===1?week:'';
+}
+function dateParts(value) {
+  const date=String(value||'');
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(date))throw fail('Date invalide');
+  const parsed=new Date(date+'T12:00:00Z');
+  if(Number.isNaN(parsed.getTime())||parsed.toISOString().slice(0,10)!==date)throw fail('Date invalide');
+  const dayIndex=(parsed.getUTCDay()+6)%7;
+  parsed.setUTCDate(parsed.getUTCDate()-dayIndex);
+  return {date,weekStart:parsed.toISOString().slice(0,10),dayIndex};
+}
+function dateFor(week,dayIndex){const date=new Date(week+'T12:00:00Z');date.setUTCDate(date.getUTCDate()+Number(dayIndex));return date.toISOString().slice(0,10);}
+function validClock(value,label){
+  const clock=String(value||'').trim()||null;
+  if(clock&&!/^([01]\d|2[0-3]):[0-5]\d$/.test(clock))throw fail(`${label} invalide`);
+  return clock;
+}
+function validateClientActivity(input,current={}){
+  const value=key=>input&&Object.prototype.hasOwnProperty.call(input,key)?input[key]:current[key];
+  const {date,weekStart,dayIndex}=dateParts(value('date'));
+  const type=String(value('type')??'');
+  const description=String(value('description')??'').trim();
+  const startsAt=validClock(value('startsAt'),'Heure de début');
+  const endsAt=validClock(value('endsAt'),'Heure de fin');
+  if(!clientActivityTypes.has(type))throw fail('Type d’activité invalide');
+  if(type==='autre'&&!description)throw fail('Le commentaire est obligatoire pour cette activité');
+  if(description.length>300)throw fail('Commentaire trop long');
+  if(endsAt&&!startsAt)throw fail('Ajoutez une heure de début avant l’heure de fin');
+  if(startsAt&&endsAt&&endsAt<=startsAt)throw fail('L’heure de fin doit suivre l’heure de début');
+  return {date,weekStart,dayIndex,type,description,startsAt,endsAt};
+}
+function planningEvent(row,viewerId){
+  const source=row.source||'backstage';
+  return {id:`task:${row.id}`,sourceId:Number(row.id),horseId:Number(row.horse_id),date:dateFor(row.week_start,row.day_index),
+    startsAt:row.starts_at||null,endsAt:row.ends_at||null,type:row.type,label:activityLabels[row.type]||row.type,
+    description:row.description||'',source,canEdit:source==='client'&&Number(row.created_by_user_id)===Number(viewerId)};
+}
+async function horseEvents(env,horseId,viewerId,week){
+  const rows=await env.DB.prepare(`SELECT id,horse_id,week_start,day_index,type,description,starts_at,ends_at,source,created_by_user_id
+    FROM planning_tasks WHERE horse_id=? AND week_start=? ORDER BY day_index,COALESCE(starts_at,'99:99'),position,id`).bind(horseId,week).all();
+  return rows.results.map(row=>planningEvent(row,viewerId));
+}
+
 export async function handleHorses(request, env, { json, cors, readJson, isAdmin, authenticatedUser }) {
   const url = new URL(request.url);
   const admin = url.pathname.startsWith('/api/admin/horses');
@@ -61,7 +110,7 @@ export async function handleHorses(request, env, { json, cors, readJson, isAdmin
     if (admin) { if (!isAdmin(request, env)) throw fail('Non autorisé', 401); }
     else { viewer = await authenticatedUser(request, env); if (!viewer) throw fail('Non autorisé', 401); }
     const method = request.method;
-    if (!admin && method !== 'GET') throw fail('Lecture uniquement', 403);
+    if (!admin && method !== 'GET' && !url.pathname.includes('/planning/tasks')) throw fail('Lecture uniquement', 403);
     if (admin && url.pathname === base + '/owner-options' && method === 'GET') {
       const q = (url.searchParams.get('q') || '').trim().slice(0,80);
       const rows = await env.DB.prepare(`SELECT id,first_name AS firstName,last_name AS lastName,email,status FROM users
@@ -95,7 +144,41 @@ export async function handleHorses(request, env, { json, cors, readJson, isAdmin
       const result = await env.DB.batch(statements);
       return json({ id: result[0].results[0].id, version:1 }, 201, cors);
     }
+    const taskMatch=url.pathname.slice(base.length).match(/^\/(\d+)\/planning\/tasks(?:\/(\d+))?$/);
     const match = url.pathname.slice(base.length).match(/^\/(\d+)(\/photo)?$/);
+    if(!admin&&taskMatch){
+      const id=Number(taskMatch[1]),taskId=taskMatch[2]?Number(taskMatch[2]):null;
+      const horse=await env.DB.prepare(`SELECT id FROM planning_horses h WHERE h.id=? AND h.status='active'
+        AND EXISTS(SELECT 1 FROM horse_owners o WHERE o.horse_id=h.id AND o.user_id=?)`).bind(id,viewer.id).first();
+      if(!horse)throw fail('Cheval introuvable',404);
+      if(!taskId&&method==='POST'){
+        const input=validateClientActivity(await readJson(request));const now=new Date().toISOString();
+        const result=await env.DB.prepare(`INSERT INTO planning_tasks(week_start,horse_id,day_index,type,description,paddock,starts_at,ends_at,
+          request_id,employee_id,position,source,created_by_user_id,created_at,updated_at) VALUES(?,?,?,?,?,'',?,?,NULL,NULL,0,'client',?,?,?) RETURNING id`)
+          .bind(input.weekStart,id,input.dayIndex,input.type,input.description,input.startsAt,input.endsAt,viewer.id,now,now).all();
+        return json({event:planningEvent({id:result.results[0].id,horse_id:id,week_start:input.weekStart,day_index:input.dayIndex,
+          type:input.type,description:input.description,starts_at:input.startsAt,ends_at:input.endsAt,source:'client',created_by_user_id:viewer.id},viewer.id)},201,cors);
+      }
+      if(taskId&&method==='PATCH'){
+        const current=await env.DB.prepare(`SELECT id,horse_id,week_start,day_index,type,description,starts_at,ends_at,source,created_by_user_id
+          FROM planning_tasks WHERE id=? AND horse_id=? AND source='client' AND created_by_user_id=?`).bind(taskId,id,viewer.id).first();
+        if(!current)throw fail('Activité modifiable introuvable',404);
+        const input=validateClientActivity(await readJson(request),{date:dateFor(current.week_start,current.day_index),type:current.type,
+          description:current.description,startsAt:current.starts_at,endsAt:current.ends_at});
+        await env.DB.prepare(`UPDATE planning_tasks SET week_start=?,day_index=?,type=?,description=?,starts_at=?,ends_at=?,updated_at=?
+          WHERE id=? AND horse_id=? AND source='client' AND created_by_user_id=?`).bind(input.weekStart,input.dayIndex,input.type,input.description,
+            input.startsAt,input.endsAt,new Date().toISOString(),taskId,id,viewer.id).run();
+        return json({event:planningEvent({...current,week_start:input.weekStart,day_index:input.dayIndex,type:input.type,
+          description:input.description,starts_at:input.startsAt,ends_at:input.endsAt},viewer.id)},200,cors);
+      }
+      if(taskId&&method==='DELETE'){
+        const deleted=await env.DB.prepare(`DELETE FROM planning_tasks WHERE id=? AND horse_id=? AND source='client' AND created_by_user_id=? RETURNING id`)
+          .bind(taskId,id,viewer.id).all();
+        if(!deleted.results.length)throw fail('Activité modifiable introuvable',404);
+        return json({deleted:true},200,cors);
+      }
+      throw fail('Méthode non autorisée',405);
+    }
     if (!match) throw fail('Route introuvable', 404);
     const id = Number(match[1]);
     const row = await env.DB.prepare(`SELECT h.* FROM planning_horses h WHERE h.id=?${admin ? '' : ' AND EXISTS(SELECT 1 FROM horse_owners o WHERE o.horse_id=h.id AND o.user_id=?)'}`)
@@ -104,6 +187,10 @@ export async function handleHorses(request, env, { json, cors, readJson, isAdmin
     if (!match[2] && method === 'GET') {
       const horse = await publicHorse(env,row,admin);
       if (admin) horse.owners = await ownersFor(env,id);
+      if(!admin&&url.searchParams.has('week')){
+        const week=validWeek(url.searchParams.get('week'));if(!week)throw fail('Semaine invalide');
+        return json({horse,weekStart:week,events:await horseEvents(env,id,viewer.id,week),activityTypes:Object.entries(activityLabels).map(([value,label])=>({value,label}))},200,cors);
+      }
       return json({ horse,...(admin ? {photosReady:photoConfig(env).ready}: {}) },200,cors);
     }
     if (admin && !match[2] && method === 'PATCH') {

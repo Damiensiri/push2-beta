@@ -530,7 +530,9 @@ export default{
         if(request.method==="GET"&&url.pathname==="/api/admin/planning"){
           const week=validWeekStart(url.searchParams.get("week"));
           if(!week)return json({error:"Semaine invalide"},400,cors);
-          return json(await loadPlanning(env,week,true),200,cors);
+          const horseIds=validHorseIds(url.searchParams.get("horse_ids"));
+          if(horseIds===undefined)return json({error:"Filtre chevaux invalide"},400,cors);
+          return json(await loadPlanning(env,week,true,horseIds),200,cors);
         }
 
         if(request.method==="POST"&&url.pathname==="/api/admin/planning/horses"){
@@ -3102,6 +3104,13 @@ function validWeekStart(value){
   return !Number.isNaN(date.getTime())&&date.getUTCDay()===1?week:"";
 }
 
+function validHorseIds(value){
+  if(value===null||value==='')return null;
+  const ids=String(value).split(',').map(Number);
+  if(!ids.length||ids.length>100||ids.some(id=>!Number.isSafeInteger(id)||id<1)||new Set(ids).size!==ids.length)return undefined;
+  return ids;
+}
+
 function publicPlanningTask(row){
   return{id:Number(row.id),weekStart:row.week_start,horseId:Number(row.horse_id),dayIndex:Number(row.day_index),
     type:row.type,description:row.description||"",paddock:row.paddock||"",startsAt:row.starts_at||"",
@@ -3109,10 +3118,11 @@ function publicPlanningTask(row){
     employeeId:row.employee_id===null||row.employee_id===undefined?null:Number(row.employee_id),
     employeeName:row.employee_name||"",employeeColor:row.employee_color||"",
     employeeAvailable:row.employee_id===null||row.employee_id===undefined?true:Boolean(Number(row.employee_available)),
-    completedAt:row.completed_at||null,completedBy:row.completed_by||null};
+    source:row.source||"backstage",completedAt:row.completed_at||null,completedBy:row.completed_by||null};
 }
 
-async function loadPlanning(env,week,includeRequests=false){
+async function loadPlanning(env,week,includeRequests=false,horseIds=null){
+  const taskFilter=horseIds?.length?` AND t.horse_id IN (${horseIds.map(()=>'?').join(',')})`:'';
   const [horseResult,taskResult,reservationResult,hoursResult,requestResult,employeeResult]=await Promise.all([
     env.DB.prepare(`SELECT h.id,h.name,wh.position FROM planning_week_horses wh JOIN planning_horses h ON h.id=wh.horse_id
       WHERE wh.week_start=? AND h.status='active' ORDER BY wh.position,h.name`).bind(week).all(),
@@ -3122,7 +3132,9 @@ async function loadPlanning(env,week,includeRequests=false){
           AND s.work_date=date(t.week_start,printf('+%d days',t.day_index))
       ) THEN 1 ELSE 0 END AS employee_available
       FROM planning_tasks t LEFT JOIN staff_employees e ON e.id=t.employee_id
-      WHERE t.week_start=? ORDER BY t.day_index,t.horse_id,t.position,t.id`).bind(week).all(),
+      WHERE t.week_start=? AND EXISTS(SELECT 1 FROM planning_week_horses wh
+        WHERE wh.week_start=t.week_start AND wh.horse_id=t.horse_id)${taskFilter}
+      ORDER BY t.day_index,t.horse_id,t.position,t.id`).bind(week,...(horseIds||[])).all(),
     env.DB.prepare(`SELECT id,name,paddock,date,time,duration FROM paddock_reservations
       WHERE date>=? AND date<=date(?, '+6 days') ORDER BY date,time,paddock,id`).bind(week,week).all(),
     env.DB.prepare("SELECT paddock,schedule_json FROM paddock_hours").all(),
@@ -3134,7 +3146,10 @@ async function loadPlanning(env,week,includeRequests=false){
       ORDER BY e.position,e.name,s.work_date`).bind(week,week).all()
   ]);
   const paddockHours={};for(const row of hoursResult.results)paddockHours[row.paddock]=JSON.parse(row.schedule_json);
-  return{...(includeRequests?{requests:requestResult.results.map(publicPaddockRequest)}:{}),weekStart:week,horses:horseResult.results.map(row=>({id:Number(row.id),name:row.name,position:Number(row.position)})),
+  const availableHorses=horseResult.results.map(row=>({id:Number(row.id),name:row.name,position:Number(row.position)}));
+  const selected=horseIds?new Set(horseIds):null;
+  return{...(includeRequests?{requests:requestResult.results.map(publicPaddockRequest)}:{}),weekStart:week,
+    availableHorses,horses:selected?availableHorses.filter(horse=>selected.has(horse.id)):availableHorses,
     tasks:taskResult.results.map(publicPlanningTask),paddockReservations:reservationResult.results.map(row=>({id:String(row.id),
       name:row.name,paddock:row.paddock,date:row.date,time:row.time,duration:Number(row.duration)})),paddockHours,
     paddockRequests:requestResult.results.map(row=>({id:String(row.id),date:row.date,name:row.name})),
@@ -3154,11 +3169,15 @@ function validatePlanningTask(input){
   if(!["paddock","travail","longe","repos","concours","proprietaire","autre"].includes(type))return{error:"Type de tâche invalide"};
   if(description.length>300)return{error:"Description trop longue"};
   if(type==="autre"&&!description)return{error:"Le texte de la tâche est obligatoire"};
-  if(type==="paddock"&&(!paddock||!/^\d{2}:\d{2}$/.test(startsAt||"")||!/^\d{2}:\d{2}$/.test(endsAt||"")))return{error:"Paddock et horaires obligatoires"};
+  const timePattern=/^([01]\d|2[0-3]):[0-5]\d$/;
+  if(startsAt&&!timePattern.test(startsAt)||endsAt&&!timePattern.test(endsAt))return{error:"Horaire invalide"};
+  if(endsAt&&!startsAt)return{error:"Ajoutez une heure de début avant l’heure de fin"};
+  if(startsAt&&endsAt&&endsAt<=startsAt)return{error:"L’heure de fin doit suivre l’heure de début"};
+  if(type==="paddock"&&(!paddock||!startsAt||!endsAt))return{error:"Paddock et horaires obligatoires"};
   if(requestId!==null&&(!Number.isInteger(requestId)||requestId<1))return{error:"Demande liée invalide"};
   if(employeeId!==null&&(!Number.isInteger(employeeId)||employeeId<1))return{error:"Salarié invalide"};
-  return{weekStart,horseId,dayIndex,type,description,paddock:type==="paddock"?paddock:"",startsAt:type==="paddock"?startsAt:null,
-    endsAt:type==="paddock"?endsAt:null,requestId,employeeId};
+  return{weekStart,horseId,dayIndex,type,description,paddock:type==="paddock"?paddock:"",startsAt,
+    endsAt,requestId,employeeId};
 }
 
 async function planningEmployeeAvailable(env,employeeId,weekStart,dayIndex){

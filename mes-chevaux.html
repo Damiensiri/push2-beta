@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
+<meta name="theme-color" content="#287fbd">
+<style id="app-critical-paint">html{background:#287fbd;color-scheme:light dark}body{margin:0;background:#287fbd;color:rgba(255,255,255,.92)}</style>
+<title>Mes chevaux</title>
+<script src="assets/js/app-config.js?v=20260906-5"></script>
+<script src="assets/js/app-layout.js?v=20260906-5"></script>
+<link rel="stylesheet" href="assets/css/app.css?v=20260906-5">
+<link rel="stylesheet" href="assets/css/themes/summer.css?v=20260906-5">
+<link rel="stylesheet" href="assets/css/themes/autumn.css?v=20260906-5">
+<link rel="stylesheet" href="assets/css/themes/christmas.css?v=20260906-5">
+<link rel="stylesheet" href="assets/css/themes/winter.css?v=20260906-5">
+<link rel="stylesheet" href="assets/css/themes/spring.css?v=20260906-5">
+<link rel="stylesheet" href="assets/css/pages/mes-chevaux.css?v=20260906-5">
+</head>
+<body class="app-page horses-page">
+<div class="ambient-stage" aria-hidden="true"></div>
+<div class="page" id="page">
+  <header class="plan-header"><button id="backBtn" type="button" aria-label="Retour"><img src="image/back.svg" alt=""></button><h1 id="pageTitle">MES CHEVAUX</h1></header>
+  <main class="horses-shell">
+    <p id="status" class="horses-status" role="status" aria-live="polite">Chargement…</p>
+    <section id="horseList" class="horse-list" aria-label="Mes chevaux"></section>
+    <section id="horseDetail" hidden>
+      <article class="horse-identity">
+        <img id="horsePhoto" alt="" hidden><div id="horsePhotoFallback" class="horse-photo-fallback"><img src="image/horse.svg" alt=""></div>
+        <div><p class="horse-kicker">Ma fiche cheval</p><h2 id="horseName"></h2><p id="horseBirth" class="horse-muted"></p></div>
+      </article>
+      <article id="horseNotes" class="horse-panel" hidden><h3>Informations</h3><p></p></article>
+      <section class="horse-panel planning-panel">
+        <div class="week-heading"><button id="previousWeek" type="button" aria-label="Semaine précédente">‹</button><div><span>Planning</span><strong id="weekLabel"></strong></div><button id="nextWeek" type="button" aria-label="Semaine suivante">›</button></div>
+        <div id="eventList" class="event-days"></div>
+        <button id="newActivity" class="primary-action" type="button">Ajouter une activité</button>
+      </section>
+    </section>
+  </main>
+</div>
+<dialog id="activityDialog" class="activity-dialog">
+  <form id="activityForm">
+    <div class="dialog-heading"><div><p class="horse-kicker">Planning personnel</p><h2 id="activityTitle">Ajouter une activité</h2></div><button id="closeActivity" class="icon-button" type="button" aria-label="Fermer">×</button></div>
+    <label>Jour<input id="activityDate" type="date" required></label>
+    <label>Activité<select id="activityType" required></select></label>
+    <div class="time-fields"><label>Début <span>(facultatif)</span><input id="activityStart" type="time"></label><label>Fin <span>(facultatif)</span><input id="activityEnd" type="time"></label></div>
+    <label>Commentaire <span>(facultatif)</span><textarea id="activityDescription" maxlength="300" rows="3"></textarea></label>
+    <p id="formStatus" class="horses-status" role="status"></p>
+    <button id="saveActivity" class="primary-action" type="submit">Enregistrer</button>
+  </form>
+</dialog>
+<script src="assets/js/pages/mes-chevaux.js?v=20260906-5"></script>
+</body>
+</html>
