@@ -2,8 +2,8 @@ import {healthDueSql,prepareHorseNotifications} from './horse-health.js';
 import { AwsClient } from 'aws4fetch';
 
 const statuses = new Set(['active', 'departed', 'archived']);
-const activityLabels = Object.freeze({travail:'Travail',longe:'Longe',repos:'Repos',concours:'Concours',proprietaire:'Propriétaire',autre:'Autre'});
-const clientActivityTypes = new Set(Object.keys(activityLabels).filter(type=>type!=='proprietaire'));
+const activityLabels = Object.freeze({travail:'Travail',longe:'Longe',repos:'Repos',concours:'Concours',cours:'Cours',proprietaire:'Propriétaire',autre:'Autre'});
+const clientActivityTypes = new Set(Object.keys(activityLabels).filter(type=>type!=='proprietaire'&&type!=='cours'));
 const fail = (message, status = 400) => Object.assign(new Error(message), { status });
 const placeholders = ids => ids.map(() => '?').join(',');
 export function validateHorse(input) {
@@ -100,6 +100,7 @@ async function horseEvents(env,horseId,viewerId,week){
     SELECT id,horse_id,week_start,day_index,type,description,starts_at,ends_at,source,created_by_user_id,
       date(week_start,printf('+%d days',day_index)) AS event_date,position
     FROM planning_tasks WHERE horse_id=? AND week_start=?
+      AND (source='client' OR type IN ('cours','concours') OR (type='paddock' AND request_id IS NOT NULL) OR pwa_visible=1)
     UNION ALL
     SELECT r.id,bh.horse_id,?,CAST(julianday(r.date)-julianday(?) AS INTEGER),'paddock',
       CASE r.paddock WHEN 'maison' THEN 'Maison' WHEN 'grande' THEN 'Grande voie' ELSE 'Beudot' END,

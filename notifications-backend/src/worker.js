@@ -94,7 +94,7 @@ export default{
       if(kioskTask&&request.method==="POST"){
         const device=await kioskDevice(request,env);
         if(!device)return json({error:"Tablette non autorisée"},401,cors);
-        const task=await env.DB.prepare("SELECT * FROM planning_tasks WHERE id=?").bind(Number(kioskTask[1])).first();
+        const task=await env.DB.prepare("SELECT * FROM planning_tasks WHERE id=? AND source<>'client'").bind(Number(kioskTask[1])).first();
         if(!task)return json({error:"Tâche introuvable"},404,cors);
         if(task.completed_at)return json({task:publicPlanningTask(task),duplicate:true},200,cors);
         if(task.request_id)await completePaddockRequest(env,Number(task.request_id),"Réalisée depuis le planning");
@@ -655,8 +655,8 @@ export default{
           const now=new Date().toISOString();
           if(validated.employeeId&&!await planningEmployeeAvailable(env,validated.employeeId,validated.weekStart,validated.dayIndex))
             return json({error:"Ce salarié ne travaille pas ce jour-là"},409,cors);
-          try{const result=await env.DB.prepare(`INSERT INTO planning_tasks(week_start,horse_id,day_index,type,description,paddock,starts_at,ends_at,request_id,employee_id,position,created_at,updated_at)
-            VALUES(?,?,?,?,?,?,?,?,?,?,0,?,?)`).bind(validated.weekStart,validated.horseId,validated.dayIndex,validated.type,validated.description,validated.paddock,validated.startsAt,validated.endsAt,validated.requestId,validated.employeeId,now,now).run();
+          try{const result=await env.DB.prepare(`INSERT INTO planning_tasks(week_start,horse_id,day_index,type,description,paddock,starts_at,ends_at,request_id,employee_id,pwa_visible,position,created_at,updated_at)
+            VALUES(?,?,?,?,?,?,?,?,?,?,?,0,?,?)`).bind(validated.weekStart,validated.horseId,validated.dayIndex,validated.type,validated.description,validated.paddock,validated.startsAt,validated.endsAt,validated.requestId,validated.employeeId,Number(validated.pwaVisible),now,now).run();
             const task=await env.DB.prepare("SELECT * FROM planning_tasks WHERE id=?").bind(result.meta.last_row_id).first();await notifyRealtime(env,"planning");return json({task:publicPlanningTask(task)},201,cors);
           }catch(error){if(String(error?.message||error).includes("UNIQUE"))return json({error:"Cette demande est déjà liée au planning"},409,cors);throw error;}
         }
@@ -676,9 +676,9 @@ export default{
             if(availability.some(value=>!value))return json({error:"Ce salarié ne travaille pas tous les jours sélectionnés"},409,cors);
           }
           const now=new Date().toISOString();
-          try{await env.DB.batch(tasks.map(task=>env.DB.prepare(`INSERT INTO planning_tasks(week_start,horse_id,day_index,type,description,paddock,starts_at,ends_at,request_id,employee_id,position,created_at,updated_at)
-            VALUES(?,?,?,?,?,?,?,?,?,?,0,?,?)`).bind(task.weekStart,task.horseId,task.dayIndex,task.type,task.description,task.paddock,
-              task.startsAt,task.endsAt,task.requestId,task.employeeId,now,now)));}
+          try{await env.DB.batch(tasks.map(task=>env.DB.prepare(`INSERT INTO planning_tasks(week_start,horse_id,day_index,type,description,paddock,starts_at,ends_at,request_id,employee_id,pwa_visible,position,created_at,updated_at)
+            VALUES(?,?,?,?,?,?,?,?,?,?,?,0,?,?)`).bind(task.weekStart,task.horseId,task.dayIndex,task.type,task.description,task.paddock,
+              task.startsAt,task.endsAt,task.requestId,task.employeeId,Number(task.pwaVisible),now,now)));}
           catch(error){if(String(error?.message||error).includes("UNIQUE"))return json({error:"Cette demande est déjà liée au planning"},409,cors);throw error;}
           await notifyRealtime(env,"planning");return json({created:tasks.length,planning:await loadPlanning(env,tasks[0].weekStart)},201,cors);
         }
@@ -698,7 +698,7 @@ export default{
             if(!Number.isInteger(taskId)||!Number.isInteger(horseId)||!Number.isInteger(dayIndex)||dayIndex<0||dayIndex>6||!Number.isInteger(position)||position<0)return json({error:"Déplacement de tâche invalide"},400,cors);
             const membership=await env.DB.prepare("SELECT 1 ok FROM planning_horses WHERE id=?").bind(horseId).first();
             if(!membership)return json({error:"Cheval introuvable"},409,cors);
-            await env.DB.prepare("UPDATE planning_tasks SET horse_id=?,day_index=?,position=?,updated_at=? WHERE id=? AND week_start=?")
+            await env.DB.prepare("UPDATE planning_tasks SET horse_id=?,day_index=?,position=?,updated_at=? WHERE id=? AND week_start=? AND source<>'client'")
               .bind(horseId,dayIndex,position,new Date().toISOString(),taskId,week).run();
           }
           await notifyRealtime(env,"planning");return json(await loadPlanning(env,week),200,cors);
@@ -706,20 +706,21 @@ export default{
 
         const adminTask=url.pathname.match(/^\/api\/admin\/planning\/tasks\/(\d+)$/);
         if(adminTask&&request.method==="DELETE"){
-          await env.DB.prepare("DELETE FROM planning_tasks WHERE id=?").bind(Number(adminTask[1])).run();
+          await env.DB.prepare("DELETE FROM planning_tasks WHERE id=? AND source<>'client'").bind(Number(adminTask[1])).run();
           await notifyRealtime(env,"planning");return json({deleted:true},200,cors);
         }
         if(adminTask&&request.method==="PATCH"){
-          const current=await env.DB.prepare("SELECT * FROM planning_tasks WHERE id=?").bind(Number(adminTask[1])).first();
+          const current=await env.DB.prepare("SELECT * FROM planning_tasks WHERE id=? AND source<>'client'").bind(Number(adminTask[1])).first();
           if(!current)return json({error:"Tâche introuvable"},404,cors);
           const input=await readJson(request);
-          const edits=["horseId","dayIndex","type","description","paddock","startsAt","endsAt","requestId","employeeId"].some(key=>input[key]!==undefined);
+          const edits=["horseId","dayIndex","type","description","paddock","startsAt","endsAt","requestId","employeeId","pwaVisible"].some(key=>input[key]!==undefined);
           if(edits){
             const validated=validatePlanningTask({weekStart:current.week_start,horseId:input.horseId??current.horse_id,
               dayIndex:input.dayIndex??current.day_index,type:input.type??current.type,description:input.description??current.description,
               paddock:input.paddock??current.paddock,startsAt:input.startsAt??current.starts_at,endsAt:input.endsAt??current.ends_at,
               requestId:input.requestId===undefined?current.request_id:input.requestId,
-              employeeId:input.employeeId===undefined?current.employee_id:input.employeeId});
+              employeeId:input.employeeId===undefined?current.employee_id:input.employeeId,
+              pwaVisible:input.pwaVisible===undefined?Boolean(current.pwa_visible):input.pwaVisible});
             if(validated.error)return json({error:validated.error},400,cors);
             if(validated.requestId&&Number(validated.requestId)!==Number(current.request_id)){
               const linked=await env.DB.prepare("SELECT id FROM paddock_requests WHERE id=? AND status='accepted'").bind(validated.requestId).first();
@@ -729,9 +730,9 @@ export default{
               ||Number(validated.dayIndex)!==Number(current.day_index);
             if(assignmentChanged&&validated.employeeId&&!await planningEmployeeAvailable(env,validated.employeeId,validated.weekStart,validated.dayIndex))
               return json({error:"Ce salarié ne travaille pas ce jour-là"},409,cors);
-            try{await env.DB.prepare(`UPDATE planning_tasks SET horse_id=?,day_index=?,type=?,description=?,paddock=?,starts_at=?,ends_at=?,request_id=?,employee_id=?,updated_at=? WHERE id=?`)
+            try{await env.DB.prepare(`UPDATE planning_tasks SET horse_id=?,day_index=?,type=?,description=?,paddock=?,starts_at=?,ends_at=?,request_id=?,employee_id=?,pwa_visible=?,updated_at=? WHERE id=?`)
               .bind(validated.horseId,validated.dayIndex,validated.type,validated.description,validated.paddock,validated.startsAt,
-                validated.endsAt,validated.requestId,validated.employeeId,new Date().toISOString(),current.id).run();}
+                validated.endsAt,validated.requestId,validated.employeeId,Number(validated.pwaVisible),new Date().toISOString(),current.id).run();}
             catch(error){if(String(error?.message||error).includes("UNIQUE"))return json({error:"Cette demande est déjà liée au planning"},409,cors);throw error;}
           }
           if(input.completed===false){await env.DB.prepare("UPDATE planning_tasks SET completed_at=NULL,completed_by=NULL,updated_at=? WHERE id=?").bind(new Date().toISOString(),current.id).run();}
@@ -3206,6 +3207,7 @@ function validHorseIds(value){
 
 function publicPlanningTask(row){
   return{id:Number(row.id),weekStart:row.week_start,horseId:Number(row.horse_id),dayIndex:Number(row.day_index),
+    pwaVisible:Boolean(row.pwa_visible),pwaAutomatic:["cours","concours"].includes(row.type)||(row.type==="paddock"&&row.request_id!=null),
     type:row.type,description:row.description||"",paddock:row.paddock||"",startsAt:row.starts_at||"",
     endsAt:row.ends_at||"",requestId:row.request_id===null?null:Number(row.request_id),position:Number(row.position||0),
     employeeId:row.employee_id===null||row.employee_id===undefined?null:Number(row.employee_id),
@@ -3219,14 +3221,14 @@ async function loadPlanning(env,week,includeRequests=false,horseIds=null){
   const [horseResult,taskResult,reservationResult,hoursResult,requestResult,employeeResult]=await Promise.all([
     env.DB.prepare(`SELECT h.id,h.name,wh.position FROM planning_week_horses wh JOIN planning_horses h ON h.id=wh.horse_id
       WHERE wh.week_start=? AND h.status='active' ORDER BY wh.position,h.name`).bind(week).all(),
-    env.DB.prepare(`SELECT 'task' AS event_kind,json_object('id',t.id,'week_start',t.week_start,'horse_id',t.horse_id,'day_index',t.day_index,'type',t.type,'description',t.description,'paddock',t.paddock,'starts_at',t.starts_at,'ends_at',t.ends_at,'request_id',t.request_id,'position',t.position,'completed_at',t.completed_at,'completed_by',t.completed_by,'employee_id',t.employee_id,'source',t.source,'created_by_user_id',t.created_by_user_id,
+    env.DB.prepare(`SELECT 'task' AS event_kind,json_object('id',t.id,'week_start',t.week_start,'horse_id',t.horse_id,'day_index',t.day_index,'type',t.type,'description',t.description,'paddock',t.paddock,'starts_at',t.starts_at,'ends_at',t.ends_at,'request_id',t.request_id,'position',t.position,'completed_at',t.completed_at,'completed_by',t.completed_by,'employee_id',t.employee_id,'source',t.source,'pwa_visible',t.pwa_visible,'created_by_user_id',t.created_by_user_id,
       'employee_name',e.name,'employee_color',e.color,'employee_available',
       CASE WHEN t.employee_id IS NULL THEN 1 WHEN EXISTS(
         SELECT 1 FROM staff_shifts s WHERE s.employee_id=t.employee_id AND s.status='work'
           AND s.work_date=date(t.week_start,printf('+%d days',t.day_index))
       ) THEN 1 ELSE 0 END) AS payload
       FROM planning_tasks t LEFT JOIN staff_employees e ON e.id=t.employee_id
-      WHERE t.week_start=? AND EXISTS(SELECT 1 FROM planning_week_horses wh
+      WHERE t.week_start=? AND t.source<>'client' AND EXISTS(SELECT 1 FROM planning_week_horses wh
         WHERE wh.week_start=t.week_start AND wh.horse_id=t.horse_id)${taskFilter}
       UNION ALL
       SELECT 'paddock_booking',json_object('id','paddock:'||r.id,'sourceId',r.id,'horseId',bh.horse_id,
@@ -3268,8 +3270,10 @@ function validatePlanningTask(input){
   const startsAt=String(input?.startsAt||"").trim()||null;const endsAt=String(input?.endsAt||"").trim()||null;
   const requestId=input?.requestId?Number(input.requestId):null;
   const employeeId=input?.employeeId?Number(input.employeeId):null;
+  if(input?.pwaVisible!==undefined&&typeof input.pwaVisible!=="boolean")return{error:"Visibilité PWA invalide"};
+  const pwaVisible=input?.pwaVisible===true;
   if(!weekStart||!Number.isInteger(horseId)||horseId<1||!Number.isInteger(dayIndex)||dayIndex<0||dayIndex>6)return{error:"Semaine, cheval ou jour invalide"};
-  if(!["paddock","travail","longe","repos","concours","proprietaire","autre"].includes(type))return{error:"Type de tâche invalide"};
+  if(!["paddock","travail","longe","repos","concours","cours","proprietaire","autre"].includes(type))return{error:"Type de tâche invalide"};
   if(description.length>300)return{error:"Description trop longue"};
   if(type==="autre"&&!description)return{error:"Le texte de la tâche est obligatoire"};
   const timePattern=/^([01]\d|2[0-3]):[0-5]\d$/;
@@ -3280,7 +3284,7 @@ function validatePlanningTask(input){
   if(requestId!==null&&(!Number.isInteger(requestId)||requestId<1))return{error:"Demande liée invalide"};
   if(employeeId!==null&&(!Number.isInteger(employeeId)||employeeId<1))return{error:"Salarié invalide"};
   return{weekStart,horseId,dayIndex,type,description,paddock:type==="paddock"?paddock:"",startsAt,
-    endsAt,requestId,employeeId};
+    endsAt,requestId,employeeId,pwaVisible};
 }
 
 async function planningEmployeeAvailable(env,employeeId,weekStart,dayIndex){
