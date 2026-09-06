@@ -1,6 +1,6 @@
 # CHEVAUX — Étape 4, bêta — 6 septembre 2026
 
-Suivi sanitaire éditable dans Backstage et par les propriétaires dans Mes chevaux : vaccination, vermifuge, ferrure/parage et dentiste. Dates réalisées, échéances et commentaires saisis manuellement ; aucun intervalle médical calculé. Historique chargé à la demande, 50 interventions par page. Les échéances courantes sont intégrées à la requête de fiche (30 maximum).
+Suivi sanitaire éditable dans Backstage et par les propriétaires dans Mes chevaux : vaccination, vermifuge, ferrure/parage et dentiste. Dates réalisées et commentaires saisis manuellement. Raccourcis facultatifs d’échéance calculés depuis la date réalisée : vaccination 1/6/12 mois, ferrure/parage 5/6/7 semaines, dentiste 12 mois ; vermifuge manuel. Aucune sélection automatique ; date toujours modifiable. Les fins de mois sont plafonnées au dernier jour du mois cible. Historique chargé à la demande, 50 interventions par page. Les échéances courantes sont intégrées à la requête de fiche (30 maximum).
 
 ## Livraison
 

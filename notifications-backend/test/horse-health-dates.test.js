@@ -1,0 +1,20 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import vm from 'node:vm';
+import {readFile} from 'node:fs/promises';
+const context=vm.createContext({window:{}});
+vm.runInContext(await readFile(new URL('../../assets/js/horse-health.js',import.meta.url),'utf8'),context);
+const due=context.window.HorseHealth.suggestedDue;
+test('échéances proposées : mois calendaires, années bissextiles et semaines',()=>{
+ assert.equal(due('2026-01-31','vaccine',0),'2026-02-28');
+ assert.equal(due('2028-01-31','vaccine',0),'2028-02-29');
+ assert.equal(due('2026-08-31','vaccine',1),'2027-02-28');
+ assert.equal(due('2024-02-29','vaccine',2),'2025-02-28');
+ assert.equal(due('2026-09-06','dental',0),'2027-09-06');
+ assert.equal(due('2026-09-06','farriery',0),'2026-10-11');
+ assert.equal(due('2026-09-06','farriery',1),'2026-10-18');
+ assert.equal(due('2026-09-06','farriery',2),'2026-10-25');
+ assert.equal(due('2026-09-06','deworming',0),'');
+ assert.equal(due('2026-02-30','vaccine',0),'');
+ assert.equal(due('','vaccine',0),'');
+});
