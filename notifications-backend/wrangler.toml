@@ -3,6 +3,9 @@ main = "src/worker.js"
 compatibility_date = "2026-07-14"
 
 [vars]
+HORSE_PHOTO_TTL_SECONDS = "600"
+HORSE_PHOTO_BUCKET = "ecurie-products-beta"
+R2_ACCOUNT_ID = "0d1cc4ef0aadb89913d38227dfd579dc"
 ENVIRONMENT = "beta"
 PUSH_ENABLED = "true"
 ONESIGNAL_APP_ID = "186e6f3b-def4-4b8e-8700-650456ff93cc"

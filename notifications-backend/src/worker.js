@@ -1,3 +1,4 @@
+import { handleHorses } from './horses.js';
 const JSON_HEADERS={
   "content-type":"application/json; charset=utf-8",
   "cache-control":"no-store",
@@ -21,6 +22,8 @@ export default{
     if(diagnostics.enabled)env={...env,DB:instrumentD1(env.DB,diagnostics)};
 
     try{
+      const horseResponse=await handleHorses(request,env,{json,cors,readJson,isAdmin,authenticatedUser});
+      if(horseResponse)return horseResponse;
       if(request.method==="GET"&&url.pathname==="/api/health"){
         return json({ok:true,environment:env.ENVIRONMENT||"unknown",pushEnabled:isPushEnabled(env)},200,cors);
       }
@@ -527,19 +530,14 @@ export default{
         if(request.method==="GET"&&url.pathname==="/api/admin/planning"){
           const week=validWeekStart(url.searchParams.get("week"));
           if(!week)return json({error:"Semaine invalide"},400,cors);
-          const planning=await loadPlanning(env,week);
-          const requests=await env.DB.prepare(`SELECT id,user_id,name,email,date,status,comment FROM paddock_requests
-            WHERE date>=? AND date<=date(?, '+6 days') AND status='accepted' ORDER BY date,name`).bind(week,week).all();
-          return json({...planning,requests:requests.results.map(publicPaddockRequest)},200,cors);
+          return json(await loadPlanning(env,week,true),200,cors);
         }
 
         if(request.method==="POST"&&url.pathname==="/api/admin/planning/horses"){
-          const input=await readJson(request);const week=validWeekStart(input?.weekStart);const name=String(input?.name||"").trim();
-          if(!week||!name||name.length>80)return json({error:"Semaine ou nom du cheval invalide"},400,cors);
-          const now=new Date().toISOString();
-          await env.DB.prepare(`INSERT INTO planning_horses(name,active,created_at,updated_at) VALUES(?,1,?,?)
-            ON CONFLICT(name) DO UPDATE SET active=1,updated_at=excluded.updated_at`).bind(name,now,now).run();
-          const horse=await env.DB.prepare("SELECT id FROM planning_horses WHERE name=? COLLATE NOCASE").bind(name).first();
+          const input=await readJson(request);const week=validWeekStart(input?.weekStart);const horseId=Number(input?.horseId);
+          if(!week||!Number.isSafeInteger(horseId)||horseId<1)return json({error:"Sélectionnez un cheval de la fiche CHEVAUX"},400,cors);
+          const horse=await env.DB.prepare("SELECT id FROM planning_horses WHERE id=? AND status='active'").bind(horseId).first();
+          if(!horse)return json({error:"Cheval actif introuvable"},404,cors);
           const pos=await env.DB.prepare("SELECT COALESCE(MAX(position),-1)+1 AS n FROM planning_week_horses WHERE week_start=?").bind(week).first();
           await env.DB.prepare(`INSERT OR IGNORE INTO planning_week_horses(week_start,horse_id,position) VALUES(?,?,?)`).bind(week,horse.id,pos.n).run();
           await notifyRealtime(env,"planning");
@@ -556,19 +554,17 @@ export default{
 
         const adminWeekHorse=url.pathname.match(/^\/api\/admin\/planning\/weeks\/(\d{4}-\d{2}-\d{2})\/horses\/(\d+)$/);
         if(adminWeekHorse&&request.method==="DELETE"){
-          await env.DB.batch([
-            env.DB.prepare("DELETE FROM planning_tasks WHERE week_start=? AND horse_id=?").bind(adminWeekHorse[1],Number(adminWeekHorse[2])),
-            env.DB.prepare("DELETE FROM planning_week_horses WHERE week_start=? AND horse_id=?").bind(adminWeekHorse[1],Number(adminWeekHorse[2]))
-          ]);
+          await env.DB.prepare("DELETE FROM planning_week_horses WHERE week_start=? AND horse_id=?")
+            .bind(adminWeekHorse[1],Number(adminWeekHorse[2])).run();
           await notifyRealtime(env,"planning");return json({deleted:true},200,cors);
         }
 
         if(request.method==="POST"&&url.pathname==="/api/admin/planning/tasks"){
           const input=await readJson(request);const validated=validatePlanningTask(input);
           if(validated.error)return json({error:validated.error},400,cors);
-          const membership=await env.DB.prepare("SELECT 1 ok FROM planning_week_horses WHERE week_start=? AND horse_id=?")
-            .bind(validated.weekStart,validated.horseId).first();
-          if(!membership)return json({error:"Cheval absent de cette semaine"},409,cors);
+          const membership=await env.DB.prepare("SELECT 1 ok FROM planning_horses WHERE id=?")
+            .bind(validated.horseId).first();
+          if(!membership)return json({error:"Cheval introuvable"},409,cors);
           if(validated.requestId){const linked=await env.DB.prepare("SELECT id FROM paddock_requests WHERE id=? AND status='accepted'").bind(validated.requestId).first();if(!linked)return json({error:"Seule une demande acceptée peut être liée au planning"},409,cors);}
           const now=new Date().toISOString();
           if(validated.employeeId&&!await planningEmployeeAvailable(env,validated.employeeId,validated.weekStart,validated.dayIndex))
@@ -585,9 +581,9 @@ export default{
           if(input?.requestId&&days.length>1)return json({error:"Une demande de mise au paddock ne peut être liée qu’à une seule journée"},409,cors);
           const tasks=days.map(dayIndex=>validatePlanningTask({...input,dayIndex}));const invalid=tasks.find(task=>task.error);
           if(invalid)return json({error:invalid.error},400,cors);
-          const membership=await env.DB.prepare("SELECT 1 ok FROM planning_week_horses WHERE week_start=? AND horse_id=?")
-            .bind(tasks[0].weekStart,tasks[0].horseId).first();
-          if(!membership)return json({error:"Cheval absent de cette semaine"},409,cors);
+          const membership=await env.DB.prepare("SELECT 1 ok FROM planning_horses WHERE id=?")
+            .bind(tasks[0].horseId).first();
+          if(!membership)return json({error:"Cheval introuvable"},409,cors);
           if(tasks[0].requestId){const linked=await env.DB.prepare("SELECT id FROM paddock_requests WHERE id=? AND status='accepted'").bind(tasks[0].requestId).first();if(!linked)return json({error:"Seule une demande acceptée peut être liée au planning"},409,cors);}
           if(tasks[0].employeeId){
             const availability=await Promise.all(tasks.map(task=>planningEmployeeAvailable(env,task.employeeId,task.weekStart,task.dayIndex)));
@@ -614,8 +610,8 @@ export default{
           if(input?.task){
             const taskId=Number(input.task.id),horseId=Number(input.task.horseId),dayIndex=Number(input.task.dayIndex),position=Number(input.task.position||0);
             if(!Number.isInteger(taskId)||!Number.isInteger(horseId)||!Number.isInteger(dayIndex)||dayIndex<0||dayIndex>6||!Number.isInteger(position)||position<0)return json({error:"Déplacement de tâche invalide"},400,cors);
-            const membership=await env.DB.prepare("SELECT 1 ok FROM planning_week_horses WHERE week_start=? AND horse_id=?").bind(week,horseId).first();
-            if(!membership)return json({error:"Cheval absent de cette semaine"},409,cors);
+            const membership=await env.DB.prepare("SELECT 1 ok FROM planning_horses WHERE id=?").bind(horseId).first();
+            if(!membership)return json({error:"Cheval introuvable"},409,cors);
             await env.DB.prepare("UPDATE planning_tasks SET horse_id=?,day_index=?,position=?,updated_at=? WHERE id=? AND week_start=?")
               .bind(horseId,dayIndex,position,new Date().toISOString(),taskId,week).run();
           }
@@ -1766,6 +1762,7 @@ function createRequestDiagnostics(request,url){
     startedAt:Date.now(),
     d1Count:0,
     d1Ms:0,
+    rowsRead:0,rowsWritten:0,metadataComplete:true,
     statements:[]
   };
 }
@@ -1781,7 +1778,9 @@ function instrumentD1(db,diagnostics){
           const count=Array.isArray(statements)?statements.length:0;
           const start=Date.now();
           try{
-            return await Reflect.apply(target.batch,target,[statements]);
+            const results=await Reflect.apply(target.batch,target,[statements]);
+            results.forEach(result=>recordD1Metadata(diagnostics,result));
+            return results;
           }finally{
             const elapsed=Date.now()-start;
             diagnostics.d1Count+=count||1;
@@ -1805,7 +1804,18 @@ function instrumentD1Statement(statement,diagnostics,sql){
         return async(...args)=>{
           const start=Date.now();
           try{
-            return await Reflect.apply(target[prop],target,args);
+            if(prop==="first"){
+              const result=await target.all();recordD1Metadata(diagnostics,result);
+              const row=result.results[0]??null;
+              if(args[0]!==undefined&&row!==null){
+                if(!Object.prototype.hasOwnProperty.call(row,args[0]))throw new Error("D1_COLUMN_NOTFOUND");
+                return row[args[0]];
+              }
+              return row;
+            }
+            const result=await Reflect.apply(target[prop],target,args);
+            recordD1Metadata(diagnostics,result);
+            return result;
           }finally{
             const elapsed=Date.now()-start;
             diagnostics.d1Count+=1;
@@ -1817,6 +1827,12 @@ function instrumentD1Statement(statement,diagnostics,sql){
       return Reflect.get(target,prop,receiver);
     }
   });
+}
+
+function recordD1Metadata(diagnostics,result){
+  const meta=result?.meta;
+  if(typeof meta?.rows_read!=="number"||typeof meta?.rows_written!=="number"){diagnostics.metadataComplete=false;return;}
+  diagnostics.rowsRead+=meta.rows_read;diagnostics.rowsWritten+=meta.rows_written;
 }
 
 function compactSql(sql){
@@ -1832,6 +1848,7 @@ function logRequestDiagnostics(diagnostics,ctx){
     query:diagnostics.query,
     d1Queries:diagnostics.d1Count,
     d1Ms:diagnostics.d1Ms,
+    rowsRead:diagnostics.rowsRead,rowsWritten:diagnostics.rowsWritten,metadataComplete:diagnostics.metadataComplete,
     totalMs:Date.now()-diagnostics.startedAt,
     statements:diagnostics.statements
   };
@@ -3095,10 +3112,10 @@ function publicPlanningTask(row){
     completedAt:row.completed_at||null,completedBy:row.completed_by||null};
 }
 
-async function loadPlanning(env,week){
+async function loadPlanning(env,week,includeRequests=false){
   const [horseResult,taskResult,reservationResult,hoursResult,requestResult,employeeResult]=await Promise.all([
     env.DB.prepare(`SELECT h.id,h.name,wh.position FROM planning_week_horses wh JOIN planning_horses h ON h.id=wh.horse_id
-      WHERE wh.week_start=? AND h.active=1 ORDER BY wh.position,h.name`).bind(week).all(),
+      WHERE wh.week_start=? AND h.status='active' ORDER BY wh.position,h.name`).bind(week).all(),
     env.DB.prepare(`SELECT t.*,e.name AS employee_name,e.color AS employee_color,
       CASE WHEN t.employee_id IS NULL THEN 1 WHEN EXISTS(
         SELECT 1 FROM staff_shifts s WHERE s.employee_id=t.employee_id AND s.status='work'
@@ -3109,7 +3126,7 @@ async function loadPlanning(env,week){
     env.DB.prepare(`SELECT id,name,paddock,date,time,duration FROM paddock_reservations
       WHERE date>=? AND date<=date(?, '+6 days') ORDER BY date,time,paddock,id`).bind(week,week).all(),
     env.DB.prepare("SELECT paddock,schedule_json FROM paddock_hours").all(),
-    env.DB.prepare(`SELECT id,date,name FROM paddock_requests WHERE date>=? AND date<=date(?, '+6 days')
+    env.DB.prepare(`SELECT ${includeRequests?'id,user_id,name,email,date,status,comment':'id,date,name'} FROM paddock_requests WHERE date>=? AND date<=date(?, '+6 days')
       AND status='accepted' ORDER BY date,name,id`).bind(week,week).all(),
     env.DB.prepare(`SELECT e.id,e.name,e.color,s.work_date
       FROM staff_employees e JOIN staff_shifts s ON s.employee_id=e.id
@@ -3117,7 +3134,7 @@ async function loadPlanning(env,week){
       ORDER BY e.position,e.name,s.work_date`).bind(week,week).all()
   ]);
   const paddockHours={};for(const row of hoursResult.results)paddockHours[row.paddock]=JSON.parse(row.schedule_json);
-  return{weekStart:week,horses:horseResult.results.map(row=>({id:Number(row.id),name:row.name,position:Number(row.position)})),
+  return{...(includeRequests?{requests:requestResult.results.map(publicPaddockRequest)}:{}),weekStart:week,horses:horseResult.results.map(row=>({id:Number(row.id),name:row.name,position:Number(row.position)})),
     tasks:taskResult.results.map(publicPlanningTask),paddockReservations:reservationResult.results.map(row=>({id:String(row.id),
       name:row.name,paddock:row.paddock,date:row.date,time:row.time,duration:Number(row.duration)})),paddockHours,
     paddockRequests:requestResult.results.map(row=>({id:String(row.id),date:row.date,name:row.name})),
@@ -3696,7 +3713,7 @@ function corsHeaders(request,env){
   return{
     "access-control-allow-origin":allowed,
     "access-control-allow-methods":"GET,POST,PUT,PATCH,DELETE,OPTIONS",
-    "access-control-allow-headers":"authorization,content-type",
+    "access-control-allow-headers":"authorization,content-type,if-match",
     "vary":"Origin"
   };
 }
@@ -3823,3 +3840,5 @@ export{
   processScheduledNotifications,validatePaddockRequestDate,validStaffMonth,staffMonthRange,staffMinutes,validateStaffShift,isStaffWeekStart,addIsoDays,
   parseIcsCalendar,googleCalendarIcalUrls,sendUserPush,sendPaddockReservationCancellationPush
 };
+
+export { instrumentD1, createRequestDiagnostics, loadPlanning };
