@@ -129,7 +129,7 @@ export async function handleHorses(request, env, { json, cors, readJson, isAdmin
         FROM planning_horses h WHERE h.id>? AND (?='all' OR h.status=?)${where} ORDER BY h.id LIMIT 51`)
         .bind(cursor,state,state,...(admin ? [] : [viewer.id])).all();
       const page = rows.results.slice(0,50);
-      return json({ horses: page.map(r => ({ id:r.id,name:r.name,status:r.status,hasPhoto:Boolean(r.photo_key),...(admin?{ownerCount:r.owner_count}:{}) })),
+      return json({ horses: await Promise.all(page.map(async r => ({ id:r.id,name:r.name,status:r.status,hasPhoto:Boolean(r.photo_key),...(admin?{ownerCount:r.owner_count}:{photo:await signedHorsePhoto(env,r.photo_key)}) }))),
         nextCursor: rows.results.length > 50 ? page.at(-1).id : null, ...(admin ? { photosReady: photoConfig(env).ready } : {}) }, 200, cors);
     }
     if (admin && url.pathname === base && method === 'POST') {
