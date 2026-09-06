@@ -21,6 +21,7 @@
 <link rel="stylesheet" href="assets/css/themes/winter.css?v=20260828-2">
 <link rel="stylesheet" href="assets/css/themes/spring.css?v=20260828-2">
 <link rel="stylesheet" href="assets/css/pages/mesreservations.css?v=20260828-2">
+<script src="assets/js/paddock-horses.js?v=20260906-11"></script>
 </head>
 
 <body class="app-page mesreservations-page">
@@ -377,9 +378,12 @@ card.innerHTML=`
 <p><strong>Horaire :</strong> ${formatTimeRange(data.date,data.time,data.duration)}</p>
 <p><strong>Durée :</strong> ${escapeHTML(data.duration)} min</p>
 ${!old ? `<button type="button" class="calendar-btn" onclick="addReservationToCalendar('${id}')">Ajouter à mon agenda</button>` : ""}
+<p>${(data.horses||[]).map(h=>escapeHTML(h.name)).join(' · ')}</p>
+${!old ? `<button type="button" data-edit-booking="${id}">Modifier</button>` : ''}
 ${!old ? `<button onclick="cancelReservation('${id}')">Annuler</button>` : ""}
 `
 
+card.querySelector('[data-edit-booking]')?.addEventListener('click',()=>PaddockHorses.edit({reservation:data,api:paddockApi,optionsPath:'/api/paddocks/planning',path:'/api/paddocks/reservations/'+id,onSaved:load}));
 if(old){
 historique.appendChild(card)
 }else{

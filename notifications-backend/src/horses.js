@@ -88,16 +88,29 @@ function validateClientActivity(input,current={}){
   if(startsAt&&endsAt&&endsAt<=startsAt)throw fail('L’heure de fin doit suivre l’heure de début');
   return {date,weekStart,dayIndex,type,description,startsAt,endsAt};
 }
-function planningEvent(row,viewerId){
+export function planningEvent(row,viewerId){
   const source=row.source||'backstage';
   return {id:`task:${row.id}`,sourceId:Number(row.id),horseId:Number(row.horse_id),date:dateFor(row.week_start,row.day_index),
     startsAt:row.starts_at||null,endsAt:row.ends_at||null,type:row.type,label:activityLabels[row.type]||row.type,
     description:row.description||'',source,canEdit:source==='client'&&Number(row.created_by_user_id)===Number(viewerId)};
 }
 async function horseEvents(env,horseId,viewerId,week){
-  const rows=await env.DB.prepare(`SELECT id,horse_id,week_start,day_index,type,description,starts_at,ends_at,source,created_by_user_id
-    FROM planning_tasks WHERE horse_id=? AND week_start=? ORDER BY day_index,COALESCE(starts_at,'99:99'),position,id`).bind(horseId,week).all();
-  return rows.results.map(row=>planningEvent(row,viewerId));
+  const rows=await env.DB.prepare(`SELECT * FROM (
+    SELECT id,horse_id,week_start,day_index,type,description,starts_at,ends_at,source,created_by_user_id,
+      date(week_start,printf('+%d days',day_index)) AS event_date,position
+    FROM planning_tasks WHERE horse_id=? AND week_start=?
+    UNION ALL
+    SELECT r.id,bh.horse_id,?,CAST(julianday(r.date)-julianday(?) AS INTEGER),'paddock',
+      CASE r.paddock WHEN 'maison' THEN 'Maison' WHEN 'grande' THEN 'Grande voie' ELSE 'Beudot' END,
+      r.time,substr(time(r.time,printf('+%d minutes',r.duration)),1,5),'paddock_booking',NULL,r.date,0
+    FROM paddock_booking_horses bh JOIN paddock_reservations r ON r.id=bh.booking_id
+    WHERE bh.horse_id=? AND r.date>=? AND r.date<=date(?,'+6 days')
+  ) ORDER BY event_date,COALESCE(starts_at,'99:99'),position,source,id`).bind(horseId,week,week,week,horseId,week,week).all();
+  return rows.results.map(row=>row.source==='paddock_booking'?{
+    id:`paddock:${row.id}`,sourceId:Number(row.id),horseId:Number(row.horse_id),date:row.event_date,
+    startsAt:row.starts_at,endsAt:row.ends_at,type:'paddock',label:'Paddock · '+row.description,
+    description:'',source:'paddock_booking',canEdit:false
+  }:planningEvent(row,viewerId));
 }
 
 export async function handleHorses(request, env, { json, cors, readJson, isAdmin, authenticatedUser }) {

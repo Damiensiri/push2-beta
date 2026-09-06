@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { Miniflare } from 'miniflare';
 import worker, {instrumentD1,createRequestDiagnostics,loadPlanning} from '../src/worker.js';
+import {validateBookingHorses} from '../src/paddock-horses.js';
 import {photoConfig,signedHorsePhoto,readPhoto} from '../src/horses.js';
 
 const read = name => readFile(new URL('../migrations/'+name,import.meta.url),'utf8');
@@ -14,7 +15,7 @@ const config={HORSE_PHOTO_TTL_SECONDS:'600',HORSE_PHOTO_BUCKET:'ecurie-products-
 test('fondations chevaux sur D1 : migration, permissions, conservation, concurrence et budgets',async t=>{
  const mf=new Miniflare({modules:true,script:'export default {fetch(){return new Response("ok")}}',d1Databases:{DB:'horses-test'},r2Buckets:['PRODUCT_IMAGES'],compatibilityDate:'2026-07-14'});
  t.after(()=>mf.dispose());const DB=await mf.getD1Database('DB'), PRODUCT_IMAGES=await mf.getR2Bucket('PRODUCT_IMAGES');
- for(const name of ['0001_users.sql','0002_paddocks.sql','0004_paddock_requests.sql','0015_stable_planning.sql','0016_staff_planning.sql','0018_planning_task_employees.sql'])await execute(DB,await read(name));
+ for(const name of ['0001_users.sql','0002_paddocks.sql','0003_paddock_antiduplicates.sql','0004_paddock_requests.sql','0007_user_approvals.sql','0013_liberte_planning.sql','0020_hour_programs.sql','0021_hour_exceptions.sql','0015_stable_planning.sql','0016_staff_planning.sql','0018_planning_task_employees.sql'])await execute(DB,await read(name));
  await execute(DB,`INSERT INTO users(id,email,first_name,last_name,password_hash,password_salt,password_iterations,created_at,updated_at) VALUES(1,'one@test.invalid','One','Client','x','x',1,'now','now'),(2,'two@test.invalid','Two','Client','x','x',1,'now','now'),(3,'three@test.invalid','Three','Client','x','x',1,'now','now');
  INSERT INTO planning_horses(id,name,active,created_at,updated_at) VALUES(12,'Tornado',1,'now','now'),(18,'Utah',0,'now','now'),(99,'Supprimé',1,'now','now'); DELETE FROM planning_horses WHERE id=99;
  INSERT INTO planning_week_horses VALUES('2026-09-07',12,0);
@@ -22,6 +23,7 @@ test('fondations chevaux sur D1 : migration, permissions, conservation, concurre
  const before=(await DB.prepare('SELECT * FROM planning_tasks').all()).results;
  await execute(DB,await read('0023_horse_foundations.sql'));
  await execute(DB,await read('0024_horse_planning.sql'));
+ await execute(DB,await read('0025_paddock_booking_horses.sql'));
  const afterPlanning=(await DB.prepare('SELECT * FROM planning_tasks').all()).results;
  assert.deepEqual(afterPlanning.map(({source,created_by_user_id,...row})=>row),before);
  assert.equal(afterPlanning[0].source,'backstage');assert.equal(afterPlanning[0].created_by_user_id,null);
@@ -53,6 +55,64 @@ test('fondations chevaux sur D1 : migration, permissions, conservation, concurre
   assert.equal((await call('/api/me/horses/'+id+'/planning/tasks/'+taskId,{method:'DELETE',token:'client2'})).status,200);
   assert.equal((await call('/api/admin/planning/horses',{method:'POST',body:{weekStart:'2026-09-07',horseId:id}})).status,201);
   const filtered=await call('/api/admin/planning?week=2026-09-07&horse_ids='+id);assert.equal(filtered.status,200);assert.deepEqual(filtered.data.horses.map(h=>h.id),[id]);assert.ok(filtered.data.tasks.every(task=>task.horseId===id));
+ });
+ await t.test('paddocks : sélection groupée, refus atomique, mouvement, concurrence, annulation et agrégation',async()=>{
+  const hours=JSON.stringify(Object.fromEntries(['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'].map(day=>[day,{open:'08:00',close:'20:00',closed:false}])));
+  for(const paddock of ['maison','grande','beudot'])await DB.prepare("INSERT OR REPLACE INTO paddock_hours(paddock,schedule_json,updated_at) VALUES(?,?,'now')").bind(paddock,hours).run();
+  const h1=(await call('/api/admin/horses',{method:'POST',body:{...payload,name:'Paddock One',ownerIds:[1]}})).data.id;
+  const h2=(await call('/api/admin/horses',{method:'POST',body:{...payload,name:'Paddock Two',ownerIds:[1]}})).data.id;
+  const foreign=(await call('/api/admin/horses',{method:'POST',body:{...payload,name:'Other Owner',ownerIds:[2]}})).data.id;
+  const diag=createRequestDiagnostics(new Request('https://test/check'),new URL('https://test/check'));
+  assert.deepEqual((await validateBookingHorses({DB:instrumentD1(DB,diag)},[h1,h2],1)).ids,[h1,h2]);assert.equal(diag.d1Count,1);assert.equal(diag.rowsWritten,0);
+  const booking={date:'2026-09-08',time:'09:00',duration:60,paddock:'maison',horseIds:[h1,h2]};
+  const tasksBefore=(await DB.prepare('SELECT COUNT(*) n FROM planning_tasks').first()).n;
+  for(const horseIds of [[h1,foreign],[h1,999999],[h1,h1],['1'],null]){
+    const refused=await call('/api/paddocks/reservations',{method:'POST',token:'client1',body:{...booking,horseIds}});
+    assert.ok([400,403].includes(refused.status),JSON.stringify(refused));
+    assert.equal((await DB.prepare('SELECT COUNT(*) n FROM paddock_reservations').first()).n,0);
+  }
+  const created=await call('/api/paddocks/reservations',{method:'POST',token:'client1',body:booking});assert.equal(created.status,201,JSON.stringify(created));
+  const bookingId=created.data.reservation.id;
+  assert.equal((await DB.prepare('SELECT COUNT(*) n FROM paddock_booking_horses').first()).n,2);
+  const detail=await call('/api/me/horses/'+h1+'?week=2026-09-07',{token:'client1'});
+  assert.equal(detail.data.events.length,1);assert.equal(detail.data.events[0].source,'paddock_booking');assert.equal(detail.data.events[0].canEdit,false);assert.equal(detail.data.events[0].endsAt,'10:00');
+  assert.equal((await call('/api/me/horses/'+h2+'?week=2026-09-07',{token:'client1'})).data.events.length,1);
+  const list=await call('/api/paddocks/reservations',{token:'client1'});assert.equal(list.data.reservations[0].horses.length,2);assert.equal(list.data.reservations[0].version,1);
+  const move={...booking,date:'2026-09-15',time:'11:00',horseIds:[h2],version:1};
+  const path='/api/paddocks/reservations/'+bookingId;
+  assert.equal((await call(path,{method:'PATCH',token:'client2',body:move})).status,403);
+  assert.equal((await call(path,{method:'PATCH',token:'client1',body:{...move,horseIds:[h2,foreign]}})).status,403);
+  assert.equal((await DB.prepare('SELECT date FROM paddock_reservations WHERE id=?').bind(bookingId).first()).date,booking.date);
+  assert.equal((await call(path,{method:'PATCH',token:'client1',body:move})).status,200);
+  assert.equal((await call(path,{method:'PATCH',token:'client1',body:move})).status,409);
+  assert.equal((await call('/api/me/horses/'+h1+'?week=2026-09-07',{token:'client1'})).data.events.length,0);
+  assert.equal((await call('/api/me/horses/'+h2+'?week=2026-09-14',{token:'client1'})).data.events[0].startsAt,'11:00');
+  assert.equal((await DB.prepare('SELECT COUNT(*) n FROM paddock_slot_locks WHERE date=?').bind(booking.date).first()).n,0);
+  await DB.prepare("INSERT INTO planning_week_horses VALUES('2026-09-14',?,0)").bind(h2).run();
+  const admin=await call('/api/admin/planning?week=2026-09-14&horse_ids='+h2);assert.equal(admin.data.events.length,1);assert.equal(admin.data.events[0].horseId,h2);assert.equal(admin.data.tasks.length,0);
+  const excluded=await call('/api/admin/planning?week=2026-09-14&horse_ids='+h1);assert.equal(excluded.data.events.length,0);
+  // No association is valid and leaves no copied task behind.
+  const empty=await call('/api/paddocks/reservations',{method:'POST',token:'client1',body:{...booking,date:'2026-09-16',horseIds:[]}});assert.equal(empty.status,201);
+  const conflict=await call(path,{method:'PATCH',token:'client1',body:{...move,date:'2026-09-16',version:2}});assert.equal(conflict.status,409);
+  const concurrentPath='/api/paddocks/reservations/'+empty.data.reservation.id;
+  const raced=await Promise.all(['2026-09-17','2026-09-18'].map(date=>call(concurrentPath,{method:'PATCH',token:'client1',body:{...booking,date,horseIds:[],version:1}})));
+  assert.deepEqual(raced.map(r=>r.status).sort(),[200,409]);
+  const winner=await DB.prepare('SELECT * FROM paddock_reservations WHERE id=?').bind(empty.data.reservation.id).first();
+  const locks=(await DB.prepare('SELECT date FROM paddock_slot_locks WHERE reservation_key=?').bind(winner.lock_key).all()).results;
+  assert.equal(locks.length,2);assert.ok(locks.every(lock=>lock.date===winner.date));
+  assert.equal((await DB.prepare('SELECT COUNT(*) n FROM planning_tasks').first()).n,tasksBefore);
+  await DB.prepare("UPDATE planning_horses SET status='archived' WHERE id=?").bind(h2).run();
+  await DB.prepare("DELETE FROM planning_week_horses WHERE horse_id=?").bind(h2).run();
+  assert.equal((await call('/api/me/horses/'+h2+'?week=2026-09-14',{token:'client1'})).data.events.length,1);
+  assert.equal((await call(path,{method:'DELETE',token:'client1'})).status,200);
+  assert.equal((await DB.prepare('SELECT COUNT(*) n FROM paddock_booking_horses WHERE booking_id=?').bind(bookingId).first()).n,0);
+  assert.equal((await call('/api/me/horses/'+h2+'?week=2026-09-14',{token:'client1'})).data.events.length,0);
+  const adminCreated=await call('/api/admin/paddocks/reservations',{method:'POST',body:{...booking,date:'2026-09-19',userId:1,horseIds:[h1]}});
+  assert.equal(adminCreated.status,201,JSON.stringify(adminCreated));
+  const adminPath='/api/admin/paddocks/reservations/'+adminCreated.data.reservation.id;
+  assert.equal((await call(adminPath,{method:'PATCH',body:{...booking,date:'2026-09-20',horseIds:[h1],version:1}})).status,200);
+  assert.equal((await call(adminPath,{method:'DELETE'})).status,200);
+  assert.deepEqual((await DB.prepare('PRAGMA foreign_key_check').all()).results,[]);
  });
  await t.test('D1 compte les vrais appels first/all/batch et leurs métadonnées',async()=>{const request=new Request('https://test/api/admin/planning');const d=createRequestDiagnostics(request,new URL(request.url));const db=instrumentD1(DB,d);await db.prepare('SELECT id FROM planning_horses LIMIT 1').first();await db.batch([db.prepare('SELECT id FROM planning_horses'),db.prepare('SELECT horse_id FROM horse_owners')]);assert.equal(d.d1Count,3);assert.equal(d.metadataComplete,true);assert.ok(d.rowsRead>0);assert.equal(d.rowsWritten,0);const p=createRequestDiagnostics(request,new URL(request.url));await loadPlanning({DB:instrumentD1(DB,p)},'2026-09-07',true);assert.equal(p.d1Count,6);});
  await t.test('photo : remplacement, refus concurrent et échec D1 préservent les objets référencés',async()=>{

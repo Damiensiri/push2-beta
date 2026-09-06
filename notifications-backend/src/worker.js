@@ -1,4 +1,5 @@
-import { handleHorses } from './horses.js';
+import {validateBookingHorses,bookingHorseInsert,bookingHorseOptions,bookingHorsesJson,paddockLabelSql} from './paddock-horses.js';
+import { handleHorses, planningEvent } from './horses.js';
 const JSON_HEADERS={
   "content-type":"application/json; charset=utf-8",
   "cache-control":"no-store",
@@ -333,7 +334,8 @@ export default{
         const viewer=await authenticatedUser(request,env);
         if(!viewer)return json({error:"Non autorisé"},401,cors);
         const today=parisNow().date;
-        const [reservationResult,datedHours,restrictionResult,requestExceptionResult]=await Promise.all([
+        const [horseOptions,reservationResult,datedHours,restrictionResult,requestExceptionResult]=await Promise.all([
+          bookingHorseOptions(env,viewer.id),
           env.DB.prepare(`SELECT id,user_id,name,paddock,date,time,duration FROM paddock_reservations
             WHERE date>=? AND date<=date(?,'+3 days') ORDER BY date,time`).bind(today,today).all(),
           loadEffectivePaddockHoursByDate(env,4),
@@ -348,7 +350,7 @@ export default{
         return json({
           reservations:reservationResult.results.map(row=>({id:String(row.id),name:row.name,paddock:row.paddock,
             date:row.date,time:row.time,duration:Number(row.duration),mine:Number(row.user_id)===Number(viewer.id)})),
-          horaires:hours,horairesParDate:datedHours,restrictions,requestExceptions,
+          horaires:hours,horairesParDate:datedHours,restrictions,requestExceptions,horseOptions,
           viewer:{firstName:viewer.first_name,email:viewer.email,role:viewer.role}
         },200,cors);
       }
@@ -356,11 +358,11 @@ export default{
       if(url.pathname==="/api/paddocks/reservations"&&request.method==="GET"){
         const viewer=await authenticatedUser(request,env);
         if(!viewer)return json({error:"Non autorisé"},401,cors);
-        const result=await env.DB.prepare(`SELECT id,name,paddock,date,time,duration,created_at
-          FROM paddock_reservations WHERE user_id=? AND date>=date('now','-3 days')
+        const result=await env.DB.prepare(`SELECT r.id,r.name,r.paddock,r.date,r.time,r.duration,r.created_at,r.version,${bookingHorsesJson} AS horses_json
+          FROM paddock_reservations r WHERE user_id=? AND date>=date('now','-3 days')
           ORDER BY date DESC,time DESC,id DESC`).bind(viewer.id).all();
         return json({reservations:result.results.map(row=>({id:String(row.id),name:row.name,paddock:row.paddock,
-          date:row.date,time:row.time,duration:Number(row.duration),createdAt:row.created_at}))},200,cors);
+          date:row.date,time:row.time,duration:Number(row.duration),createdAt:row.created_at,version:row.version,horses:JSON.parse(row.horses_json)}))},200,cors);
       }
 
       if(url.pathname==="/api/paddocks/reservations"&&request.method==="POST"){
@@ -369,6 +371,8 @@ export default{
         const input=await readJson(request);
         const booking=validatePaddockBooking(input);
         if(booking.error)return json({error:booking.error},400,cors);
+        const horseSelection=await validateBookingHorses(env,input?.horseIds,viewer.id);
+        if(horseSelection.error)return json({error:horseSelection.error},horseSelection.status,cors);
         const policyError=await paddockBookingPolicyError(env,booking);
         if(policyError)return json({error:policyError},409,cors);
         const conflict=await env.DB.prepare(`SELECT id FROM paddock_reservations WHERE date=? AND paddock=?
@@ -388,6 +392,7 @@ export default{
             env.DB.prepare(`INSERT INTO paddock_reservations(lock_key,user_id,name,email,paddock,date,time,duration,created_at)
               VALUES(?,?,?,?,?,?,?,?,?)`).bind(lockKey,viewer.id,viewer.first_name,viewer.email,booking.paddock,
               booking.date,booking.time,booking.duration,now),
+            bookingHorseInsert(env,lockKey,horseSelection.ids),
             ...paddockLockStatements(env,{lockKey,date:booking.date,paddock:booking.paddock,startMinutes:booking.startMinutes,duration:booking.duration})
           ]);
         }catch(error){
@@ -395,7 +400,7 @@ export default{
           throw error;
         }
         const created=await env.DB.prepare("SELECT id FROM paddock_reservations WHERE lock_key=?").bind(lockKey).first();
-        await notifyRealtime(env,"paddocks");
+        await notifyRealtime(env,"paddocks");await notifyRealtime(env,"planning");
         await sendAdminEventPush(env,"Nouvelle réservation paddock",`${viewer.first_name} — ${booking.date} à ${booking.time}`,"paddocks.html");
         return json({reservation:{id:String(created.id),name:viewer.first_name,paddock:booking.paddock,
           date:booking.date,time:booking.time,duration:booking.duration,mine:true},
@@ -479,6 +484,52 @@ export default{
         }
       }
 
+      const editBookingMatch=url.pathname.match(/^\/api\/(admin\/)?paddocks\/reservations\/(\d+)$/);
+      if(editBookingMatch&&request.method==='PATCH'){
+        const admin=Boolean(editBookingMatch[1]);
+        const viewer=admin?null:await authenticatedUser(request,env);
+        if(admin?!isAdmin(request,env):!viewer)return json({error:'Non autorisé'},401,cors);
+        const reservation=await env.DB.prepare('SELECT * FROM paddock_reservations WHERE id=?').bind(Number(editBookingMatch[2])).first();
+        if(!reservation)return json({error:'Réservation introuvable'},404,cors);
+        if(!admin&&Number(reservation.user_id)!==Number(viewer.id))return json({error:'Action interdite'},403,cors);
+        const input=await readJson(request);
+        if(!Number.isSafeInteger(input?.version)||input.version!==reservation.version)return json({error:'La réservation a changé. Actualisez la page.'},409,cors);
+        const booking=validatePaddockBooking({...reservation,...input});
+        if(booking.error)return json({error:booking.error},400,cors);
+        const horseSelection=await validateBookingHorses(env,input.horseIds,reservation.user_id);
+        if(horseSelection.error)return json({error:horseSelection.error},horseSelection.status,cors);
+        // Require the complete selection to avoid silently dropping associations.
+        if(!Array.isArray(input.horseIds))return json({error:'Sélection de chevaux requise'},400,cors);
+        const policyError=await paddockBookingPolicyError(env,booking);
+        if(policyError)return json({error:policyError},409,cors);
+        const conflict=await env.DB.prepare(`SELECT id FROM paddock_reservations WHERE id<>? AND date=? AND
+          ((paddock=? AND ? < CAST(substr(time,1,2) AS INTEGER)*60+CAST(substr(time,4,2) AS INTEGER)+duration
+          AND ?+? > CAST(substr(time,1,2) AS INTEGER)*60+CAST(substr(time,4,2) AS INTEGER)) OR user_id=?) LIMIT 1`)
+          .bind(reservation.id,booking.date,booking.paddock,booking.startMinutes,booking.startMinutes,booking.duration,reservation.user_id).first();
+        if(conflict)return json({error:'Créneau occupé ou autre réservation ce jour'},409,cors);
+        const lockKey=crypto.randomUUID();
+        try{
+          const results=await env.DB.batch([
+            env.DB.prepare(`UPDATE paddock_reservations SET paddock=?,date=?,time=?,duration=?,lock_key=?,
+              version=CASE WHEN version=? THEN version+1 ELSE NULL END WHERE id=?`)
+              .bind(booking.paddock,booking.date,booking.time,booking.duration,lockKey,input.version,reservation.id),
+            env.DB.prepare(`DELETE FROM paddock_slot_locks WHERE reservation_key=? AND EXISTS(SELECT 1 FROM paddock_reservations WHERE lock_key=?)`).bind(reservation.lock_key,lockKey),
+            env.DB.prepare(`INSERT INTO paddock_slot_locks(date,paddock,slot_minute,reservation_key)
+              SELECT r.date,r.paddock,CAST(substr(r.time,1,2) AS INTEGER)*60+CAST(substr(r.time,4,2) AS INTEGER)+j.value,r.lock_key
+              FROM paddock_reservations r,json_each(?) j WHERE r.lock_key=?`).bind(JSON.stringify(booking.duration===90?[0,30,60]:[0,30]),lockKey),
+            env.DB.prepare(`DELETE FROM paddock_booking_horses WHERE booking_id=(SELECT id FROM paddock_reservations WHERE lock_key=?)`).bind(lockKey),
+            bookingHorseInsert(env,lockKey,horseSelection.ids)
+          ]);
+          if(!results[0].meta.changes)return json({error:'La réservation a été supprimée'},409,cors);
+        }catch(error){
+          if(/UNIQUE|NOT NULL/.test(String(error?.message||error)))return json({error:'La réservation ou le créneau a changé. Actualisez la page.'},409,cors);
+          throw error;
+        }
+        await notifyRealtime(env,'paddocks');await notifyRealtime(env,'planning');
+        return json({reservation:{id:String(reservation.id),date:booking.date,time:booking.time,paddock:booking.paddock,
+          duration:booking.duration,horseIds:horseSelection.ids,version:input.version+1}},200,cors);
+      }
+
       const paddockReservationMatch=url.pathname.match(/^\/api\/paddocks\/reservations\/(\d+)$/);
       if(paddockReservationMatch&&request.method==="DELETE"){
         const viewer=await authenticatedUser(request,env);
@@ -488,10 +539,10 @@ export default{
         if(!reservation)return json({error:"Réservation introuvable"},404,cors);
         if(viewer.role!=="admin"&&Number(reservation.user_id)!==Number(viewer.id))return json({error:"Action interdite"},403,cors);
         await env.DB.batch([
-          env.DB.prepare("DELETE FROM paddock_slot_locks WHERE reservation_key=?").bind(reservation.lock_key),
+          env.DB.prepare("DELETE FROM paddock_slot_locks WHERE reservation_key IN (SELECT lock_key FROM paddock_reservations WHERE id=?)").bind(reservation.id),
           env.DB.prepare("DELETE FROM paddock_reservations WHERE id=?").bind(reservation.id)
         ]);
-        await notifyRealtime(env,"paddocks");
+        await notifyRealtime(env,"paddocks");await notifyRealtime(env,"planning");
         await sendAdminEventPush(env,"Réservation paddock annulée",`${viewer.first_name} a annulé sa réservation.`,"paddocks.html");
         return json({deleted:true},200,cors);
       }
@@ -1164,7 +1215,7 @@ export default{
         if(request.method==="GET"&&url.pathname==="/api/admin/paddocks"){
           const today=parisNow().date;
           const [reservationResult,datedHours,restrictionResult,requestResult]=await Promise.all([
-            env.DB.prepare(`SELECT id,name,email,paddock,date,time,duration FROM paddock_reservations
+            env.DB.prepare(`SELECT r.id,r.user_id,r.name,r.email,r.paddock,r.date,r.time,r.duration,r.version,${bookingHorsesJson} AS horses_json FROM paddock_reservations r
               WHERE date>=date('now') ORDER BY date,time`).all(),
             loadEffectivePaddockHoursByDate(env,31),
             env.DB.prepare("SELECT date,block_grande_90,block_beudot_90 FROM paddock_restrictions WHERE date>=date('now')").all(),
@@ -1173,10 +1224,15 @@ export default{
           ]);
           const hours=datedHours[today]||await loadEffectivePaddockHours(env,today);
           const restrictions={};for(const row of restrictionResult.results)restrictions[row.date]={blockGrande90:Boolean(row.block_grande_90),blockBeudot90:Boolean(row.block_beudot_90)};
-          return json({reservations:reservationResult.results.map(row=>({...row,id:String(row.id),duration:Number(row.duration)})),
+          return json({reservations:reservationResult.results.map(row=>({id:String(row.id),userId:row.user_id,name:row.name,email:row.email,paddock:row.paddock,date:row.date,time:row.time,duration:Number(row.duration),version:row.version,horses:JSON.parse(row.horses_json)})),
             requests:requestResult.results.map(publicPaddockRequest),horaires:hours,horairesParDate:datedHours,restrictions},200,cors);
         }
 
+        if(request.method==="GET"&&url.pathname==="/api/admin/paddocks/horse-options"){
+          const userId=Number(url.searchParams.get('userId'));
+          if(!Number.isSafeInteger(userId)||userId<1)return json({error:'Client invalide'},400,cors);
+          return json({horses:await bookingHorseOptions(env,userId)},200,cors);
+        }
         if(request.method==="POST"&&url.pathname==="/api/admin/paddocks/reservations"){
           const input=await readJson(request);
           const booking=validatePaddockBooking(input);
@@ -1186,6 +1242,8 @@ export default{
           const user=await env.DB.prepare(`SELECT * FROM users WHERE id=? AND status='active'
             AND COALESCE(approval_status,'approved')='approved'`).bind(userId).first();
           if(!user)return json({error:"Client actif introuvable"},404,cors);
+          const horseSelection=await validateBookingHorses(env,input?.horseIds,user.id);
+          if(horseSelection.error)return json({error:horseSelection.error},horseSelection.status,cors);
           const policyError=await paddockBookingPolicyError(env,booking);
           if(policyError)return json({error:policyError},409,cors);
           const conflict=await env.DB.prepare(`SELECT id FROM paddock_reservations WHERE date=? AND paddock=?
@@ -1204,7 +1262,8 @@ export default{
               env.DB.prepare(`INSERT INTO paddock_reservations(lock_key,user_id,name,email,paddock,date,time,duration,created_at)
                 VALUES(?,?,?,?,?,?,?,?,?)`).bind(lockKey,user.id,user.first_name,user.email,booking.paddock,
                 booking.date,booking.time,booking.duration,now),
-              ...paddockLockStatements(env,{lockKey,date:booking.date,paddock:booking.paddock,
+              bookingHorseInsert(env,lockKey,horseSelection.ids),
+            ...paddockLockStatements(env,{lockKey,date:booking.date,paddock:booking.paddock,
                 startMinutes:booking.startMinutes,duration:booking.duration})
             ]);
           }catch(error){
@@ -1212,7 +1271,7 @@ export default{
             throw error;
           }
           const created=await env.DB.prepare("SELECT id FROM paddock_reservations WHERE lock_key=?").bind(lockKey).first();
-          await notifyRealtime(env,"paddocks");
+          await notifyRealtime(env,"paddocks");await notifyRealtime(env,"planning");
           const email=await sendPaddockReservationConfirmationEmail(env,{
             id:created.id,name:user.first_name,email:user.email,paddock:booking.paddock,
             date:booking.date,time:booking.time,duration:booking.duration
@@ -1280,7 +1339,7 @@ export default{
             if(String(error?.message||error).includes("UNIQUE"))return json({error:"Un créneau est déjà occupé"},409,cors);
             throw error;
           }
-          await notifyRealtime(env,"paddocks");
+          await notifyRealtime(env,"paddocks");await notifyRealtime(env,"planning");
           return json({created:paddocks.length},201,cors);
         }
 
@@ -1293,10 +1352,10 @@ export default{
           const comment=String(input?.comment||"").trim();
           if(comment.length>500)return json({error:"Commentaire trop long"},400,cors);
           await env.DB.batch([
-            env.DB.prepare("DELETE FROM paddock_slot_locks WHERE reservation_key=?").bind(reservation.lock_key),
+            env.DB.prepare("DELETE FROM paddock_slot_locks WHERE reservation_key IN (SELECT lock_key FROM paddock_reservations WHERE id=?)").bind(reservation.id),
             env.DB.prepare("DELETE FROM paddock_reservations WHERE id=?").bind(reservation.id)
           ]);
-          await notifyRealtime(env,"paddocks");
+          await notifyRealtime(env,"paddocks");await notifyRealtime(env,"planning");
           let email={requested:false,sent:false};
           if(reservation.email&&reservation.email.includes("@"))email=await sendPaddockReservationCancellationEmail(env,reservation,comment);
           const push=await sendPaddockReservationCancellationPush(env,reservation,comment);
@@ -1310,14 +1369,14 @@ export default{
             VALUES(?,?,?,?) ON CONFLICT(date) DO UPDATE SET block_grande_90=excluded.block_grande_90,
             block_beudot_90=excluded.block_beudot_90,updated_at=excluded.updated_at`)
             .bind(date,input.blockGrande90?1:0,input.blockBeudot90?1:0,new Date().toISOString()).run();
-          await notifyRealtime(env,"paddocks");
+          await notifyRealtime(env,"paddocks");await notifyRealtime(env,"planning");
           return json({saved:true},200,cors);
         }
 
         const adminRestriction=url.pathname.match(/^\/api\/admin\/paddocks\/restrictions\/(\d{4}-\d{2}-\d{2})$/);
         if(request.method==="DELETE"&&adminRestriction){
           await env.DB.prepare("DELETE FROM paddock_restrictions WHERE date=?").bind(adminRestriction[1]).run();
-          await notifyRealtime(env,"paddocks");
+          await notifyRealtime(env,"paddocks");await notifyRealtime(env,"planning");
           return json({deleted:true},200,cors);
         }
 
@@ -1329,7 +1388,7 @@ export default{
           await env.DB.batch(paddocks.map(paddock=>env.DB.prepare(`INSERT INTO paddock_hours(paddock,schedule_json,updated_at)
             VALUES(?,?,?) ON CONFLICT(paddock) DO UPDATE SET schedule_json=excluded.schedule_json,updated_at=excluded.updated_at`)
             .bind(paddock,encoded,now)));
-          await notifyRealtime(env,"paddocks");
+          await notifyRealtime(env,"paddocks");await notifyRealtime(env,"planning");
           return json({saved:true,paddocks},200,cors);
         }
 
@@ -1436,7 +1495,7 @@ export default{
             env.DB.prepare("DELETE FROM users WHERE id=?").bind(current.id)
           ]);
           await env.PRODUCT_IMAGES.delete(`profiles/${current.id}.jpg`);
-          await notifyRealtime(env,"paddocks");
+          await notifyRealtime(env,"paddocks");await notifyRealtime(env,"planning");
           await notifyRealtime(env,"paddock-accounts");
           return json({deleted:true},200,cors);
         }
@@ -1582,7 +1641,7 @@ export default{
             validated.opensAt,validated.closesAt,now,now).run();
           await notifyRealtime(env,"schedules");
           await notifyRealtime(env,"statuses");
-          await notifyRealtime(env,"paddocks");
+          await notifyRealtime(env,"paddocks");await notifyRealtime(env,"planning");
           return json({exception:await loadHourException(env,validated.date,validated.scope,validated.targetSlug)},200,cors);
         }
 
@@ -1593,7 +1652,7 @@ export default{
           if(!result.meta.changes)return json({error:"Exception horaire introuvable"},404,cors);
           await notifyRealtime(env,"schedules");
           await notifyRealtime(env,"statuses");
-          await notifyRealtime(env,"paddocks");
+          await notifyRealtime(env,"paddocks");await notifyRealtime(env,"planning");
           return json({deleted:true},200,cors);
         }
 
@@ -3126,15 +3185,24 @@ async function loadPlanning(env,week,includeRequests=false,horseIds=null){
   const [horseResult,taskResult,reservationResult,hoursResult,requestResult,employeeResult]=await Promise.all([
     env.DB.prepare(`SELECT h.id,h.name,wh.position FROM planning_week_horses wh JOIN planning_horses h ON h.id=wh.horse_id
       WHERE wh.week_start=? AND h.status='active' ORDER BY wh.position,h.name`).bind(week).all(),
-    env.DB.prepare(`SELECT t.*,e.name AS employee_name,e.color AS employee_color,
+    env.DB.prepare(`SELECT 'task' AS event_kind,json_object('id',t.id,'week_start',t.week_start,'horse_id',t.horse_id,'day_index',t.day_index,'type',t.type,'description',t.description,'paddock',t.paddock,'starts_at',t.starts_at,'ends_at',t.ends_at,'request_id',t.request_id,'position',t.position,'completed_at',t.completed_at,'completed_by',t.completed_by,'employee_id',t.employee_id,'source',t.source,'created_by_user_id',t.created_by_user_id,
+      'employee_name',e.name,'employee_color',e.color,'employee_available',
       CASE WHEN t.employee_id IS NULL THEN 1 WHEN EXISTS(
         SELECT 1 FROM staff_shifts s WHERE s.employee_id=t.employee_id AND s.status='work'
           AND s.work_date=date(t.week_start,printf('+%d days',t.day_index))
-      ) THEN 1 ELSE 0 END AS employee_available
+      ) THEN 1 ELSE 0 END) AS payload
       FROM planning_tasks t LEFT JOIN staff_employees e ON e.id=t.employee_id
       WHERE t.week_start=? AND EXISTS(SELECT 1 FROM planning_week_horses wh
         WHERE wh.week_start=t.week_start AND wh.horse_id=t.horse_id)${taskFilter}
-      ORDER BY t.day_index,t.horse_id,t.position,t.id`).bind(week,...(horseIds||[])).all(),
+      UNION ALL
+      SELECT 'paddock_booking',json_object('id','paddock:'||r.id,'sourceId',r.id,'horseId',bh.horse_id,
+        'date',r.date,'dayIndex',CAST(julianday(r.date)-julianday(?) AS INTEGER),'startsAt',r.time,
+        'endsAt',substr(time(r.time,printf('+%d minutes',r.duration)),1,5),'type','paddock',
+        'label','Paddock · '||${paddockLabelSql},'source','paddock_booking','canEdit',json('false'))
+      FROM paddock_reservations r JOIN paddock_booking_horses bh ON bh.booking_id=r.id
+      WHERE r.date>=? AND r.date<=date(?,'+6 days') AND EXISTS(SELECT 1 FROM planning_week_horses wh
+        WHERE wh.week_start=? AND wh.horse_id=bh.horse_id)${horseIds?.length?` AND bh.horse_id IN (${horseIds.map(()=>'?').join(',')})`:''}`)
+      .bind(week,...(horseIds||[]),week,week,week,week,...(horseIds||[])).all(),
     env.DB.prepare(`SELECT id,name,paddock,date,time,duration FROM paddock_reservations
       WHERE date>=? AND date<=date(?, '+6 days') ORDER BY date,time,paddock,id`).bind(week,week).all(),
     env.DB.prepare("SELECT paddock,schedule_json FROM paddock_hours").all(),
@@ -3150,7 +3218,8 @@ async function loadPlanning(env,week,includeRequests=false,horseIds=null){
   const selected=horseIds?new Set(horseIds):null;
   return{...(includeRequests?{requests:requestResult.results.map(publicPaddockRequest)}:{}),weekStart:week,
     availableHorses,horses:selected?availableHorses.filter(horse=>selected.has(horse.id)):availableHorses,
-    tasks:taskResult.results.map(publicPlanningTask),paddockReservations:reservationResult.results.map(row=>({id:String(row.id),
+    tasks:taskResult.results.filter(row=>row.event_kind==='task').map(row=>publicPlanningTask(JSON.parse(row.payload))).sort((a,b)=>a.dayIndex-b.dayIndex||a.position-b.position||a.id-b.id),
+    events:taskResult.results.map(row=>{const data=JSON.parse(row.payload);return row.event_kind==='paddock_booking'?data:{...planningEvent(data,null),canEdit:includeRequests};}),paddockReservations:reservationResult.results.map(row=>({id:String(row.id),
       name:row.name,paddock:row.paddock,date:row.date,time:row.time,duration:Number(row.duration)})),paddockHours,
     paddockRequests:requestResult.results.map(row=>({id:String(row.id),date:row.date,name:row.name})),
     employees:[...employeeResult.results.reduce((map,row)=>{
@@ -3414,8 +3483,9 @@ function validatePaddockBooking(input){
   const time=String(input?.time||"");
   const duration=Number(input?.duration);
   if(!["maison","grande","beudot"].includes(paddock))return{error:"Paddock invalide"};
-  if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return{error:"Date invalide"};
+  if(!validIsoDate(date))return{error:"Date invalide"};
   if(!/^\d{2}:\d{2}$/.test(time)||timeToMinutes(time)===null)return{error:"Heure invalide"};
+  if(timeToMinutes(time)%30!==0)return{error:"Choisissez une heure ou une demi-heure"};
   if(![60,90].includes(duration))return{error:"Durée invalide"};
   if(duration===90&&paddock==="maison")return{error:"Les réservations de 1 h 30 sont réservées à Grande voie et Beudot"};
   return{paddock,date,time,duration,startMinutes:timeToMinutes(time)};
