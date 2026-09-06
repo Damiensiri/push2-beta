@@ -3,6 +3,9 @@ main = "src/worker.js"
 compatibility_date = "2026-07-14"
 
 [vars]
+HORSE_REMINDER_OFFSETS = "7,0"
+HORSE_REMINDER_BATCH_SIZE = "50"
+HORSE_HEALTH_MAIL_ENABLED = "true"
 HORSE_PHOTO_TTL_SECONDS = "600"
 HORSE_PHOTO_BUCKET = "ecurie-products-beta"
 R2_ACCOUNT_ID = "0d1cc4ef0aadb89913d38227dfd579dc"
@@ -17,7 +20,7 @@ GOOGLE_CALENDAR_PERSONAL_ICAL_URL = "https://calendar.google.com/calendar/ical/d
 GOOGLE_CALENDAR_GROUP_ICAL_URL = "https://calendar.google.com/calendar/ical/2b1f61f5adb93a5c51f3ac30d5978fa1b2310ba76408273f5adb977ef90ce081%40group.calendar.google.com/public/basic.ics"
 
 [triggers]
-crons = ["* * * * *"]
+crons = ["* * * * *", "0 7 * * *"]
 
 [[d1_databases]]
 binding = "DB"

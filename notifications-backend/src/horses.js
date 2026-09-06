@@ -1,3 +1,4 @@
+import {healthDueSql,prepareHorseNotifications} from './horse-health.js';
 import { AwsClient } from 'aws4fetch';
 
 const statuses = new Set(['active', 'departed', 'archived']);
@@ -39,7 +40,7 @@ export async function signedHorsePhoto(env, key, now = new Date()) {
 }
 async function publicHorse(env, row, admin = false) {
   const horse = { id: Number(row.id), name: row.name, status: row.status, birthDate: row.birth_date,
-    publicNotes: row.public_notes, photo: await signedHorsePhoto(env, row.photo_key), ...(!admin?{photoVersion:row.version}:{}) };
+    publicNotes: row.public_notes,healthDue:JSON.parse(row.health_due_json||'[]'), photo: await signedHorsePhoto(env, row.photo_key), ...(!admin?{photoVersion:row.version}:{}) };
   if (admin) Object.assign(horse, { adminNotes: row.admin_notes, version: row.version, updatedAt: row.updated_at });
   return horse;
 }
@@ -194,7 +195,7 @@ export async function handleHorses(request, env, { json, cors, readJson, isAdmin
     }
     if (!match) throw fail('Route introuvable', 404);
     const id = Number(match[1]);
-    const row = await env.DB.prepare(`SELECT h.* FROM planning_horses h WHERE h.id=?${admin ? '' : ' AND EXISTS(SELECT 1 FROM horse_owners o WHERE o.horse_id=h.id AND o.user_id=?)'}`)
+    const row = await env.DB.prepare(`SELECT h.*,${healthDueSql} AS health_due_json FROM planning_horses h WHERE h.id=?${admin ? '' : ' AND EXISTS(SELECT 1 FROM horse_owners o WHERE o.horse_id=h.id AND o.user_id=?)'}`)
       .bind(id,...(admin ? [] : [viewer.id])).first();
     if (!row) throw fail('Cheval introuvable',404);
     if (!match[2] && method === 'GET') {
@@ -213,13 +214,14 @@ export async function handleHorses(request, env, { json, cors, readJson, isAdmin
       const now = new Date().toISOString();
       // Owners change before the version update, guarded by the same expected version.
       const result = await env.DB.batch([
-        env.DB.prepare('DELETE FROM horse_owners WHERE horse_id=? AND EXISTS(SELECT 1 FROM planning_horses WHERE id=? AND version=?)').bind(id,id,row.version),
-        ...(input.ownerIds.length ? [env.DB.prepare(`INSERT INTO horse_owners(horse_id,user_id,created_at)
+        env.DB.prepare(`DELETE FROM horse_owners WHERE horse_id=? AND user_id NOT IN (SELECT value FROM json_each(?)) AND EXISTS(SELECT 1 FROM planning_horses WHERE id=? AND version=?)`).bind(id,JSON.stringify(input.ownerIds),id,row.version),
+        ...(input.ownerIds.length ? [env.DB.prepare(`INSERT OR IGNORE INTO horse_owners(horse_id,user_id,created_at)
           SELECT ?,u.id,? FROM users u WHERE u.id IN (${placeholders(input.ownerIds)}) AND EXISTS(SELECT 1 FROM planning_horses WHERE id=? AND version=?)`).bind(id,now,...input.ownerIds,id,row.version)] : []),
         env.DB.prepare(`UPDATE planning_horses SET name=?,status=?,birth_date=?,public_notes=?,admin_notes=?,version=version+1,updated_at=? WHERE id=? AND version=? RETURNING version`)
-          .bind(input.name,input.status,input.birthDate,input.publicNotes,input.adminNotes,now,id,row.version)
+          .bind(input.name,input.status,input.birthDate,input.publicNotes,input.adminNotes,now,id,row.version),
+        prepareHorseNotifications(env,id)
       ]);
-      if (!result.at(-1).results.length) throw fail('Fiche modifiée ailleurs. Rechargez-la.',409);
+      if (!result.at(-2).results.length) throw fail('Fiche modifiée ailleurs. Rechargez-la.',409);
       return json({ saved:true,version:row.version+1 },200,cors);
     }
     if (match[2] && (admin ? ['PUT','DELETE'].includes(method) : method==='PUT')) {
@@ -250,6 +252,7 @@ export async function handleHorses(request, env, { json, cors, readJson, isAdmin
     }
     throw fail('Méthode non autorisée',405);
   } catch (error) {
+    if(String(error.message).includes('HEALTH_SEND_IN_PROGRESS'))return json({error:'Un rappel sanitaire est en cours d’envoi. Réessayez dans quelques instants.'},409,cors);
     if (error.status) return json({error:error.message},error.status,cors);
     console.error(JSON.stringify({type:'horses-error',message:String(error.message)}));
     return json({error:'Impossible d’enregistrer ou charger la fiche'},500,cors);

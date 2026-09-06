@@ -15,7 +15,7 @@
 <link rel="stylesheet" href="assets/css/themes/winter.css?v=20260906-5">
 <link rel="stylesheet" href="assets/css/themes/spring.css?v=20260906-5">
 <link rel="stylesheet" href="assets/css/pages/mes-chevaux.css?v=20260906-12">
-</head>
+<link rel="stylesheet" href="assets/css/horse-health.css?v=20260906-14"><script src="assets/js/horse-health.js?v=20260906-14"></script></head>
 <body class="app-page horses-page">
 <div class="ambient-stage" aria-hidden="true"></div>
 <div class="page" id="page">
@@ -29,7 +29,8 @@
         <div><p class="horse-kicker">Ma fiche cheval</p><h2 id="horseName"></h2><p id="horseBirth" class="horse-muted"></p><label class="horse-photo-upload" title="JPEG, PNG ou WebP · 3 Mo maximum"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h4l2-3h4l2 3h4v13H4z"/><circle cx="12" cy="13" r="4"/></svg><span>Modifier la photo</span><input id="ownerPhotoFile" type="file" accept="image/jpeg,image/png,image/webp" aria-label="Modifier la photo du cheval"></label></div>
       </article>
       <article id="horseNotes" class="horse-panel" hidden><h3>Informations</h3><p></p></article>
-      <section class="horse-panel planning-panel">
+      <section id="horseHealth" class="horse-panel horse-health-summary"></section>
+<section class="horse-panel planning-panel">
         <div class="week-heading"><button id="previousWeek" type="button" aria-label="Semaine précédente">‹</button><div><span>Planning</span><strong id="weekLabel"></strong></div><button id="nextWeek" type="button" aria-label="Semaine suivante">›</button></div>
         <div id="eventList" class="event-days"></div>
         <button id="newActivity" class="primary-action" type="button">Ajouter une activité</button>
@@ -48,6 +49,6 @@
     <button id="saveActivity" class="primary-action" type="submit">Enregistrer</button>
   </form>
 </dialog>
-<script src="assets/js/pages/mes-chevaux.js?v=20260906-11"></script>
+<script src="assets/js/pages/mes-chevaux.js?v=20260906-14"></script>
 </body>
 </html>

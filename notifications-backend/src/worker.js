@@ -1,3 +1,4 @@
+import {handleHorseHealth,processHorseReminders,resolveHealthMail} from './horse-health.js';
 import {validateBookingHorses,bookingHorseInsert,bookingHorseOptions,bookingHorsesJson,paddockLabelSql} from './paddock-horses.js';
 import { handleHorses, planningEvent } from './horses.js';
 const JSON_HEADERS={
@@ -8,6 +9,12 @@ const JSON_HEADERS={
 
 export default{
   async scheduled(controller,env,ctx){
+    if(controller.cron==='0 7 * * *'){
+      const request=new Request('https://internal/api/cron/horse-health'),diagnostics=createRequestDiagnostics(request,new URL(request.url));
+      ctx.waitUntil(processHorseReminders({...env,DB:instrumentD1(env.DB,diagnostics)},new Date(controller.scheduledTime))
+        .then(result=>console.log(JSON.stringify({type:'horse-health-cron',...result}))).finally(()=>logRequestDiagnostics(diagnostics,ctx)));
+      return;
+    }
     ctx.waitUntil(processPaddockPushReminders(env,new Date(controller.scheduledTime)));
     ctx.waitUntil(processScheduledNotifications(env,new Date(controller.scheduledTime)));
   },
@@ -23,6 +30,12 @@ export default{
     if(diagnostics.enabled)env={...env,DB:instrumentD1(env.DB,diagnostics)};
 
     try{
+      if(url.pathname==='/api/horse-mail/resolve'&&request.method==='POST'){
+        const input=await readJson(request),row=await resolveHealthMail(env,Number(input?.id),input?.token);
+        if(!row)return json({error:'Rappel non disponible'},404,cors);
+        return json({email:row.email,firstName:row.first_name,horseName:row.horse_name,label:row.label,nextDueOn:row.next_due_on},200,cors);
+      }
+      const healthResponse=await handleHorseHealth(request,env,{json,cors,readJson,isAdmin,authenticatedUser});if(healthResponse)return healthResponse;
       const horseResponse=await handleHorses(request,env,{json,cors,readJson,isAdmin,authenticatedUser});
       if(horseResponse)return horseResponse;
       if(request.method==="GET"&&url.pathname==="/api/health"){
@@ -1825,6 +1838,7 @@ export default{
 
       return json({error:"Route introuvable"},404,cors);
     }catch(error){
+      if(String(error?.message||error).includes('HEALTH_SEND_IN_PROGRESS'))return json({error:'Un rappel sanitaire est en cours d’envoi. Réessayez dans quelques instants.'},409,cors);
       return json({error:"Erreur interne",detail:String(error?.message||error)},500,cors);
     }finally{
       if(diagnostics.enabled)logRequestDiagnostics(diagnostics,ctx);

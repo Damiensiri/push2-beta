@@ -1,0 +1,12 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import vm from 'node:vm';
+const source=await readFile(new URL('../../mailer/mailer-beta-complet.gs',import.meta.url),'utf8');
+function setup({unavailable=false,failSend=false}={}){const cache=new Map(),sent=[];let resolves=0;
+ const context=vm.createContext({console,ContentService:{MimeType:{JSON:'json'},createTextOutput:text=>({setMimeType:()=>JSON.parse(text)})},LockService:{getScriptLock:()=>({waitLock(){},releaseLock(){}})},CacheService:{getScriptCache:()=>({get:key=>cache.get(key),put:(key,value)=>cache.set(key,value)})},MailApp:{getRemainingDailyQuota:()=>100,sendEmail:message=>{sent.push(message);if(failSend)throw Error('uncertain');}},UrlFetchApp:{fetch:(url,opt)=>{assert.equal(url,'https://ecurie-notifications-beta.damiensiri-pro.workers.dev/api/horse-mail/resolve');assert.ok(JSON.parse(opt.payload).token);resolves++;return {getResponseCode:()=>unavailable?404:200,getContentText:()=>JSON.stringify({email:'owner@example.invalid',firstName:'Test',horseName:'Tornado',label:'Vaccin grippe',nextDueOn:'2026-09-15'})};}}});vm.runInContext(source,context);
+ const payload={type:'horse_health_reminder',notificationId:1,token:'12345678-1234-1234-1234-123456789abc'};
+ return {context,sent,call:(p=payload)=>context.doPost({postData:{contents:JSON.stringify(p)}}),resolves:()=>resolves};}
+test('mailer sanitaire : destinataire résolu côté Worker, corps lisible et doublon refusé',()=>{const t=setup();assert.equal(t.call().sent,true);assert.equal(t.call().duplicate,true);assert.equal(t.sent.length,1);assert.equal(t.resolves(),1);assert.equal(t.sent[0].to,'owner@example.invalid');assert.ok(t.sent[0].body.includes('\n\n'));assert.ok(t.sent[0].body.includes('Tornado'));assert.equal(t.context.doGet().version,'2026-09-06-horse-health');});
+test('mailer sanitaire : rappel annulé et jeton invalide ne déclenchent aucun email',()=>{const t=setup({unavailable:true});assert.equal(t.call().definitelyNotSent,true);assert.equal(t.call({type:'horse_health_reminder',notificationId:1,token:'bad'}).definitelyNotSent,true);assert.equal(t.sent.length,0);});
+test('mailer sanitaire : résultat ambigu non réessayé ; flux historiques conservés',()=>{const t=setup({failSend:true});assert.equal(t.call().definitelyNotSent,false);t.call();assert.equal(t.sent.length,1);let legacy=0;t.context.legacyDoPost_=()=>{legacy++;return {legacy:true};};assert.equal(t.call({type:'order_confirmation'}).legacy,true);assert.equal(legacy,1);});
