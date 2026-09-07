@@ -47,9 +47,10 @@ test('fondations chevaux sur D1 : migration, permissions, conservation, concurre
  await t.test('planning client agrégé, horaires facultatifs et droits selon la source',async()=>{
   const initial=await call('/api/me/horses/'+id+'?week=2026-09-07',{token:'client2'});assert.equal(initial.status,200);assert.equal(initial.data.events.length,0);
   assert.ok(initial.data.activityTypes.every(type=>type.value!=='proprietaire'));
+  assert.ok(initial.data.activityTypes.some(type=>type.value==='cours'&&type.label==='Cours'));
   assert.equal((await call('/api/me/horses/'+id+'/planning/tasks',{method:'POST',token:'client2',body:{date:'2026-09-08',type:'proprietaire'}})).status,400);
-  const createdActivity=await call('/api/me/horses/'+id+'/planning/tasks',{method:'POST',token:'client2',body:{date:'2026-09-08',type:'travail',startsAt:'14:00',endsAt:'15:00',description:'Séance légère'}});
-  assert.equal(createdActivity.status,201);assert.equal(createdActivity.data.event.source,'client');assert.equal(createdActivity.data.event.canEdit,true);
+  const createdActivity=await call('/api/me/horses/'+id+'/planning/tasks',{method:'POST',token:'client2',body:{date:'2026-09-08',type:'cours',startsAt:'14:00',endsAt:'15:00',description:'Séance légère'}});
+  assert.equal(createdActivity.status,201);assert.equal(createdActivity.data.event.type,'cours');assert.equal(createdActivity.data.event.source,'client');assert.equal(createdActivity.data.event.canEdit,true);
   const taskId=createdActivity.data.event.sourceId;
   const detail=await call('/api/me/horses/'+id+'?week=2026-09-07',{token:'client2'});assert.equal(detail.data.events.length,1);assert.equal(detail.data.events[0].date,'2026-09-08');
   assert.equal((await call('/api/me/horses/'+id+'/planning/tasks/'+taskId,{method:'PATCH',token:'client1',body:{description:'Interdit'}})).status,404);

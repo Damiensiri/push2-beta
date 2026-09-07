@@ -3,7 +3,7 @@ import { AwsClient } from 'aws4fetch';
 
 const statuses = new Set(['active', 'departed', 'archived']);
 const activityLabels = Object.freeze({travail:'Travail',longe:'Longe',repos:'Repos',concours:'Concours',cours:'Cours',proprietaire:'Propriétaire',autre:'Autre'});
-const clientActivityTypes = new Set(Object.keys(activityLabels).filter(type=>type!=='proprietaire'&&type!=='cours'));
+const clientActivityTypes = new Set(Object.keys(activityLabels).filter(type=>type!=='proprietaire'));
 const fail = (message, status = 400) => Object.assign(new Error(message), { status });
 const placeholders = ids => ids.map(() => '?').join(',');
 export function validateHorse(input) {
