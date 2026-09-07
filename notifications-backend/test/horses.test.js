@@ -162,6 +162,32 @@ test('fondations chevaux sur D1 : migration, permissions, conservation, concurre
   assert.equal((await call(adminPath,{method:'DELETE'})).status,200);
   assert.deepEqual((await DB.prepare('PRAGMA foreign_key_check').all()).results,[]);
  });
+ await t.test('sanitaire groupé : droits, atomicité, rappels, doublons et indépendance',async()=>{
+  const ids=[];for(const name of ['Groupe A','Groupe B'])ids.push((await call('/api/admin/horses',{method:'POST',body:{...payload,name,ownerIds:[1,2]}})).data.id);
+  const input={horseIds:ids,requestId:crypto.randomUUID(),type:'vaccine',label:'Vaccin groupe',performedOn:'2026-09-01',nextDueOn:'2026-10-01',comment:'Commun'};
+  const url='/api/admin/horses/health-batch';
+  assert.equal((await call(url,{method:'POST',token:'client1',body:input})).status,401);
+  for(const bad of [{horseIds:[]},{horseIds:[ids[0],ids[0]]},{horseIds:[ids[0],999999]},{performedOn:'2026-02-30'},{nextDueOn:'2026-01-01'}])assert.ok([400,409].includes((await call(url,{method:'POST',body:{...input,...bad}})).status));
+  assert.equal((await DB.prepare('SELECT COUNT(*) n FROM horse_health_records WHERE horse_id IN (?,?)').bind(...ids).first()).n,0);
+  const added=await call(url,{method:'POST',body:input});assert.equal(added.status,201,JSON.stringify(added));assert.equal(added.data.count,2);
+  const notifications=(await DB.prepare('SELECT COUNT(*) n FROM horse_notifications WHERE horse_id IN (?,?)').bind(...ids).first()).n;assert.equal(notifications,8);
+  const retried=await call(url,{method:'POST',body:input});assert.equal(retried.status,201);assert.deepEqual(retried.data,added.data);
+  const concurrent=await Promise.all([call(url,{method:"POST",body:input}),call(url,{method:"POST",body:input})]);for(const r of concurrent){assert.equal(r.status,201);assert.deepEqual(r.data,added.data);}
+  assert.equal((await DB.prepare('SELECT COUNT(*) n FROM horse_health_records WHERE horse_id IN (?,?)').bind(...ids).first()).n,2);
+  assert.equal((await DB.prepare('SELECT COUNT(*) n FROM horse_notifications WHERE horse_id IN (?,?)').bind(...ids).first()).n,notifications);
+  const a=added.data.records.find(r=>r.horseId===ids[0]),b=added.data.records.find(r=>r.horseId===ids[1]);
+  assert.equal((await call('/api/admin/horses/'+ids[0]+'/health/'+a.id,{method:'PATCH',body:{...input,version:1,comment:'Individuel'}})).status,200);
+  assert.equal((await DB.prepare('SELECT comment FROM horse_health_records WHERE id=?').bind(b.id).first()).comment,'Commun');
+  await DB.prepare("UPDATE horse_notifications SET status='sending',claimed_at=? WHERE record_id=?").bind(new Date().toISOString(),b.id).run();
+  const next={...input,requestId:crypto.randomUUID(),performedOn:'2026-09-02'};
+  assert.equal((await call(url,{method:'POST',body:next})).status,409);
+  assert.equal((await DB.prepare('SELECT COUNT(*) n FROM horse_health_records WHERE horse_id IN (?,?)').bind(...ids).first()).n,2);
+  assert.equal((await DB.prepare('SELECT is_current FROM horse_health_records WHERE id=?').bind(a.id).first()).is_current,1);
+  await DB.prepare("UPDATE horse_notifications SET status='cancelled',claimed_at=NULL WHERE record_id=?").bind(b.id).run();
+  assert.equal((await call(url,{method:'POST',body:next})).status,201);
+  assert.equal((await DB.prepare('SELECT COUNT(*) n FROM horse_health_records WHERE horse_id IN (?,?) AND is_current=1').bind(...ids).first()).n,2);
+  assert.equal((await call('/api/me/horses/'+ids[0]+'/health',{token:'client1'})).data.records.length,2);
+ });
  await t.test('sanitaire : historique, permissions, invalidation atomique, propriétaires, Cron et doublons',async()=>{
   const healthHorse=(await call('/api/admin/horses',{method:'POST',body:{...payload,name:'Santé',ownerIds:[1,2]}})).data.id;
   const base='/api/admin/horses/'+healthHorse+'/health',client='/api/me/horses/'+healthHorse;

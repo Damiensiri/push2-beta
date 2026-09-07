@@ -9,9 +9,9 @@ export function prepareHorseNotifications(env,horseId,day=today()){
  SELECT r.horse_id,r.id,r.version,o.user_id,o.created_at,j.value,
  CASE WHEN j.value=0 AND r.next_due_on<? THEN ? ELSE date(r.next_due_on,printf('-%d days',j.value)) END
  FROM horse_health_records r JOIN planning_horses h ON h.id=r.horse_id JOIN horse_owners o ON o.horse_id=h.id CROSS JOIN json_each(?) j
- WHERE h.id=? AND h.status='active' AND r.is_current=1 AND r.deleted_at IS NULL AND r.next_due_on IS NOT NULL
+ WHERE h.id IN (SELECT value FROM json_each(?)) AND h.status='active' AND r.is_current=1 AND r.deleted_at IS NULL AND r.next_due_on IS NOT NULL
  AND (j.value=0 OR date(r.next_due_on,printf('-%d days',j.value))>=?)`)
- .bind(day,day,JSON.stringify(reminderOffsets(env)),horseId,day);
+ .bind(day,day,JSON.stringify(reminderOffsets(env)),JSON.stringify(Array.isArray(horseId)?horseId:[horseId]),day);
 }
 function date(value,optional=false){if(optional&&(value===null||value===''))return null;if(typeof value!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(value)||!Number.isFinite(Date.parse(value))||new Date(value).toISOString().slice(0,10)!==value)throw fail('Date invalide');return value;}
 export function validateHealth(input){
@@ -25,9 +25,36 @@ export function validateHealth(input){
 }
 const mailStatuses={pending:'Prévu',sending:'Envoi en cours / à vérifier',sent:'Envoyé',cancelled:'Annulé',failed:'Échec temporaire',uncertain:'À vérifier'};
 const publicRecord=r=>({id:r.id,type:r.type,label:r.label,performedOn:r.performed_on,nextDueOn:r.next_due_on,comment:r.comment,isCurrent:Boolean(r.is_current),version:r.version});
+async function createGroupHealth(request,env,{json,cors,readJson,isAdmin}){
+ if(!isAdmin(request,env))throw fail('Non autorisé',401);
+ if(request.method!=='POST')throw fail('Méthode non autorisée',405);
+ const raw=await readJson(request),ids=raw?.horseIds;
+ if(!Array.isArray(ids)||!ids.length||ids.length>50||ids.some(id=>!Number.isSafeInteger(id)||id<1)||new Set(ids).size!==ids.length)throw fail('Sélectionnez entre 1 et 50 chevaux distincts.');
+ if(typeof raw.requestId!=='string'||!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(raw.requestId))throw fail('Identifiant d’enregistrement invalide');
+ const input=validateHealth(raw),horseIds=[...ids].sort((a,b)=>a-b),idsJson=JSON.stringify(horseIds);
+ const found=await env.DB.prepare('SELECT id FROM planning_horses WHERE id IN (SELECT value FROM json_each(?))').bind(idsJson).all();
+ if(found.results.length!==horseIds.length)throw fail('Un cheval sélectionné n’existe plus. Rechargez la liste.',409);
+ const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify({horseIds,...input})));
+ const key='group:'+raw.requestId+':'+Array.from(new Uint8Array(digest),v=>v.toString(16).padStart(2,'0')).join(''),now=new Date().toISOString();
+ const result=await env.DB.batch([
+  env.DB.prepare(`UPDATE horse_health_records AS r SET is_current=0,updated_at=?
+   WHERE horse_id IN (SELECT value FROM json_each(?)) AND type=? AND series_key=? AND is_current=1 AND deleted_at IS NULL AND performed_on<=?
+   AND NOT EXISTS(SELECT 1 FROM horse_health_records done WHERE done.creation_key=?||':'||r.horse_id)`)
+   .bind(now,idsJson,input.type,input.seriesKey,input.performedOn,key),
+  env.DB.prepare(`INSERT INTO horse_health_records(horse_id,type,label,series_key,performed_on,next_due_on,comment,is_current,creation_key,created_at,updated_at)
+   SELECT j.value,?,?,?,?,?,?,NOT EXISTS(SELECT 1 FROM horse_health_records r WHERE r.horse_id=j.value AND r.type=? AND r.series_key=? AND r.is_current=1 AND r.deleted_at IS NULL),?||':'||j.value,?,?
+   FROM json_each(?) j WHERE NOT EXISTS(SELECT 1 FROM horse_health_records done WHERE done.creation_key=?||':'||j.value)`)
+   .bind(input.type,input.label,input.seriesKey,input.performedOn,input.nextDueOn,input.comment,input.type,input.seriesKey,key,now,now,idsJson,key),
+  prepareHorseNotifications(env,horseIds),
+  env.DB.prepare("SELECT id,horse_id FROM horse_health_records WHERE creation_key IN (SELECT ?||':'||value FROM json_each(?)) ORDER BY horse_id").bind(key,idsJson)
+ ]);
+ return json({count:result[3].results.length,records:result[3].results.map(r=>({id:r.id,horseId:r.horse_id}))},201,cors);
+}
+
 export async function handleHorseHealth(request,env,{json,cors,readJson,isAdmin,authenticatedUser}){
- const url=new URL(request.url),match=url.pathname.match(/^\/api\/(admin|me)\/horses\/(\d+)\/health(?:\/(\d+))?$/);if(!match)return null;
+ const url=new URL(request.url),match=url.pathname.match(/^\/api\/(admin|me)\/horses\/(\d+)\/health(?:\/(\d+))?$/);const group=url.pathname==='/api/admin/horses/health-batch';if(!match&&!group)return null;
  try{
+  if(group)return await createGroupHealth(request,env,{json,cors,readJson,isAdmin});
   const admin=match[1]==='admin',horseId=Number(match[2]),recordId=match[3]?Number(match[3]):null;
   let viewer;if(admin){if(!isAdmin(request,env))throw fail('Non autorisé',401);}else{viewer=await authenticatedUser(request,env);if(!viewer)throw fail('Non autorisé',401);}
   const horse=await env.DB.prepare(`SELECT h.id,h.status FROM planning_horses h WHERE h.id=?${admin?'':' AND EXISTS(SELECT 1 FROM horse_owners o WHERE o.horse_id=h.id AND o.user_id=?)'}`).bind(horseId,...(admin?[]:[viewer.id])).first();
