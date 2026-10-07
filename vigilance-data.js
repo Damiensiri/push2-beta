@@ -3,8 +3,8 @@ window.METEOALARM_VIGILANCE = {
   "level": "yellow",
   "label": "Jaune",
   "phenomenon": "Orages",
-  "period": "Du 7 octobre à 00:00 au 8 octobre à 00:00",
-  "updatedAt": "6 octobre à 22:02",
+  "period": "Du 7 octobre à 06:01 au 8 octobre à 00:00",
+  "updatedAt": "7 octobre à 06:02",
   "source": "MeteoAlarm / EUMETNET",
   "sourceUrl": "https://meteoalarm.org"
 };
