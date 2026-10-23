@@ -38,8 +38,6 @@
     saveGeneralSchedules:document.getElementById("saveGeneralSchedulesBtn"),
     generalSchedulesStatus:document.getElementById("generalSchedulesStatus"),
     exceptionDate:document.getElementById("exceptionDate"),
-    exceptionEndDate:document.getElementById("exceptionEndDate"),
-    exceptionColor:document.getElementById("exceptionColor"),
     exceptionMessage:document.getElementById("exceptionMessage"),
     saveException:document.getElementById("saveExceptionBtn"),
     exceptionStatus:document.getElementById("exceptionStatus"),
@@ -306,7 +304,7 @@
     if(!operations.exceptions.length){
       const empty=document.createElement("p");
       empty.className="empty";
-      empty.textContent="Aucune alerte temporaire enregistrée.";
+      empty.textContent="Aucune exception enregistrée.";
       elements.exceptionsList.appendChild(empty);
       return;
     }
@@ -315,11 +313,9 @@
       row.className="exception-item";
       const text=document.createElement("div");
       const title=document.createElement("strong");
-      const endDate=item.endDate||item.end_date||"";
-      const color=(item.color||"orange")==="red"?"Rouge":"Orange";
-      title.textContent=endDate&&endDate!==item.date?`${item.date} au ${endDate}`:item.date;
+      title.textContent=item.date;
       const message=document.createElement("p");
-      message.textContent=`${color} · ${item.message}`;
+      message.textContent=item.message;
       text.append(title,message);
       const remove=document.createElement("button");
       remove.type="button";
@@ -351,11 +347,11 @@
   }
 
   async function deleteException(item){
-    if(!window.confirm(`Supprimer l’alerte du ${item.date} ?`))return;
+    if(!window.confirm(`Supprimer l’exception du ${item.date} ?`))return;
     try{
       await api(`/api/admin/exceptions/${item.id}`,{method:"DELETE"});
       await refreshOperations();
-      setStatus(elements.exceptionStatus,"Alerte supprimée.","success");
+      setStatus(elements.exceptionStatus,"Exception supprimée.","success");
     }catch(error){setStatus(elements.exceptionStatus,error.message,"error");}
   }
 
@@ -392,7 +388,7 @@
       badges.append(
         badge(alert.active==="oui"?"Publiée":"Inactive",alert.active==="oui"?"active":"inactive"),
         badge(alert.epingle==="oui"?"Épinglée":"Non épinglée"),
-        badge(alert.push_sent_at?"Push envoyé":alert.push_requested?"Push en attente (bêta)":"Sans push")
+        badge(alert.push_sent_at?"Push envoyé":alert.push_requested?"Push en attente (production)":"Sans push")
       );
 
       const edit=document.createElement("button");
@@ -476,7 +472,7 @@
         sent:"Alerte enregistrée et push envoyé.",
         "already-sent":"Alerte enregistrée. Le push avait déjà été envoyé.",
         "not-requested":"Alerte enregistrée sans push.",
-        "disabled-in-beta":"Alerte enregistrée. Le push bêta n’est pas encore activé.",
+        "disabled":"Alerte enregistrée. Le push production n’est pas encore activé.",
         failed:`Alerte enregistrée, mais le push a échoué${result.push?.error?" : "+result.push.error:"."}`
       };
       const pushFailed=result.push?.status==="failed";
@@ -566,18 +562,11 @@
     setStatus(elements.exceptionStatus,"Enregistrement…");
     try{
       await api("/api/admin/exceptions",{
-        method:"POST",body:JSON.stringify({
-          date:elements.exceptionDate.value,
-          endDate:elements.exceptionEndDate.value,
-          color:elements.exceptionColor.value,
-          message:elements.exceptionMessage.value
-        })
+        method:"POST",body:JSON.stringify({date:elements.exceptionDate.value,message:elements.exceptionMessage.value})
       });
       elements.exceptionMessage.value="";
-      elements.exceptionEndDate.value="";
-      elements.exceptionColor.value="orange";
       await refreshOperations();
-      setStatus(elements.exceptionStatus,"Alerte enregistrée.","success");
+      setStatus(elements.exceptionStatus,"Exception enregistrée.","success");
     }catch(error){setStatus(elements.exceptionStatus,error.message,"error");}
   });
 

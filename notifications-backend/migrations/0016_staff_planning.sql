@@ -32,9 +32,7 @@ CREATE INDEX IF NOT EXISTS idx_staff_shifts_month
 INSERT OR IGNORE INTO staff_employees(name,color,active,position,created_at,updated_at)
 VALUES
   ('CARON Killian','#F27D2C',1,0,datetime('now'),datetime('now')),
-  ('Salarié 2','#4C78C5',1,1,datetime('now'),datetime('now')),
-  ('Salarié 3','#70AD47',1,2,datetime('now'),datetime('now')),
-  ('Salarié 4','#A66DD4',1,3,datetime('now'),datetime('now'));
+  ('Juliette Bonbon Collombar','#4C78C5',1,1,datetime('now'),datetime('now'));
 
 WITH imported(work_date,morning_start,morning_end,afternoon_start,afternoon_end) AS (
   VALUES
@@ -72,4 +70,27 @@ INSERT OR IGNORE INTO staff_shifts(
 SELECT staff_employees.id,work_date,'work',morning_start,morning_end,afternoon_start,afternoon_end,'',datetime('now'),datetime('now')
 FROM staff_employees
 JOIN imported
+WHERE staff_employees.name='CARON Killian';
+
+INSERT OR IGNORE INTO staff_shifts(
+  employee_id,work_date,status,morning_start,morning_end,afternoon_start,afternoon_end,note,created_at,updated_at
+)
+SELECT id,'2026-07-27','rest',NULL,NULL,NULL,NULL,'',datetime('now'),datetime('now')
+FROM staff_employees WHERE name='CARON Killian';
+
+WITH special(work_date,status) AS (
+  VALUES
+    ('2026-08-03','leave'),
+    ('2026-08-04','leave'),
+    ('2026-08-05','leave'),
+    ('2026-08-07','leave'),
+    ('2026-08-08','sick'),
+    ('2026-08-09','sick')
+)
+INSERT OR IGNORE INTO staff_shifts(
+  employee_id,work_date,status,morning_start,morning_end,afternoon_start,afternoon_end,note,created_at,updated_at
+)
+SELECT staff_employees.id,work_date,status,NULL,NULL,NULL,NULL,'',datetime('now'),datetime('now')
+FROM staff_employees
+JOIN special
 WHERE staff_employees.name='CARON Killian';

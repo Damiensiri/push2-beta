@@ -1,7 +1,7 @@
 (function(){
 "use strict"
 
-const ENDPOINT="https://script.google.com/macros/s/AKfycbx278-X4lrLlua_Jns-UfO04PDWDhk7qOTnsF2BW_VuMjgNnlHIxvsW9fk35HI6nJl-eQ/exec"
+const ENDPOINT="https://script.google.com/macros/s/AKfycbygbKTIyyymQN7hD3WV_Tu_47GrZFZ0ZEA5dQLHMBvb1QLyKU4Xh5kRU1Y2Q9FziNEC/exec"
 const ORDER_SOURCES=["soins","services","laverie","panier"]
 
 function sendPayload(payload){

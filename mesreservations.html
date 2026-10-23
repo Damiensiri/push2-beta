@@ -11,17 +11,17 @@
 
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
 
-<script src="assets/js/app-config.js?v=20260828-2"></script>
-<script src="assets/js/app-layout.js?v=20260828-2"></script>
+<script src="assets/js/app-config.js?v=20260918-085300"></script>
+<script src="assets/js/app-layout.js?v=20260918-085300"></script>
 
-<link rel="stylesheet" href="assets/css/app.css?v=20260828-2">
-<link rel="stylesheet" href="assets/css/themes/summer.css?v=20260828-2">
-<link rel="stylesheet" href="assets/css/themes/autumn.css?v=20260828-2">
-<link rel="stylesheet" href="assets/css/themes/christmas.css?v=20260828-2">
-<link rel="stylesheet" href="assets/css/themes/winter.css?v=20260828-2">
-<link rel="stylesheet" href="assets/css/themes/spring.css?v=20260828-2">
-<link rel="stylesheet" href="assets/css/pages/mesreservations.css?v=20260828-2">
-<script src="assets/js/paddock-horses.js?v=20260906-13"></script>
+<link rel="stylesheet" href="assets/css/app.css?v=20260918-085300">
+<link rel="stylesheet" href="assets/css/themes/summer.css?v=20260918-085300">
+<link rel="stylesheet" href="assets/css/themes/autumn.css?v=20260918-085300">
+<link rel="stylesheet" href="assets/css/themes/christmas.css?v=20260918-085300">
+<link rel="stylesheet" href="assets/css/themes/winter.css?v=20260918-085300">
+<link rel="stylesheet" href="assets/css/themes/spring.css?v=20260918-085300">
+<link rel="stylesheet" href="assets/css/pages/mesreservations.css?v=20260918-085300">
+<script src="assets/js/paddock-horses.js?v=20260918-085300"></script>
 </head>
 
 <body class="app-page mesreservations-page">
@@ -108,11 +108,7 @@ month:"long",
 year:"numeric"
 }).format(date)
 }
-
-function formatShortDateFR(dateStr){
-const match=String(dateStr||"").match(/^(\d{4})-(\d{2})-(\d{2})$/)
-return match?`${match[3]}/${match[2]}/${match[1].slice(-2)}`:""
-}
+function formatShortDateFR(dateStr){const match=String(dateStr||"").match(/^(\d{4})-(\d{2})-(\d{2})$/);return match?`${match[3]}/${match[2]}/${match[1].slice(-2)}`:""}
 
 function formatTimeFR(value){
 if(!value) return "--:--"
@@ -220,7 +216,7 @@ reservation.description
 )
 }
 
-/* ===== DONNÉES BÊTA ===== */
+/* ===== DONNÉES PRODUCTION ===== */
 
 const PADDOCK_API="https://ecurie-notifications-beta.damiensiri-pro.workers.dev"
 const PADDOCK_TOKEN_KEY="ecurie_beta_session"
@@ -479,7 +475,7 @@ else if(type==="paddock-accounts")loadPaddockCard()
 })
 
 </script>
-<script src="assets/js/status-realtime.js?v=20260828-2"></script>
+<script src="assets/js/status-realtime.js?v=20260918-085300"></script>
 
 </body>
 </html>

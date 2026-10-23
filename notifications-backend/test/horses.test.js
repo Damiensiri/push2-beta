@@ -52,6 +52,10 @@ test('fondations chevaux sur D1 : migration, permissions, conservation, concurre
   const createdActivity=await call('/api/me/horses/'+id+'/planning/tasks',{method:'POST',token:'client2',body:{date:'2026-09-08',type:'cours',startsAt:'14:00',endsAt:'15:00',description:'Séance légère'}});
   assert.equal(createdActivity.status,201);assert.equal(createdActivity.data.event.type,'cours');assert.equal(createdActivity.data.event.source,'client');assert.equal(createdActivity.data.event.canEdit,true);
   const taskId=createdActivity.data.event.sourceId;
+  await call('/api/admin/planning/horses',{method:'POST',body:{weekStart:'2026-09-07',horseId:id}});
+  const privatePlanning=await call('/api/admin/planning?week=2026-09-07');assert.ok(!privatePlanning.data.tasks.some(task=>task.id===taskId));assert.ok(!privatePlanning.data.events.some(event=>event.source==='client'));
+  assert.equal((await call('/api/admin/planning/tasks/'+taskId,{method:'PATCH',body:{completed:true}})).status,404);
+
   const detail=await call('/api/me/horses/'+id+'?week=2026-09-07',{token:'client2'});assert.equal(detail.data.events.length,1);assert.equal(detail.data.events[0].date,'2026-09-08');
   assert.equal((await call('/api/me/horses/'+id+'/planning/tasks/'+taskId,{method:'PATCH',token:'client1',body:{description:'Interdit'}})).status,404);
   const changed=await call('/api/me/horses/'+id+'/planning/tasks/'+taskId,{method:'PATCH',token:'client2',body:{endsAt:null,description:'Travail à pied'}});assert.equal(changed.status,200);assert.equal(changed.data.event.endsAt,null);

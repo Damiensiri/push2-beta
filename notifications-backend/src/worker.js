@@ -28,7 +28,6 @@ export default{
 
     const diagnostics=createRequestDiagnostics(request,url);
     if(diagnostics.enabled)env={...env,DB:instrumentD1(env.DB,diagnostics)};
-
     try{
       if(url.pathname==='/api/horse-mail/resolve'&&request.method==='POST'){
         const input=await readJson(request),row=await resolveHealthMail(env,Number(input?.id),input?.token);
@@ -261,7 +260,6 @@ export default{
       if(url.pathname==="/api/push/subscription"){
         const viewer=await authenticatedUser(request,env);
         if(!viewer)return json({error:"Non autorisé"},401,cors);
-        if(viewer.role!=="client")return json({registered:false,ignored:true,reason:"client-push-only"},200,cors);
         if(request.method==="PUT"||request.method==="DELETE"){
           const input=await readJson(request);const subscriptionId=String(input?.subscriptionId||"").trim();
           const installationId=String(input?.installationId||"").trim();
@@ -350,10 +348,10 @@ export default{
         const [horseOptions,reservationResult,datedHours,restrictionResult,requestExceptionResult]=await Promise.all([
           bookingHorseOptions(env,viewer.id),
           env.DB.prepare(`SELECT id,user_id,name,paddock,date,time,duration FROM paddock_reservations
-            WHERE date>=? AND date<=date(?,'+3 days') ORDER BY date,time`).bind(today,today).all(),
-          loadEffectivePaddockHoursByDate(env,4),
-          env.DB.prepare("SELECT date,block_grande_90,block_beudot_90 FROM paddock_restrictions WHERE date>=? AND date<=date(?,'+3 days')").bind(today,today).all(),
-          env.DB.prepare("SELECT date,is_open,comment FROM paddock_request_exceptions WHERE date>=? AND date<=date(?,'+3 days')").bind(today,today).all()
+            WHERE date>=date('now') ORDER BY date,time`).all(),
+          loadEffectivePaddockHoursByDate(env,14),
+          env.DB.prepare("SELECT date,block_grande_90,block_beudot_90 FROM paddock_restrictions WHERE date>=date('now')").all(),
+          env.DB.prepare("SELECT date,is_open,comment FROM paddock_request_exceptions WHERE date>=date('now')").all()
         ]);
         const hours=datedHours[today]||await loadEffectivePaddockHours(env,today);
         const restrictions={};
@@ -620,7 +618,11 @@ export default{
         }
 
         if(request.method==="POST"&&url.pathname==="/api/admin/planning/horses"){
-          const input=await readJson(request);const week=validWeekStart(input?.weekStart);const horseId=Number(input?.horseId);
+          const input=await readJson(request);const week=validWeekStart(input?.weekStart);let horseId=Number(input?.horseId);
+          if(week&&!horseId&&String(input?.name||'').trim()){
+            const name=String(input.name).trim().slice(0,100);const existing=await env.DB.prepare("SELECT id FROM planning_horses WHERE name=? AND status='active' ORDER BY id LIMIT 1").bind(name).first();
+            if(existing)horseId=existing.id;else{const now=new Date().toISOString();const created=await env.DB.prepare("INSERT INTO planning_horses(name,created_at,updated_at) VALUES(?,?,?) RETURNING id").bind(name,now,now).first();horseId=created.id;}
+          }
           if(!week||!Number.isSafeInteger(horseId)||horseId<1)return json({error:"Sélectionnez un cheval de la fiche CHEVAUX"},400,cors);
           const horse=await env.DB.prepare("SELECT id FROM planning_horses WHERE id=? AND status='active'").bind(horseId).first();
           if(!horse)return json({error:"Cheval actif introuvable"},404,cors);
@@ -1247,16 +1249,15 @@ export default{
         }
 
         if(request.method==="GET"&&url.pathname==="/api/admin/paddocks"){
-          const today=parisNow().date;
-          const [reservationResult,datedHours,restrictionResult,requestResult]=await Promise.all([
+          const [reservationResult,hours,datedHours,restrictionResult,requestResult]=await Promise.all([
             env.DB.prepare(`SELECT r.id,r.user_id,r.name,r.email,r.paddock,r.date,r.time,r.duration,r.version,${bookingHorsesJson} AS horses_json FROM paddock_reservations r
               WHERE date>=date('now') ORDER BY date,time`).all(),
-            loadEffectivePaddockHoursByDate(env,31),
+            loadEffectivePaddockHours(env,parisNow().date),
+            loadEffectivePaddockHoursByDate(env,120),
             env.DB.prepare("SELECT date,block_grande_90,block_beudot_90 FROM paddock_restrictions WHERE date>=date('now')").all(),
             env.DB.prepare(`SELECT id,user_id,name,email,date,status,comment,created_at,updated_at
               FROM paddock_requests ORDER BY date DESC,id DESC`).all()
           ]);
-          const hours=datedHours[today]||await loadEffectivePaddockHours(env,today);
           const restrictions={};for(const row of restrictionResult.results)restrictions[row.date]={blockGrande90:Boolean(row.block_grande_90),blockBeudot90:Boolean(row.block_beudot_90)};
           return json({reservations:reservationResult.results.map(row=>({id:String(row.id),userId:row.user_id,name:row.name,email:row.email,paddock:row.paddock,date:row.date,time:row.time,duration:Number(row.duration),version:row.version,horses:JSON.parse(row.horses_json)})),
             requests:requestResult.results.map(publicPaddockRequest),horaires:hours,horairesParDate:datedHours,restrictions},200,cors);
@@ -1392,7 +1393,8 @@ export default{
           await notifyRealtime(env,"paddocks");await notifyRealtime(env,"planning");
           let email={requested:false,sent:false};
           if(reservation.email&&reservation.email.includes("@"))email=await sendPaddockReservationCancellationEmail(env,reservation,comment);
-          const push=await sendPaddockReservationCancellationPush(env,reservation,comment);
+          const push=await sendPaddockReservationCancellationPush(env,reservation);
+          await sendAdminEventPush(env,"Réservation paddock annulée",`${reservation.name} — ${reservation.date} à ${reservation.time}`,"paddocks.html");
           return json({deleted:true,email,push},200,cors);
         }
 
@@ -1840,9 +1842,7 @@ export default{
     }catch(error){
       if(String(error?.message||error).includes('HEALTH_SEND_IN_PROGRESS'))return json({error:'Un rappel sanitaire est en cours d’envoi. Réessayez dans quelques instants.'},409,cors);
       return json({error:"Erreur interne",detail:String(error?.message||error)},500,cors);
-    }finally{
-      if(diagnostics.enabled)logRequestDiagnostics(diagnostics,ctx);
-    }
+    }finally{logRequestDiagnostics(diagnostics,ctx);}
   }
 };
 
@@ -1998,8 +1998,6 @@ async function loadPublicStatuses(env,date=new Date(),dateOverride=""){
 function publicSpace(space,schedule,minutes,nextOpening=null,activity=null){
   const normalHours=schedule?`${schedule.opens_at} - ${schedule.closes_at}`:"";
   let status=calculateStatus(space.manual_status,schedule,minutes);
-  // Un statut « prévu » n'a de sens que s'il existe une ouverture future.
-  // Lorsque toutes les journées à venir sont fermées, l'espace reste fermé.
   if(status==="prevision"&&!nextOpening&&space.manual_status!=="prevision")status="ferme";
   const hidesHours=status==="ferme"||status==="hors-service";
   const activityBlocked=["ferme","hors-service"].includes(status);
@@ -2142,9 +2140,8 @@ function nextClosedInterval(schedule,minutes){
 }
 
 function publicSchedule(row){
+  const value={jour:DAY_NAMES[row.day],ouvert:row.opens_at,ferme:row.closes_at};
   const status=row.exception_manual_status||row.program_manual_status||"ouvert";
-  const closed=status!=="ouvert";
-  const value={jour:DAY_NAMES[row.day],ouvert:closed?"":row.opens_at,ferme:closed?"":row.closes_at};
   if(status!=="ouvert")value.statut=status;
   const closedIntervals=normalizeClosedIntervals(row.closed_intervals);
   if(closedIntervals.length)value.closedIntervals=closedIntervals;
@@ -2174,13 +2171,13 @@ async function loadEffectiveGeneralSchedules(env,dateString=""){
   const entries=await loadApplicableHourEntries(env,"general",dateString);
   const map=new Map(base.results.map(row=>[Number(row.day),{...row}]));
   entries.filter(row=>row.target_slug==="general").forEach(row=>{
-    const closed=String(row.manual_status||"ouvert")!=="ouvert";
-    map.set(Number(row.day),{day:row.day,opens_at:closed?"":row.opens_at,closes_at:closed?"":row.closes_at,program_manual_status:row.manual_status});
+    map.set(Number(row.day),{day:row.day,opens_at:row.opens_at,closes_at:row.closes_at,program_manual_status:row.manual_status});
   });
   const exception=await loadHourException(env,date,"general","general");
   if(exception&&day){
-    const closed=exception.manualStatus!=="ouvert";
-    map.set(day,{day,opens_at:closed?"":exception.opensAt,closes_at:closed?"":exception.closesAt,exception_manual_status:exception.manualStatus});
+    const current=map.get(day)||{day};
+    if(isPartialClosureException(exception))map.set(day,addClosedInterval(current,exception));
+    else map.set(day,{day,opens_at:exception.opensAt,closes_at:exception.closesAt,exception_manual_status:exception.manualStatus});
   }
   return [...map.values()].sort((a,b)=>Number(a.day)-Number(b.day));
 }
@@ -2212,8 +2209,12 @@ function buildEffectiveGeneralSchedulesForDate(baseRows,entries,exception,date){
     map.set(Number(row.day),{day:row.day,opens_at:closed?"":row.opens_at,closes_at:closed?"":row.closes_at,program_manual_status:row.manual_status});
   });
   if(exception&&day){
-    const closed=exception.manualStatus!=="ouvert";
-    map.set(day,{day,opens_at:closed?"":exception.opensAt,closes_at:closed?"":exception.closesAt,exception_manual_status:exception.manualStatus});
+    const current=map.get(day)||{day};
+    if(isPartialClosureException(exception))map.set(day,addClosedInterval(current,exception));
+    else {
+      const closed=exception.manualStatus!=="ouvert";
+      map.set(day,{day,opens_at:closed?"":exception.opensAt,closes_at:closed?"":exception.closesAt,exception_manual_status:exception.manualStatus});
+    }
   }
   return [...map.values()].sort((a,b)=>Number(a.day)-Number(b.day));
 }
@@ -2227,6 +2228,7 @@ async function loadEffectiveSpaceSchedules(env,dateString=""){
   effectiveSpaceScheduleCache.set(date,{at:Date.now(),value});
   return value;
 }
+
 async function loadEffectiveSpaceSchedulesUncached(env,dateString=""){
   const date=validIsoDate(dateString)||parisNow().date;
   const day=dayNumberFromIsoDate(date);
@@ -2253,8 +2255,9 @@ async function loadEffectiveSpaceSchedulesUncached(env,dateString=""){
     exceptions.filter(item=>item.scope==="work"||item.scope==="paddocks").forEach(item=>{
       const spaceSlug=item.scope==="paddocks"&&item.targetSlug==="grande"?"grande-voie":item.targetSlug;
       const key=`${spaceSlug}:${day}`;
-      const closed=item.manualStatus!=="ouvert";
-      map.set(key,{space_slug:spaceSlug,day,opens_at:closed?"":item.opensAt,closes_at:closed?"":item.closesAt,
+      const current=map.get(key)||{space_slug:spaceSlug,day};
+      if(isPartialClosureException(item))map.set(key,addClosedInterval(current,item));
+      else map.set(key,{space_slug:spaceSlug,day,opens_at:item.opensAt,closes_at:item.closesAt,
         program_manual_status:item.manualStatus,hour_exception:true});
     });
   }
@@ -2319,9 +2322,13 @@ function buildEffectiveSpaceSchedulesForDate(baseRows,entries,exceptions,date){
     exceptions.filter(item=>item.scope==="work"||item.scope==="paddocks").forEach(item=>{
       const spaceSlug=item.scope==="paddocks"&&item.targetSlug==="grande"?"grande-voie":item.targetSlug;
       const key=`${spaceSlug}:${day}`;
-      const closed=item.manualStatus!=="ouvert";
-      map.set(key,{space_slug:spaceSlug,day,opens_at:closed?"":item.opensAt,closes_at:closed?"":item.closesAt,
-        program_manual_status:item.manualStatus,hour_exception:true});
+      const current=map.get(key)||{space_slug:spaceSlug,day};
+      if(isPartialClosureException(item))map.set(key,addClosedInterval(current,item));
+      else {
+        const closed=item.manualStatus!=="ouvert";
+        map.set(key,{space_slug:spaceSlug,day,opens_at:closed?"":item.opensAt,closes_at:closed?"":item.closesAt,
+          program_manual_status:item.manualStatus,hour_exception:true});
+      }
     });
   }
   return [...map.values()].sort((a,b)=>String(a.space_slug).localeCompare(String(b.space_slug))||Number(a.day)-Number(b.day));
@@ -2361,11 +2368,10 @@ async function loadEffectivePaddockHours(env,dateString=""){
     const dayName=dayNames[Number(row.day)];
     if(!dayName)continue;
     const paddockHours=hours[row.target_slug]||{};
-    const closed=["ferme","hors-service"].includes(String(row.manual_status||""));
     paddockHours[dayName]={
-      closed,
-      open:closed?"":row.opens_at,
-      close:closed?"":row.closes_at
+      closed:["ferme","hors-service"].includes(String(row.manual_status||"")),
+      open:row.opens_at,
+      close:row.closes_at
     };
     hours[row.target_slug]=paddockHours;
   }
@@ -2374,11 +2380,19 @@ async function loadEffectivePaddockHours(env,dateString=""){
     const exceptions=await loadHourExceptionsForDate(env,date);
     exceptions.filter(item=>item.scope==="paddocks"&&["maison","grande","beudot"].includes(item.targetSlug)).forEach(item=>{
       const paddockHours=hours[item.targetSlug]||{};
-      const closed=["ferme","hors-service"].includes(item.manualStatus);
+      if(isPartialClosureException(item)){
+        paddockHours[dayName]={
+          ...(paddockHours[dayName]||{}),
+          closed:false,
+          closedIntervals:normalizeClosedIntervals([...(paddockHours[dayName]?.closedIntervals||[]),{open:item.opensAt,close:item.closesAt,status:item.manualStatus}])
+        };
+        hours[item.targetSlug]=paddockHours;
+        return;
+      }
       paddockHours[dayName]={
-        closed,
-        open:closed?"":item.opensAt,
-        close:closed?"":item.closesAt
+        closed:["ferme","hors-service"].includes(item.manualStatus),
+        open:item.opensAt,
+        close:item.closesAt
       };
       hours[item.targetSlug]=paddockHours;
     });
@@ -2457,6 +2471,15 @@ function buildEffectivePaddockHoursForDate(baseRows,entries,exceptions,date){
     const dayName=DAY_NAMES[day];
     exceptions.filter(item=>item.scope==="paddocks"&&["maison","grande","beudot"].includes(item.targetSlug)).forEach(item=>{
       const paddockHours=hours[item.targetSlug]||{};
+      if(isPartialClosureException(item)){
+        paddockHours[dayName]={
+          ...(paddockHours[dayName]||{}),
+          closed:false,
+          closedIntervals:normalizeClosedIntervals([...(paddockHours[dayName]?.closedIntervals||[]),{open:item.opensAt,close:item.closesAt,status:item.manualStatus}])
+        };
+        hours[item.targetSlug]=paddockHours;
+        return;
+      }
       const closed=["ferme","hors-service"].includes(item.manualStatus);
       paddockHours[dayName]={closed,open:closed?"":item.opensAt,close:closed?"":item.closesAt};
       hours[item.targetSlug]=paddockHours;
@@ -2645,20 +2668,14 @@ async function validateHourProgram(env,input){
     const specialHours=String(entry?.specialHours||"").trim();
     const info=String(entry?.info||"").trim();
     if(!allowedTargets.has(targetSlug))return{error:"Espace invalide dans la programmation"};
+    if(day<1||day>7||!/^\d{2}:\d{2}$/.test(opensAt)||!/^\d{2}:\d{2}$/.test(closesAt))return{error:"Horaire invalide"};
+    if(timeToMinutes(opensAt)===null||timeToMinutes(closesAt)===null)return{error:"Horaire invalide"};
     if(!["ouvert","prevision","ferme","hors-service"].includes(manualStatus))return{error:"Statut invalide"};
-    const hasOpen=Boolean(opensAt);
-    const hasClose=Boolean(closesAt);
-    if(manualStatus==="ouvert"){
-      if(!hasOpen||!hasClose||!/^\d{2}:\d{2}$/.test(opensAt)||!/^\d{2}:\d{2}$/.test(closesAt))return{error:"Une programmation ouverte doit avoir des horaires"};
-      if(timeToMinutes(opensAt)===null||timeToMinutes(closesAt)===null)return{error:"Horaire invalide"};
-    }else if(hasOpen||hasClose){
-      return{error:"Une programmation fermée s’applique à la journée complète, sans horaires"};
-    }
     if(specialHours.length>120||info.length>500)return{error:"Texte trop long"};
     const key=`${targetSlug}:${day}`;
     if(keys.has(key))return{error:"Chaque jour ne doit apparaître qu’une fois par espace"};
     keys.add(key);
-    rows.push({targetSlug,day,manualStatus,opensAt:manualStatus==="ouvert"?opensAt:"",closesAt:manualStatus==="ouvert"?closesAt:"",specialHours,info,
+    rows.push({targetSlug,day,manualStatus,opensAt,closesAt,specialHours,info,
       liberte:scope==="work"?normalizeYesNo(entry?.liberte,true):"",
       longe:scope==="work"?normalizeYesNo(entry?.longe,true):""});
   }
@@ -2678,12 +2695,9 @@ async function validateHourException(env,input){
   if(scope==="general"&&manualStatus==="hors-service")return{error:"Hors service ne s’applique pas aux horaires des écuries"};
   const hasOpen=Boolean(opensAt);
   const hasClose=Boolean(closesAt);
-  if(manualStatus==="ouvert"){
-    if(!hasOpen||!hasClose)return{error:"Une exception ouverte doit avoir des horaires"};
-    if(timeToMinutes(opensAt)===null||timeToMinutes(closesAt)===null)return{error:"Horaire invalide"};
-  }else if(hasOpen||hasClose){
-    return{error:"Une exception fermée s’applique à la journée complète, sans horaires"};
-  }
+  if(hasOpen!==hasClose)return{error:"Renseignez les deux horaires ou aucun horaire"};
+  if(hasOpen&&(timeToMinutes(opensAt)===null||timeToMinutes(closesAt)===null))return{error:"Horaire invalide"};
+  if(!hasOpen&&manualStatus==="ouvert")return{error:"Une exception ouverte doit avoir des horaires"};
   const spaces=scope==="work"?await env.DB.prepare("SELECT slug FROM spaces").all():{results:[]};
   const allowedTargets=new Set(
     scope==="general"?["general"]:
@@ -2691,7 +2705,7 @@ async function validateHourException(env,input){
     spaces.results.map(row=>row.slug).filter(slug=>["carriere","manege"].includes(slug))
   );
   if(!allowedTargets.has(targetSlug))return{error:"Espace invalide dans l’exception"};
-  return{date,scope,targetSlug,manualStatus,opensAt:manualStatus==="ouvert"?opensAt:"",closesAt:manualStatus==="ouvert"?closesAt:""};
+  return{date,scope,targetSlug,manualStatus,opensAt,closesAt};
 }
 
 function validateActivityProgram(input){
@@ -2761,7 +2775,7 @@ function validateScheduleException(input){
   if(!date)return{error:"Date de début invalide"};
   if(rawEndDate&&!endDate)return{error:"Date de fin invalide"};
   if(endDate&&endDate<date)return{error:"La date de fin doit être postérieure ou égale à la date de début"};
-  if(!message||message.length>500)return{error:"Texte d’exception invalide"};
+  if(!message||message.length>500)return{error:"Texte d’alerte invalide"};
   if(!["orange","red"].includes(color))return{error:"Couleur invalide"};
   return{date,endDate:endDate||null,message,color};
 }
@@ -2820,7 +2834,7 @@ async function sendRequestedPush(env,alert){
   if(!alert.push_requested)return{enabled:isPushEnabled(env),status:"not-requested"};
   if(alert.push_sent_at)return{enabled:isPushEnabled(env),status:"already-sent",sentAt:alert.push_sent_at};
   if(alert.active!=="oui")return{enabled:isPushEnabled(env),status:"inactive-alert"};
-  if(!isPushEnabled(env))return{enabled:false,status:"disabled-in-beta"};
+  if(!isPushEnabled(env))return{enabled:false,status:"disabled"};
 
   const publicAlertId=alert.alert_id??alert.id;
   const detailUrl=`https://damiensiri.github.io/push2-beta/detail.html?id=${encodeURIComponent(publicAlertId)}`;
@@ -2949,6 +2963,33 @@ async function sendPaddockReminderPush(env,reservation,type,subscriptionIds,deli
   }catch(error){return{sent:false,error:String(error?.message||error)};}
 }
 
+async function sendOneSignalPush(env,payload){
+  try{
+    const controller=new AbortController();
+    const timeout=setTimeout(()=>controller.abort(),8000);
+    let response;
+    try{
+      response=await fetch("https://api.onesignal.com/notifications",{
+        method:"POST",
+        signal:controller.signal,
+        headers:{
+          "authorization":`Key ${env.ONESIGNAL_REST_API_KEY}`,
+          "content-type":"application/json; charset=utf-8"
+        },
+        body:JSON.stringify(payload)
+      });
+    }finally{
+      clearTimeout(timeout);
+    }
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok||data.errors)return{sent:false,error:data.errors||`HTTP ${response.status}`};
+    if(Number(data.recipients)===0)return{sent:false,error:"Aucun destinataire OneSignal actif"};
+    return{sent:true,id:data.id||null,recipients:Number(data.recipients)||null};
+  }catch(error){
+    return{sent:false,error:String(error?.message||error)};
+  }
+}
+
 async function sendUserPush(env,userId,{title,message,url,deliveryKey,email}){
   if(!isPushEnabled(env))return{enabled:false,status:"disabled"};
   const cleanEmail=normalizeEmail(email);
@@ -2988,33 +3029,6 @@ async function sendUserPush(env,userId,{title,message,url,deliveryKey,email}){
     return{enabled:true,status:"failed",error:result.error||"Échec OneSignal"};
   }catch(error){
     return{enabled:true,status:"failed",error:String(error?.message||error)};
-  }
-}
-
-async function sendOneSignalPush(env,payload){
-  try{
-    const controller=new AbortController();
-    const timeout=setTimeout(()=>controller.abort(),8000);
-    let response;
-    try{
-      response=await fetch("https://api.onesignal.com/notifications",{
-        method:"POST",
-        signal:controller.signal,
-        headers:{
-          "authorization":`Key ${env.ONESIGNAL_REST_API_KEY}`,
-          "content-type":"application/json; charset=utf-8"
-        },
-        body:JSON.stringify(payload)
-      });
-    }finally{
-      clearTimeout(timeout);
-    }
-    const data=await response.json().catch(()=>({}));
-    if(!response.ok||data.errors)return{sent:false,error:data.errors||`HTTP ${response.status}`};
-    if(Number(data.recipients)===0)return{sent:false,error:"Aucun destinataire OneSignal actif"};
-    return{sent:true,id:data.id||null,recipients:Number(data.recipients)||null};
-  }catch(error){
-    return{sent:false,error:String(error?.message||error)};
   }
 }
 
@@ -3649,7 +3663,7 @@ async function loadOrders(env,whereClause,bindings){
 }
 
 async function sendOrderEmail(env,type,order,user){
-  if(!env.MAILER_ENDPOINT)return{requested:true,sent:false,error:"Mailer bêta non configuré"};
+  if(!env.MAILER_ENDPOINT)return{requested:true,sent:false,error:"Mailer production non configuré"};
   const payload={type,idempotencyKey:`${type}:${order.publicId}:${order.status}:${order.updatedAt}`,
     customer:{email:user.email,firstName:user.first_name||user.firstName,lastName:user.last_name||user.lastName},
     order:{id:order.publicId,source:order.source,total:order.total,status:order.status,comment:order.comment||"",
@@ -3676,7 +3690,7 @@ async function loadPaddockAccount(env,userId){
 }
 
 async function sendPaddockRequestConfirmationEmail(env,row){
-  if(!env.MAILER_ENDPOINT)return{requested:true,sent:false,error:"Mailer bêta non configuré"};
+  if(!env.MAILER_ENDPOINT)return{requested:true,sent:false,error:"Mailer production non configuré"};
   const payload={type:"paddock_request_confirmation",idempotencyKey:`paddock-request:${row.id}`,
     customer:{email:row.email,firstName:row.name},request:{id:String(row.id),date:row.date}};
   try{
@@ -3688,7 +3702,7 @@ async function sendPaddockRequestConfirmationEmail(env,row){
 }
 
 async function sendPaddockRequestStatusEmail(env,row){
-  if(!env.MAILER_ENDPOINT)return{requested:true,sent:false,error:"Mailer bêta non configuré"};
+  if(!env.MAILER_ENDPOINT)return{requested:true,sent:false,error:"Mailer production non configuré"};
   const payload={
     type:"paddock_request_status",
     idempotencyKey:`paddock-request-status:${row.id}:${row.status}:${row.updated_at}`,
@@ -3706,7 +3720,7 @@ async function sendPaddockRequestStatusEmail(env,row){
 }
 
 async function sendPaddockReservationCancellationEmail(env,row,comment){
-  if(!env.MAILER_ENDPOINT)return{requested:true,sent:false,error:"Mailer bêta non configuré"};
+  if(!env.MAILER_ENDPOINT)return{requested:true,sent:false,error:"Mailer production non configuré"};
   const payload={type:"paddock_reservation_cancelled",
     idempotencyKey:`paddock-reservation-cancelled:${row.id}:${new Date().toISOString()}`,
     customer:{email:row.email,firstName:row.name},
@@ -3720,7 +3734,7 @@ async function sendPaddockReservationCancellationEmail(env,row,comment){
 }
 
 async function sendPaddockReservationConfirmationEmail(env,row){
-  if(!env.MAILER_ENDPOINT)return{requested:true,sent:false,error:"Mailer bêta non configuré"};
+  if(!env.MAILER_ENDPOINT)return{requested:true,sent:false,error:"Mailer production non configuré"};
   const payload={type:"paddock_reservation_confirmation",
     idempotencyKey:`paddock-reservation:${row.id}`,
     customer:{email:row.email,firstName:row.name},
@@ -3734,7 +3748,7 @@ async function sendPaddockReservationConfirmationEmail(env,row){
 }
 
 async function sendAccountApprovedEmail(env,user,approvedAt){
-  if(!env.MAILER_ENDPOINT)return{requested:true,sent:false,error:"Mailer bêta non configuré"};
+  if(!env.MAILER_ENDPOINT)return{requested:true,sent:false,error:"Mailer production non configuré"};
   const payload={type:"account_approved",idempotencyKey:`account-approved:${user.id}:${approvedAt}`,
     customer:{email:user.email,firstName:user.first_name,lastName:user.last_name},
     account:{id:String(user.id),loginUrl:"https://damiensiri.github.io/push2-beta/connexion.html"}};
@@ -3747,7 +3761,7 @@ async function sendAccountApprovedEmail(env,user,approvedAt){
 }
 
 async function sendPasswordResetEmail(env,user,token,expiresAt){
-  if(!env.MAILER_ENDPOINT)return{requested:true,sent:false,error:"Mailer bêta non configuré"};
+  if(!env.MAILER_ENDPOINT)return{requested:true,sent:false,error:"Mailer production non configuré"};
   const resetUrl=`https://damiensiri.github.io/push2-beta/connexion.html?reset=${encodeURIComponent(token)}`;
   const payload={type:"password_reset",idempotencyKey:`password-reset:${user.id}:${expiresAt}`,
     customer:{email:user.email,firstName:user.first_name,lastName:user.last_name},reset:{url:resetUrl,expiresAt}};
@@ -3923,14 +3937,14 @@ async function notifyRealtime(env,type){
 }
 
 async function sendAdminEventPush(env,title,message,page){
-  if(!isPushEnabled(env))return{sent:false,disabled:true};
+  if(!env.ADMIN_ONESIGNAL_APP_ID||!env.ADMIN_ONESIGNAL_REST_API_KEY)return{sent:false,disabled:true};
   try{
     const result=await env.DB.prepare("SELECT subscription_id FROM admin_push_subscriptions ORDER BY updated_at DESC").all();
     const subscriptionIds=result.results.map(row=>row.subscription_id).filter(Boolean);
     if(!subscriptionIds.length)return{sent:false,noSubscribers:true};
     const response=await fetch("https://api.onesignal.com/notifications",{method:"POST",headers:{
-      "authorization":`Key ${env.ONESIGNAL_REST_API_KEY}`,"content-type":"application/json; charset=utf-8"},body:JSON.stringify({
-        app_id:env.ONESIGNAL_APP_ID,include_subscription_ids:subscriptionIds,
+      "authorization":`Key ${env.ADMIN_ONESIGNAL_REST_API_KEY}`,"content-type":"application/json; charset=utf-8"},body:JSON.stringify({
+        app_id:env.ADMIN_ONESIGNAL_APP_ID,include_subscription_ids:subscriptionIds,
         headings:{fr:title,en:title},contents:{fr:message,en:message},
         url:`https://damiensiri.github.io/backstage-beta/${page}`
       })});
@@ -3979,7 +3993,8 @@ export{
   normalizeEmail,validatePassword,validateNewUser,hashPassword,verifyPassword,publicUser,validatePaddockBooking,validatePaddockHours,
   parisLocalMinute,reservationLocalMinute,duePaddockReminderTypes,isValidPushSubscriptionId,isValidPushInstallationId,processPaddockPushReminders,
   processScheduledNotifications,validatePaddockRequestDate,validStaffMonth,staffMonthRange,staffMinutes,validateStaffShift,isStaffWeekStart,addIsoDays,
-  parseIcsCalendar,googleCalendarIcalUrls,sendUserPush,sendPaddockReservationCancellationPush
+  parseIcsCalendar,googleCalendarIcalUrls
+  ,sendUserPush,sendPaddockReservationCancellationPush
 };
 
 export { instrumentD1, createRequestDiagnostics, loadPlanning };

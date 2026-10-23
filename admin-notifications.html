@@ -4,9 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <style id="app-critical-paint">html{background:#287fbd;color-scheme:light dark;}body{margin:0;background:#287fbd;color:rgba(255,255,255,.92);}</style>
-<title>Administration — Bêta</title>
+<title>Administration</title>
 <meta name="theme-color" content="#102b45">
-<link rel="stylesheet" href="assets/css/pages/admin-notifications-beta.css?v=20260828-2">
+<link rel="stylesheet" href="assets/css/pages/admin-notifications.css?v=20260918-085300">
 </head>
 <body>
 <main class="admin-shell">
@@ -14,9 +14,9 @@
     <div class="admin-heading">
       <div class="admin-title-row">
         <h1>Administration</h1>
-        <span class="environment">BÊTA · PUSH ACTIF</span>
+        <span class="environment">PRODUCTION · PUSH ACTIF</span>
       </div>
-      <p>Notifications, espaces et horaires de la PWA bêta.</p>
+      <p>Notifications, espaces et horaires de la PWA.</p>
     </div>
     <div class="header-actions">
       <button id="settingsBtn" class="icon-button" type="button" aria-label="Ouvrir les paramètres" aria-expanded="false">⚙︎</button>
@@ -28,12 +28,12 @@
     <button type="button" data-section-button="spaces" class="active">Espaces</button>
     <button type="button" data-section-button="notifications">Notifications</button>
     <button type="button" data-section-button="general">Écuries</button>
-    <button type="button" data-section-button="exceptions">Alertes temporaires</button>
+    <button type="button" data-section-button="exceptions">Exceptions</button>
     <button type="button" data-section-button="home-alert">Alerte accueil</button>
   </nav>
 
   <section id="settingsPanel" class="panel connection-panel" aria-labelledby="connectionTitle" hidden>
-    <h2 id="connectionTitle">Connexion au backend bêta</h2>
+    <h2 id="connectionTitle">Connexion au backend de production</h2>
     <label>Adresse de l’API
       <input id="apiUrl" type="url" inputmode="url" placeholder="https://…workers.dev">
     </label>
@@ -76,7 +76,7 @@
       <div class="switches single-option">
         <label class="check"><input id="epingle" type="checkbox"> Épingler l’alerte</label>
       </div>
-      <p class="safety-note">Le push est réservé aux appareils abonnés à l’application OneSignal bêta.</p>
+      <p class="safety-note">Le push est réservé aux appareils abonnés à l’application OneSignal de production.</p>
       <div class="form-actions">
         <button id="publishBtn" type="submit" name="delivery" value="publish">Publier</button>
         <button id="sendBtn" class="send" type="submit" name="delivery" value="send">Envoyer</button>
@@ -147,28 +147,18 @@
 
   <section class="admin-section" data-admin-section="exceptions" hidden>
     <div class="panel">
-      <h2>Alerte temporaire d’accueil</h2>
-      <p class="section-help">Affiché temporairement sur l’accueil sans remplacer les horaires d’ouverture.</p>
-      <label>Date de début
+      <h2>Exception de date</h2>
+      <label>Date
         <input id="exceptionDate" type="date">
-      </label>
-      <label>Date de fin <small>(facultative)</small>
-        <input id="exceptionEndDate" type="date">
-      </label>
-      <label>Couleur du bandeau
-        <select id="exceptionColor">
-          <option value="orange">Orange</option>
-          <option value="red">Rouge</option>
-        </select>
       </label>
       <label>Texte affiché dans le bandeau
         <textarea id="exceptionMessage" maxlength="500" rows="3"></textarea>
       </label>
-      <button id="saveExceptionBtn" type="button">Enregistrer l’alerte</button>
+      <button id="saveExceptionBtn" type="button">Enregistrer l’exception</button>
       <p id="exceptionStatus" class="status" role="status"></p>
     </div>
     <div class="panel">
-      <h2>Alertes temporaires enregistrées</h2>
+      <h2>Exceptions enregistrées</h2>
       <div id="exceptionsList" class="exceptions-list"></div>
     </div>
   </section>
@@ -185,8 +175,8 @@
     </div>
   </section>
 </main>
-<script src="assets/js/notification-format.js?v=20260828-2"></script>
-<script src="assets/js/pages/admin-notifications-beta.js?v=20261023-1"></script>
-<script src="assets/js/status-realtime.js?v=20260828-2"></script>
+<script src="assets/js/notification-format.js?v=20260918-085300"></script>
+<script src="assets/js/pages/admin-notifications.js?v=20260918-085300"></script>
+<script src="assets/js/status-realtime.js?v=20260918-085300"></script>
 </body>
 </html>

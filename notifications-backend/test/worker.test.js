@@ -2,16 +2,16 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   compatibleAlert,validateAlert,parisNow,isPushEnabled,sendRequestedPush,plainTextMessage,
-  calculateStatus,publicSpace,publicSchedule,validateSpace,validateSchedules,timeToMinutes,effectiveActivityValue,findNextSpaceOpening,
+  calculateStatus,publicSpace,publicSchedule,validateSpace,validateSchedules,timeToMinutes,findNextSpaceOpening,
   validateScheduleException,
   spaceProgramFields,
   normalizeEmail,validatePassword,validateNewUser,hashPassword,verifyPassword,validatePaddockBooking,
   reservationLocalMinute,duePaddockReminderTypes,validatePaddockRequestDate,
   validStaffMonth,staffMonthRange,staffMinutes,validateStaffShift,isStaffWeekStart,addIsoDays,
-  parseIcsCalendar,googleCalendarIcalUrls,sendPaddockReservationCancellationPush
+  parseIcsCalendar,googleCalendarIcalUrls
 } from "../src/worker.js";
 
-test("les bandeaux exceptionnels acceptent une journée ou une période et une couleur",()=>{
+test("les alertes temporaires acceptent une journée ou une période et une couleur",()=>{
   assert.deepEqual(validateScheduleException({date:"2026-10-23",message:"Information"}),{
     date:"2026-10-23",endDate:null,message:"Information",color:"orange"
   });
@@ -253,137 +253,6 @@ test("une notification programmée ouvre le détail de l’alerte et non celui d
   }
 });
 
-test("une annulation de réservation paddock peut envoyer un push ciblé au client",async()=>{
-  const originalFetch=globalThis.fetch;
-  let payload=null;
-  globalThis.fetch=async(_url,options)=>{
-    payload=JSON.parse(options.body);
-    return new Response(JSON.stringify({id:"onesignal-cancel"}),{
-      status:200,
-      headers:{"content-type":"application/json"}
-    });
-  };
-  const env={
-    PUSH_ENABLED:"true",
-    ONESIGNAL_APP_ID:"app",
-    ONESIGNAL_REST_API_KEY:"secret",
-    DB:{
-      prepare(){
-        return{
-          bind(){
-            return{all:async()=>({results:[{subscription_id:"subscription-cible-1234567890"}]})};
-          }
-        };
-      }
-    }
-  };
-  try{
-    const result=await sendPaddockReservationCancellationPush(env,{
-      id:42,user_id:7,lock_key:"lock-42",paddock:"maison",date:"2026-08-31",time:"14:00"
-    },"Météo");
-    assert.equal(result.status,"sent");
-    assert.equal(result.method,"subscriptions");
-    assert.equal(payload.app_id,"app");
-    assert.deepEqual(payload.include_subscription_ids,["subscription-cible-1234567890"]);
-    assert.equal(payload.headings.fr,"Réservation paddock annulée");
-    assert.match(payload.contents.fr,/Maison/);
-    assert.doesNotMatch(payload.contents.fr,/Météo/);
-    assert.match(payload.idempotency_key,/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
-    assert.equal(payload.url,"https://damiensiri.github.io/push2-beta/mesreservations.html");
-  }finally{
-    globalThis.fetch=originalFetch;
-  }
-});
-
-test("une annulation paddock retrouve aussi le push client par email",async()=>{
-  const originalFetch=globalThis.fetch;
-  let sql="";
-  let bound=[];
-  globalThis.fetch=async(_url,options)=>{
-    return new Response(JSON.stringify({id:"onesignal-email"}),{
-      status:200,
-      headers:{"content-type":"application/json"}
-    });
-  };
-  const env={
-    PUSH_ENABLED:"true",
-    ONESIGNAL_APP_ID:"app",
-    ONESIGNAL_REST_API_KEY:"secret",
-    DB:{
-      prepare(statement){
-        sql=statement;
-        return{
-          bind(...values){
-            bound=values;
-            return{all:async()=>({results:[{subscription_id:"subscription-email-1234567890"}]})};
-          }
-        };
-      }
-    }
-  };
-  try{
-    const result=await sendPaddockReservationCancellationPush(env,{
-      id:43,user_id:null,lock_key:"lock-43",email:"Client@Exemple.fr",paddock:"beudot",date:"2026-08-31",time:"15:00"
-    });
-    assert.equal(result.status,"sent");
-    assert.match(sql,/JOIN users/);
-    assert.deepEqual(bound,["client@exemple.fr"]);
-  }finally{
-    globalThis.fetch=originalFetch;
-  }
-});
-
-test("une annulation paddock retente appareil par appareil si le lot OneSignal ne cible personne",async()=>{
-  const originalFetch=globalThis.fetch;
-  const calls=[];
-  globalThis.fetch=async(_url,options)=>{
-    const payload=JSON.parse(options.body);
-    calls.push(payload.include_subscription_ids);
-    if(payload.include_subscription_ids.length>1){
-      return new Response(JSON.stringify({id:"empty-lot",recipients:0}),{
-        status:200,
-        headers:{"content-type":"application/json"}
-      });
-    }
-    const active=payload.include_subscription_ids[0]==="subscription-ok-1234567890";
-    return new Response(JSON.stringify({id:active?"single-ok":"single-empty",recipients:active?1:0}),{
-      status:200,
-      headers:{"content-type":"application/json"}
-    });
-  };
-  const env={
-    PUSH_ENABLED:"true",
-    ONESIGNAL_APP_ID:"app",
-    ONESIGNAL_REST_API_KEY:"secret",
-    DB:{
-      prepare(){
-        return{
-          bind(){
-            return{all:async()=>({results:[
-              {subscription_id:"subscription-ko-1234567890"},
-              {subscription_id:"subscription-ok-1234567890"}
-            ]})};
-          }
-        };
-      }
-    }
-  };
-  try{
-    const result=await sendPaddockReservationCancellationPush(env,{
-      id:44,user_id:7,lock_key:"lock-44",email:"client@example.fr",paddock:"grande",date:"2026-08-31",time:"16:00"
-    });
-    assert.equal(result.status,"sent");
-    assert.equal(result.recipients,1);
-    assert.deepEqual(calls,[
-      ["subscription-ko-1234567890","subscription-ok-1234567890"],
-      ["subscription-ko-1234567890"],
-      ["subscription-ok-1234567890"]
-    ]);
-  }finally{
-    globalThis.fetch=originalFetch;
-  }
-});
-
 test("le mode ouvert suit les horaires propres à l’espace",()=>{
   const schedule={opens_at:"10:00",closes_at:"20:00"};
   assert.equal(calculateStatus("ouvert",schedule,9*60),"prevision");
@@ -460,9 +329,6 @@ test("les sept jours sont validés",()=>{
   assert.deepEqual(publicSchedule({day:1,opens_at:"08:00",closes_at:"21:00"}),{
     jour:"lundi",ouvert:"08:00",ferme:"21:00"
   });
-  assert.deepEqual(publicSchedule({day:2,opens_at:"09:00",closes_at:"12:00",program_manual_status:"ferme"}),{
-    jour:"mardi",ouvert:"",ferme:"",statut:"ferme"
-  });
 });
 
 test("les champs d’un espace sont normalisés",()=>{
@@ -472,13 +338,4 @@ test("les champs d’un espace sont normalisés",()=>{
   assert.equal(value.longe,"non");
   assert.equal(value.info,"Test");
   assert.equal(value.specialHours,"Prévu 19h");
-});
-
-test("les activités programmées suivent leur plage horaire",()=>{
-  assert.equal(effectiveActivityValue({enabled:"oui",startsAt:"",endsAt:""},8*60),"oui");
-  assert.equal(effectiveActivityValue({enabled:"non",startsAt:"08:00",endsAt:"10:00"},9*60),"non");
-  assert.equal(effectiveActivityValue({enabled:"oui",startsAt:"08:00",endsAt:"10:00"},9*60),"oui");
-  assert.equal(effectiveActivityValue({enabled:"oui",startsAt:"08:00",endsAt:"10:00"},10*60),"non");
-  assert.equal(effectiveActivityValue({enabled:"oui",startsAt:"22:00",endsAt:"02:00"},23*60),"oui");
-  assert.equal(effectiveActivityValue({enabled:"oui",startsAt:"22:00",endsAt:"02:00"},3*60),"non");
 });

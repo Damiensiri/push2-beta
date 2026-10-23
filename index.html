@@ -9,10 +9,8 @@
 <title>Ecurie Damien Siri</title>
 
 <script>
-const APP_VERSION="20260907-2";
+const APP_VERSION="20260918-085300";
 const APP_BASE_URL=new URL("./",window.location.href);
-const IS_BETA=window.location.hostname==="damiensiri.github.io" &&
-              APP_BASE_URL.pathname==="/push2-beta/";
 </script>
 <link rel="manifest" id="app-manifest">
 <script>
@@ -20,12 +18,10 @@ document.getElementById("app-manifest").href=`manifest.json?v=${APP_VERSION}`;
 
 if("serviceWorker" in navigator){
 window.addEventListener("load",()=>{
-const registrationPromise=IS_BETA
-?navigator.serviceWorker.register(
+const registrationPromise=navigator.serviceWorker.register(
 new URL("OneSignalSDKWorker.js",APP_BASE_URL).href,
 {scope:APP_BASE_URL.pathname}
-)
-:navigator.serviceWorker.getRegistration();
+);
 
 registrationPromise.then(registration=>{
 setTimeout(()=>registration?.update?.(),3000);
@@ -34,27 +30,27 @@ setTimeout(()=>registration?.update?.(),3000);
 }
 </script>
 
-<link rel="apple-touch-icon" sizes="192x192" href="image/icon-192x192.png?v=20260714-181500">
+<link rel="apple-touch-icon" sizes="192x192" href="image/icon-192x192.png?v=20260907-2">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Ecurie DS">
 <meta name="theme-color" content="#287fbd">
 
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700&display=swap" rel="stylesheet">
 
-<script src="assets/js/app-config.js?v=20260830-2"></script>
-<script src="assets/js/app-layout.js?v=20260830-2"></script>
-<script src="assets/js/profile-store.js?v=20260828-3" defer></script>
-<script src="assets/js/pages/index-profile.js?v=20260828-3" defer></script>
-<script src="assets/js/pages/index-install-prompt.js?v=20260828-3" defer></script>
+<script src="assets/js/app-config.js?v=20260918-085300"></script>
+<script src="assets/js/app-layout.js?v=20260918-085300"></script>
+<script src="assets/js/profile-store.js?v=20260918-085300" defer></script>
+<script src="assets/js/pages/index-profile.js?v=20260918-085300" defer></script>
+<script src="assets/js/pages/index-install-prompt.js?v=20260918-085300" defer></script>
 
-<link rel="stylesheet" href="assets/css/app.css?v=20260828-3">
-<link rel="stylesheet" href="assets/css/themes/summer.css?v=20260828-3">
-<link rel="stylesheet" href="assets/css/themes/autumn.css?v=20260828-3">
-<link rel="stylesheet" href="assets/css/themes/christmas.css?v=20260828-3">
-<link rel="stylesheet" href="assets/css/themes/winter.css?v=20260828-3">
-<link rel="stylesheet" href="assets/css/themes/spring.css?v=20260828-3">
-<link rel="stylesheet" href="assets/css/pages/index.css?v=20260828-3">
+<link rel="stylesheet" href="assets/css/app.css?v=20260918-085300">
+<link rel="stylesheet" href="assets/css/themes/summer.css?v=20260918-085300">
+<link rel="stylesheet" href="assets/css/themes/autumn.css?v=20260918-085300">
+<link rel="stylesheet" href="assets/css/themes/christmas.css?v=20260918-085300">
+<link rel="stylesheet" href="assets/css/themes/winter.css?v=20260918-085300">
+<link rel="stylesheet" href="assets/css/themes/spring.css?v=20260918-085300">
+<link rel="stylesheet" href="assets/css/pages/index.css?v=20260918-085300">
 </head>
 
 <!-- REMPLACE UNIQUEMENT ÇA -->
@@ -130,8 +126,8 @@ setTimeout(()=>registration?.update?.(),3000);
 
 <div class="section-title">COMPTE</div>
 
-<div class="list-btn" onclick="go('mes-chevaux.html')"><img src="image/horse-home.svg?v=20260907-2" alt="" style="opacity:1"> MES CHEVAUX</div>
 <div class="list-btn" onclick="go('mes-commandes.html')"><img src="image/compte.svg"> MES COMMANDES</div>
+<div class="list-btn" onclick="go('mes-chevaux.html')"><img src="image/horse-home.svg?v=20260907-2" alt="" style="opacity:1"> MES CHEVAUX</div>
 <div class="list-btn" onclick="go('mesreservations.html')"><img src="image/reservation.svg"> MES RÉSERVATIONS</div>
 <div class="list-btn" onclick="go('panier.html')"><img src="image/panier.svg"> MON PANIER</div>
 
@@ -289,8 +285,6 @@ fetch(STATUTS_URL,{cache:"no-store"}).then(r=>r.json())
 ]);
 
 try{
-localStorage.setItem("horaires",JSON.stringify(horaires));
-localStorage.setItem("horaires_exceptions",JSON.stringify(exceptions));
 localStorage.setItem("statuts",JSON.stringify(statuts));
 localStorage.setItem("statuts_confirmed_at",String(Date.now()));
 }catch(e){}
@@ -311,13 +305,13 @@ const now=new Date();
 const today=localIsoDate(now);
 const activeException=(exceptions||[])
   .filter(item=>{
-    const start=String(item.date||"");
-    const end=String(item.endDate||item.end_date||start);
+    const start=String(item.date||"").slice(0,10);
+    const end=String(item.endDate||item.end_date||start).slice(0,10);
     return start&&start<=today&&today<=end;
   })
   .sort((a,b)=>String(b.date).localeCompare(String(a.date)))[0];
 
-if(activeException||(accueil && alerte && alerte.trim()!=="")){
+if(activeException||(accueil&&alerte&&alerte.trim()!=="")){
 const alertMessage=activeException?.message||alerte;
 const isUrgent=activeException
   ? String(activeException.color||"orange").toLowerCase()==="red"
@@ -377,22 +371,13 @@ status.textContent=next
 
 }
 
-/* Affichage immédiat depuis le dernier état connu, puis actualisation réseau. */
-try{
-  const cachedSchedules=JSON.parse(localStorage.getItem("horaires")||"null");
-  const cachedExceptions=JSON.parse(localStorage.getItem("horaires_exceptions")||"null");
-  const cachedStatuses=JSON.parse(localStorage.getItem("statuts")||"null");
-  if(cachedSchedules&&cachedStatuses) updateUI(cachedSchedules,cachedExceptions||[],cachedStatuses);
-}catch(error){}
 load();
 setInterval(load,10000);
 window.addEventListener("pwa-data-changed",load);
 
-setTimeout(()=>{
 ["paddocks.html","travail.html","plan.html","horaires.html"].forEach(p=>{
 fetch(withAppVersion(p),{cache:"reload"}).catch(()=>{});
 });
-},2500);
 
 </script>
 
@@ -480,7 +465,7 @@ setInterval(updateBell,60000);
 
 </script>
 
-<script src="assets/js/status-realtime.js?v=20260828-3"></script>
+<script src="assets/js/status-realtime.js?v=20260918-085300"></script>
 
 </body>
 </html>

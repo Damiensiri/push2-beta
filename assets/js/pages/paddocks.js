@@ -55,7 +55,7 @@ statusWrap.className="status-wrap status-"+statut;
 
 document.getElementById(e+"-statut").innerText=STATUS_LABELS[statut]||"";
 const el=document.getElementById(e+"-horaire");
-el.innerText=(row.horaire_special||"").trim()||transitionText(row.transition);
+el.innerText=(row.horaire_special||"").trim()||transitionText(row.transition)||(row.horaire_affiche||"").trim();
 el.hidden=!el.innerText;
 
 document.getElementById(e+"-info").innerText=row.info||"";
@@ -107,7 +107,7 @@ async function load(){
 
 try{
 
-const r=await fetch(API,{cache:"default"});
+const r=await fetch(API+"?t="+Date.now(),{cache:"no-store"});
 if(!r.ok) throw new Error("Réponse réseau invalide");
 const data=await r.json();
 

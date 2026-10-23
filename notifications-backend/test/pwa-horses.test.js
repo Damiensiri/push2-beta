@@ -10,7 +10,7 @@ test('la PWA expose Mes chevaux avec une fiche et un planning agrégé',async()=
   assert.match(home,/go\('mes-chevaux\.html'\)/);
   assert.match(page,/id="horseDetail"/);assert.match(page,/id="activityForm"/);
   assert.match(script,/\/api\/me\/horses/);assert.match(script,/planning\/tasks/);assert.match(script,/event\.canEdit/);
-  assert.doesNotMatch(page+script,/adminNotes|horse_owners|photo_key|notifications-prod/i);
+  assert.doesNotMatch(page+script,/adminNotes|horse_owners|photo_key|ecurie-notifications-prod/i);
   const version=home.match(/const APP_VERSION="([^\"]+)"/)[1];
   for(const text of [worker,manifest])assert.ok(text.includes(version));
 });

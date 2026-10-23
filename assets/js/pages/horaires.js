@@ -4,7 +4,7 @@ const SHEET_URL="https://ecurie-notifications-beta.damiensiri-pro.workers.dev/ap
 
 const REFRESH=60000;
 const FRESHNESS=60000;
-const CACHE_KEY="horaires";
+const CACHE_KEY="horaires_effectifs_v3";
 const CACHE_CONFIRMED_AT_KEY="horaires_confirmed_at";
 
 let syncPending=false;
@@ -74,12 +74,7 @@ function renderHoraires(data){
     }else if(row.statut==="hors-service"){
       contenu="Hors service";
     }else{
-      const partialClosures=(row.closedIntervals||[])
-        .filter(item=>item.open&&item.close)
-        .map(item=>`Fermé ${formatTime(item.open)} - ${formatTime(item.close)}`);
-      contenu=`${formatTime(row.ouvert)} - ${formatTime(row.ferme)}${
-        partialClosures.length?`<small class="partial-closure">${partialClosures.join(" · ")}</small>`:""
-      }`;
+      contenu=`${formatTime(row.ouvert)} - ${formatTime(row.ferme)}`;
     }
 
     card.innerHTML=`
@@ -134,7 +129,7 @@ function cacheIsFresh(){
 
 function fetchJson(url){
   const separator=url.includes("?")?"&":"?";
-  return fetch(url,{cache:"default"}).then(response=>{
+  return fetch(url+separator+"t="+Date.now(),{cache:"no-store"}).then(response=>{
     if(!response.ok) throw new Error("Réponse réseau invalide");
     return response.json();
   });
@@ -145,9 +140,9 @@ function fetchJson(url){
 function loadHoraires(){
 
 const weekDates=rollingDates();
-const scheduleUrl=SHEET_URL+"?dates="+encodeURIComponent(Object.keys(weekDates).join(","));
+const schedulesUrl=`${SHEET_URL}?dates=${encodeURIComponent(Object.keys(weekDates).join(","))}`;
 
-fetchJson(scheduleUrl)
+fetchJson(schedulesUrl)
 .then(horaires=>{
 
   try{

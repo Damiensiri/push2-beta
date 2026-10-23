@@ -25,8 +25,8 @@ Le dépôt `push2-beta` ne doit pas contenir de fichier `CNAME`. Les chemins de
 la PWA doivent rester compatibles avec le sous-dossier `/push2-beta/` ainsi
 qu’avec la racine du domaine de production.
 
-Les notifications OneSignal ne sont pas activées sur la bêta. Elles restent
-réservées au domaine de production `app.damiensiri.com`.
+Les notifications OneSignal de la bêta utilisent une application et des
+abonnements séparés de la production.
 
 ## Workflow
 
@@ -921,6 +921,22 @@ numéro a été enregistré depuis le profil. La page ne permet plus d’ajouter
 changer ou de supprimer ce numéro. Le chargement de la carte, le calcul du
 solde restant, la jauge et l’affichage de la dernière mise sont conservés à
 l’identique.
+
+## Densification visuelle du planning écurie
+
+La vue quotidienne de `planning.html` donne désormais environ deux tiers de
+la largeur aux tâches, présentées sur deux colonnes, et un tiers au planning
+des paddocks, présenté sous forme de trois cartes compactes empilées. La liste
+des tâches possède son propre défilement sur grand écran afin de garder les
+paddocks visibles. Une flèche purement indicative apparaît au bas des tâches
+uniquement quand du contenu reste à consulter, puis disparaît en fin de liste.
+
+Le logo existant est conservé et la sous-ligne d’environnement a été retirée.
+Chaque carte possède une petite vignette de cheval décorative. Les demandes de
+mise au paddock restent signalées en orange et le salarié affecté n’est affiché
+qu’une seule fois. Cette évolution ne modifie ni les données, ni les validations
+définitives, ni les appels API, ni la navigation Jour/Semaine, ni le comportement
+des réservations paddock.
 
 ## Reprise d’une nouvelle session
 

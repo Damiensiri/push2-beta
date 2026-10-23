@@ -65,7 +65,7 @@ return transition.type==="closing"?`Fermeture${day} à ${time}`:`Ouverture${day}
 }
 
 function loadData(){
-fetch(SHEET_URL,{cache:"default"})
+fetch(SHEET_URL+"?t="+Date.now(),{cache:"no-store"})
 .then(r=>{
 if(!r.ok) throw new Error("Réponse réseau invalide");
 return r.json();
@@ -217,13 +217,13 @@ if(status==="prevision") return `<span style="color:rgba(255,255,255,.58);font-w
 return `<span style="color:${value==="oui"?"#33d17a":"#ff4d4d"};font-weight:800">${value.toUpperCase()}</span>`;
 };
 
-if(showActivities){
-liberte.innerHTML=`Liberté : ${activityLabel(e.liberte||"non")}`;
+if(showActivities&&e.liberte){
+liberte.innerHTML=`Liberté : ${activityLabel(e.liberte)}`;
 show=true;
 }
 
-if(showActivities){
-longe.innerHTML=`Longe : ${activityLabel(e.longe||"non")}`;
+if(showActivities&&e.longe){
+longe.innerHTML=`Longe : ${activityLabel(e.longe)}`;
 show=true;
 }
 

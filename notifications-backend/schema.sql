@@ -137,7 +137,7 @@ CREATE TABLE IF NOT EXISTS home_alert (
   updated_at TEXT NOT NULL
 );
 
--- Migration totale : les comptes sont créés depuis le Backstage bêta.
+-- Migration totale : les comptes sont créés depuis le Backstage production.
 -- Aucun compte ni aucune session de production ne sont importés ici.
 CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
