@@ -3,8 +3,8 @@ window.METEOALARM_VIGILANCE = {
   "level": "yellow",
   "label": "Jaune",
   "phenomenon": "Vent violent",
-  "period": "Du 23 octobre à 18:01 au 24 octobre à 00:00",
-  "updatedAt": "23 octobre à 18:01",
+  "period": "Du 23 octobre à 20:00 au 24 octobre à 00:00",
+  "updatedAt": "23 octobre à 20:00",
   "source": "MeteoAlarm / EUMETNET",
   "sourceUrl": "https://meteoalarm.org"
 };
