@@ -1,4 +1,5 @@
 window.APP_CONFIG=Object.freeze({
+  IOS_PWA_STATUSBAR_WORKAROUND:true,
   theme:"summer",
   themeConfigUrl:"https://script.google.com/macros/s/AKfycbzMcwPF2geZ_3ZAbFqRKWphL-4dX2_pPMMT8TCY2RF4j_ICMxyGeJH-pcN7v-9KsKDW/exec",
   themeConfigTimeoutMs:4000,

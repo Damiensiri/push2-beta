@@ -28,6 +28,19 @@ qu’avec la racine du domaine de production.
 Les notifications OneSignal de la bêta utilisent une application et des
 abonnements séparés de la production.
 
+### Diagnostic temporaire de la barre d’état iOS 27
+
+La bêta charge une expérimentation isolée lorsque
+`IOS_PWA_STATUSBAR_WORKAROUND` vaut `true`, uniquement sous iOS et dans la PWA
+installée en mode standalone. Sur l’accueil, cinq appuis rapides sur la ligne de
+version ouvrent le panneau permettant de choisir `Original`, `Sonde
+transparente` ou `Couleur unie`. Le mode choisi est appliqué au prochain
+lancement complet de la PWA.
+
+Cette expérimentation ne constitue pas un correctif validé. La couleur unie est
+un témoin diagnostique et ne doit pas devenir le rendu définitif. Pour désactiver
+entièrement l’essai, remettre `IOS_PWA_STATUSBAR_WORKAROUND` à `false`.
+
 ## Workflow
 
 1. Tous les développements commencent sur `push2-beta`.
