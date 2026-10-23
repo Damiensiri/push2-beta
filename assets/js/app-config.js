@@ -3,6 +3,7 @@ window.APP_CONFIG=Object.freeze({
   themeConfigUrl:"https://script.google.com/macros/s/AKfycbzMcwPF2geZ_3ZAbFqRKWphL-4dX2_pPMMT8TCY2RF4j_ICMxyGeJH-pcN7v-9KsKDW/exec",
   themeConfigTimeoutMs:4000,
   themeConfigRefreshMs:60000,
+  IOS_PWA_CONTENT_CLEARANCE_PX:16,
   themes:Object.freeze([
     "summer",
     "autumn",

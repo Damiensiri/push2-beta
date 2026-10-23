@@ -412,6 +412,20 @@ par `scripts/bump-app-version.sh`. Aucun thème saisonnier, fond commun,
 barre d’accès rapide devra être intégrée comme composant isolé et ne pourra pas
 introduire `app.css` ou le moteur de fond commun dans cette page.
 
+## Dégagement supérieur expérimental — iOS PWA bêta
+
+La bêta peut éloigner les en-têtes du voile supérieur imposé par iOS sans
+modifier les fonds plein écran. La valeur
+`IOS_PWA_CONTENT_CLEARANCE_PX` de `assets/js/app-config.js` indique le
+décalage en pixels. La valeur `0` désactive totalement l’expérience et rend la
+mise en page d’origine après fermeture puis réouverture de la PWA.
+
+Le script `assets/js/ios-pwa-content-clearance.js` n’active la feuille dédiée
+que sur iOS en mode standalone. La feuille
+`assets/css/ios-pwa-content-clearance.css` décale les en-têtes et réserve le
+même espace au contenu ; elle ne cible aucune couche d’ambiance, aucun fond et
+aucun thème. Safari classique, Android et desktop restent inchangés.
+
 ## Fond global et Safe Area iPhone — technique validée
 
 Cette architecture est la référence à conserver pour les pages migrées. Elle

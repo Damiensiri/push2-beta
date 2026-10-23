@@ -1,0 +1,28 @@
+/*
+ * Expérience bêta iOS PWA : éloigne uniquement l'interface supérieure du
+ * voile système. Les fonds et les couches d'ambiance restent inchangés.
+ */
+
+html.ios-pwa-content-clearance body.index-page header{
+  top:var(--ios-pwa-content-clearance);
+}
+
+html.ios-pwa-content-clearance body.index-page .scroll{
+  padding-top:calc(70px + var(--safe-top) + var(--ios-pwa-content-clearance));
+}
+
+html.ios-pwa-content-clearance body.app-page:not(.login-page){
+  padding-top:calc(76px + var(--safe-top) + var(--ios-pwa-content-clearance));
+}
+
+html.ios-pwa-content-clearance body.app-page:not(.login-page) .page > header{
+  top:calc(6px + var(--ios-pwa-content-clearance));
+}
+
+html.ios-pwa-content-clearance body.fullscreen-weather .app-shell{
+  padding-top:calc(var(--safe-top) + 84px + var(--ios-pwa-content-clearance));
+}
+
+html.ios-pwa-content-clearance body.fullscreen-weather .top-bar{
+  top:calc(var(--safe-top) + 16px + var(--ios-pwa-content-clearance));
+}

@@ -1,8 +1,13 @@
 (function initializeAppLayout(){
+  const layoutScriptUrl=document.currentScript?.src||"";
   const layoutVersion=(()=>{
-    try{return new URL(document.currentScript?.src||"",window.location.href).searchParams.get("v")||"current";}
+    try{return new URL(layoutScriptUrl,window.location.href).searchParams.get("v")||"current";}
     catch(error){return"current";}
   })();
+
+  const clearanceScript=document.createElement("script");
+  clearanceScript.src=new URL(`ios-pwa-content-clearance.js?v=${encodeURIComponent(layoutVersion)}`,layoutScriptUrl||window.location.href).href;
+  document.head.appendChild(clearanceScript);
 
   const hadServiceWorkerController=Boolean(navigator.serviceWorker?.controller);
   if("serviceWorker" in navigator){
