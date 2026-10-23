@@ -4,24 +4,6 @@
     catch(error){return"current";}
   })();
 
-  function initializeIosPwaStatusbarExperiment(){
-    const config=window.APP_CONFIG||{};
-    if(config.IOS_PWA_STATUSBAR_WORKAROUND!==true)return;
-
-    const isStandalone=navigator.standalone===true||window.matchMedia?.("(display-mode: standalone)").matches===true;
-    const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||
-      (navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
-    if(!isIOS||!isStandalone)return;
-
-    const version=encodeURIComponent(layoutVersion);
-    const script=document.createElement("script");
-    script.src=`assets/js/ios-pwa-statusbar-workaround.js?v=${version}`;
-    script.dataset.iosPwaStatusbarExperiment="";
-    document.head.appendChild(script);
-  }
-
-  initializeIosPwaStatusbarExperiment();
-
   const hadServiceWorkerController=Boolean(navigator.serviceWorker?.controller);
   if("serviceWorker" in navigator){
     const reloadKey=`ecurie-pwa-controller-reload:${layoutVersion}`;
