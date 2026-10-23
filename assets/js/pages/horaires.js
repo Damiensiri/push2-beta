@@ -1,15 +1,12 @@
 /* ===== CONFIG ===== */
 
 const SHEET_URL="https://ecurie-notifications-beta.damiensiri-pro.workers.dev/api/schedules";
-const EXCEPTIONS_URL="https://ecurie-notifications-beta.damiensiri-pro.workers.dev/api/exceptions";
 
 const REFRESH=60000;
 const FRESHNESS=60000;
 const CACHE_KEY="horaires";
-const EXCEPTIONS_CACHE_KEY="horaires_exceptions";
 const CACHE_CONFIRMED_AT_KEY="horaires_confirmed_at";
 
-let exceptions={};
 let syncPending=false;
 let syncState="";
 let backgroundedAt=null;
@@ -56,16 +53,6 @@ function rollingDates(date=new Date()){
   return dates;
 }
 
-function applyExceptions(data,date=new Date()){
-  exceptions={};
-  const weekDates=rollingDates(date);
-
-  data.forEach(row=>{
-    const jour=weekDates[String(row.date||"")];
-    if(jour) exceptions[jour]=row.message;
-  });
-}
-
 /* ===== RENDER ===== */
 
 function renderHoraires(data){
@@ -82,9 +69,7 @@ function renderHoraires(data){
 
     let contenu;
 
-    if(exceptions[row.jour]){
-      contenu=exceptions[row.jour];
-    }else if(row.statut==="ferme"){
+    if(row.statut==="ferme"){
       contenu="Fermé";
     }else if(row.statut==="hors-service"){
       contenu="Hors service";
@@ -138,10 +123,8 @@ function confirmSync(){
 function cacheIsFresh(){
   try{
     const cachedHoraires=localStorage.getItem(CACHE_KEY);
-    const cachedExceptions=localStorage.getItem(EXCEPTIONS_CACHE_KEY);
     const confirmedAt=Number(localStorage.getItem(CACHE_CONFIRMED_AT_KEY));
     return Boolean(cachedHoraires) &&
-      Boolean(cachedExceptions) &&
       Number.isFinite(confirmedAt) &&
       Date.now()-confirmedAt<FRESHNESS;
   }catch(e){
@@ -164,17 +147,11 @@ function loadHoraires(){
 const weekDates=rollingDates();
 const scheduleUrl=SHEET_URL+"?dates="+encodeURIComponent(Object.keys(weekDates).join(","));
 
-Promise.all([
-fetchJson(scheduleUrl),
-fetchJson(EXCEPTIONS_URL)
-])
-.then(([horaires,exc])=>{
-
-  applyExceptions(exc);
+fetchJson(scheduleUrl)
+.then(horaires=>{
 
   try{
     localStorage.setItem(CACHE_KEY,JSON.stringify(horaires));
-    localStorage.setItem(EXCEPTIONS_CACHE_KEY,JSON.stringify(exc));
     localStorage.setItem(CACHE_CONFIRMED_AT_KEY,String(Date.now()));
   }catch(e){}
 
@@ -200,9 +177,6 @@ function resolveWeeklyHoraires(payload,weekDates){
 /* ===== CACHE INSTANT ===== */
 
 try{
-  const cachedExceptions=localStorage.getItem(EXCEPTIONS_CACHE_KEY);
-  if(cachedExceptions) applyExceptions(JSON.parse(cachedExceptions));
-
   const cachedHoraires=localStorage.getItem(CACHE_KEY);
   if(cachedHoraires) renderHoraires(resolveWeeklyHoraires(JSON.parse(cachedHoraires),rollingDates()));
 }catch(e){}

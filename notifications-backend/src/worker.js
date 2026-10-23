@@ -70,7 +70,7 @@ export default{
 
       if(request.method==="GET"&&url.pathname==="/api/exceptions"){
         const result=await env.DB.prepare(`
-          SELECT date,message FROM schedule_exceptions ORDER BY date
+          SELECT date,end_date AS endDate,message,color FROM schedule_exceptions ORDER BY date
         `).all();
         return json(result.results,200,{...cors,"cache-control":"public, max-age=15"});
       }
@@ -1692,15 +1692,14 @@ export default{
 
         if(request.method==="POST"&&url.pathname==="/api/admin/exceptions"){
           const input=await readJson(request);
-          const date=String(input?.date||"").trim();
-          const message=String(input?.message||"").trim();
-          if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return json({error:"Date invalide"},400,cors);
-          if(!message||message.length>500)return json({error:"Texte d’exception invalide"},400,cors);
+          const validated=validateScheduleException(input);
+          if(validated.error)return json({error:validated.error},400,cors);
           const now=parisNow().iso;
           await env.DB.prepare(`
-            INSERT INTO schedule_exceptions(date,message,created_at,updated_at) VALUES(?,?,?,?)
-            ON CONFLICT(date) DO UPDATE SET message=excluded.message,updated_at=excluded.updated_at
-          `).bind(date,message,now,now).run();
+            INSERT INTO schedule_exceptions(date,end_date,message,color,created_at,updated_at) VALUES(?,?,?,?,?,?)
+            ON CONFLICT(date) DO UPDATE SET end_date=excluded.end_date,message=excluded.message,
+              color=excluded.color,updated_at=excluded.updated_at
+          `).bind(validated.date,validated.endDate,validated.message,validated.color,now,now).run();
           await notifyRealtime(env,"exceptions");
           return json({saved:true},200,cors);
         }
@@ -2751,6 +2750,20 @@ async function saveActivityProgramEntries(env,programId,entries){
 function validIsoDate(value){
   const date=String(value||"").trim();
   return /^\d{4}-\d{2}-\d{2}$/.test(date)?date:"";
+}
+
+function validateScheduleException(input){
+  const date=validIsoDate(input?.date);
+  const rawEndDate=String(input?.endDate||"").trim();
+  const endDate=rawEndDate?validIsoDate(rawEndDate):"";
+  const message=String(input?.message||"").trim();
+  const color=String(input?.color||"orange").trim().toLowerCase();
+  if(!date)return{error:"Date de début invalide"};
+  if(rawEndDate&&!endDate)return{error:"Date de fin invalide"};
+  if(endDate&&endDate<date)return{error:"La date de fin doit être postérieure ou égale à la date de début"};
+  if(!message||message.length>500)return{error:"Texte d’exception invalide"};
+  if(!["orange","red"].includes(color))return{error:"Couleur invalide"};
+  return{date,endDate:endDate||null,message,color};
 }
 
 function parseDateList(value){
@@ -3961,6 +3974,7 @@ export class RealtimeHub{
 export{
   compatibleAlert,validateAlert,validateScheduledNotification,parisNow,parisDateTime,isPushEnabled,sendRequestedPush,plainTextMessage,
   calculateStatus,publicSpace,publicSchedule,validateSpace,validateSchedules,timeToMinutes,effectiveActivityValue,parisClock,findNextSpaceOpening,
+  validateScheduleException,
   spaceProgramFields,
   normalizeEmail,validatePassword,validateNewUser,hashPassword,verifyPassword,publicUser,validatePaddockBooking,validatePaddockHours,
   parisLocalMinute,reservationLocalMinute,duePaddockReminderTypes,isValidPushSubscriptionId,isValidPushInstallationId,processPaddockPushReminders,

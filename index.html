@@ -289,6 +289,8 @@ fetch(STATUTS_URL,{cache:"no-store"}).then(r=>r.json())
 ]);
 
 try{
+localStorage.setItem("horaires",JSON.stringify(horaires));
+localStorage.setItem("horaires_exceptions",JSON.stringify(exceptions));
 localStorage.setItem("statuts",JSON.stringify(statuts));
 localStorage.setItem("statuts_confirmed_at",String(Date.now()));
 }catch(e){}
@@ -305,38 +307,27 @@ status.classList.remove("open","closed","exception");
 
 const accueil=statuts.find(e=>e.espace==="accueil");
 const alerte=getSheetValue(accueil,"alerte");
+const now=new Date();
+const today=localIsoDate(now);
+const activeException=(exceptions||[])
+  .filter(item=>{
+    const start=String(item.date||"");
+    const end=String(item.endDate||item.end_date||start);
+    return start&&start<=today&&today<=end;
+  })
+  .sort((a,b)=>String(b.date).localeCompare(String(a.date)))[0];
 
-if(accueil && alerte && alerte.trim()!==""){
-const isUrgent=String(getSheetValue(accueil,"urgent")).trim().toLowerCase()==="oui";
+if(activeException||(accueil && alerte && alerte.trim()!=="")){
+const alertMessage=activeException?.message||alerte;
+const isUrgent=activeException
+  ? String(activeException.color||"orange").toLowerCase()==="red"
+  : String(getSheetValue(accueil,"urgent")).trim().toLowerCase()==="oui";
 alertBox.style.display="flex";
 alertBox.classList.toggle("urgent",isUrgent);
-alertBox.innerHTML="⚠️ "+alerte;
+alertBox.textContent="⚠️ "+alertMessage;
 }else{
 alertBox.style.display="none";
 alertBox.classList.remove("urgent");
-}
-
-const now=new Date();
-
-const today=localIsoDate(now);
-
-const ex = exceptions.find(e=>{
-  if(!e.date) return false;
-
-  const d = new Date(e.date);
-
-  const local =
-    d.getFullYear() + "-" +
-    String(d.getMonth()+1).padStart(2,"0") + "-" +
-    String(d.getDate()).padStart(2,"0");
-
-  return local === today;
-});
-
-if(ex){
-status.classList.add("exception");
-status.textContent=ex.message;
-return;
 }
 
 const h=scheduleForDate(horaires,today);

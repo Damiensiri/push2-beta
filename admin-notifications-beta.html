@@ -28,7 +28,7 @@
     <button type="button" data-section-button="spaces" class="active">Espaces</button>
     <button type="button" data-section-button="notifications">Notifications</button>
     <button type="button" data-section-button="general">Écuries</button>
-    <button type="button" data-section-button="exceptions">Exceptions</button>
+    <button type="button" data-section-button="exceptions">Alertes temporaires</button>
     <button type="button" data-section-button="home-alert">Alerte accueil</button>
   </nav>
 
@@ -147,18 +147,28 @@
 
   <section class="admin-section" data-admin-section="exceptions" hidden>
     <div class="panel">
-      <h2>Exception de date</h2>
-      <label>Date
+      <h2>Alerte temporaire d’accueil</h2>
+      <p class="section-help">Affiché temporairement sur l’accueil sans remplacer les horaires d’ouverture.</p>
+      <label>Date de début
         <input id="exceptionDate" type="date">
+      </label>
+      <label>Date de fin <small>(facultative)</small>
+        <input id="exceptionEndDate" type="date">
+      </label>
+      <label>Couleur du bandeau
+        <select id="exceptionColor">
+          <option value="orange">Orange</option>
+          <option value="red">Rouge</option>
+        </select>
       </label>
       <label>Texte affiché dans le bandeau
         <textarea id="exceptionMessage" maxlength="500" rows="3"></textarea>
       </label>
-      <button id="saveExceptionBtn" type="button">Enregistrer l’exception</button>
+      <button id="saveExceptionBtn" type="button">Enregistrer l’alerte</button>
       <p id="exceptionStatus" class="status" role="status"></p>
     </div>
     <div class="panel">
-      <h2>Exceptions enregistrées</h2>
+      <h2>Alertes temporaires enregistrées</h2>
       <div id="exceptionsList" class="exceptions-list"></div>
     </div>
   </section>
@@ -176,7 +186,7 @@
   </section>
 </main>
 <script src="assets/js/notification-format.js?v=20260828-2"></script>
-<script src="assets/js/pages/admin-notifications-beta.js?v=20260828-2"></script>
+<script src="assets/js/pages/admin-notifications-beta.js?v=20261023-1"></script>
 <script src="assets/js/status-realtime.js?v=20260828-2"></script>
 </body>
 </html>

@@ -38,6 +38,8 @@
     saveGeneralSchedules:document.getElementById("saveGeneralSchedulesBtn"),
     generalSchedulesStatus:document.getElementById("generalSchedulesStatus"),
     exceptionDate:document.getElementById("exceptionDate"),
+    exceptionEndDate:document.getElementById("exceptionEndDate"),
+    exceptionColor:document.getElementById("exceptionColor"),
     exceptionMessage:document.getElementById("exceptionMessage"),
     saveException:document.getElementById("saveExceptionBtn"),
     exceptionStatus:document.getElementById("exceptionStatus"),
@@ -304,7 +306,7 @@
     if(!operations.exceptions.length){
       const empty=document.createElement("p");
       empty.className="empty";
-      empty.textContent="Aucune exception enregistrée.";
+      empty.textContent="Aucune alerte temporaire enregistrée.";
       elements.exceptionsList.appendChild(empty);
       return;
     }
@@ -313,9 +315,11 @@
       row.className="exception-item";
       const text=document.createElement("div");
       const title=document.createElement("strong");
-      title.textContent=item.date;
+      const endDate=item.endDate||item.end_date||"";
+      const color=(item.color||"orange")==="red"?"Rouge":"Orange";
+      title.textContent=endDate&&endDate!==item.date?`${item.date} au ${endDate}`:item.date;
       const message=document.createElement("p");
-      message.textContent=item.message;
+      message.textContent=`${color} · ${item.message}`;
       text.append(title,message);
       const remove=document.createElement("button");
       remove.type="button";
@@ -347,11 +351,11 @@
   }
 
   async function deleteException(item){
-    if(!window.confirm(`Supprimer l’exception du ${item.date} ?`))return;
+    if(!window.confirm(`Supprimer l’alerte du ${item.date} ?`))return;
     try{
       await api(`/api/admin/exceptions/${item.id}`,{method:"DELETE"});
       await refreshOperations();
-      setStatus(elements.exceptionStatus,"Exception supprimée.","success");
+      setStatus(elements.exceptionStatus,"Alerte supprimée.","success");
     }catch(error){setStatus(elements.exceptionStatus,error.message,"error");}
   }
 
@@ -562,11 +566,18 @@
     setStatus(elements.exceptionStatus,"Enregistrement…");
     try{
       await api("/api/admin/exceptions",{
-        method:"POST",body:JSON.stringify({date:elements.exceptionDate.value,message:elements.exceptionMessage.value})
+        method:"POST",body:JSON.stringify({
+          date:elements.exceptionDate.value,
+          endDate:elements.exceptionEndDate.value,
+          color:elements.exceptionColor.value,
+          message:elements.exceptionMessage.value
+        })
       });
       elements.exceptionMessage.value="";
+      elements.exceptionEndDate.value="";
+      elements.exceptionColor.value="orange";
       await refreshOperations();
-      setStatus(elements.exceptionStatus,"Exception enregistrée.","success");
+      setStatus(elements.exceptionStatus,"Alerte enregistrée.","success");
     }catch(error){setStatus(elements.exceptionStatus,error.message,"error");}
   });
 

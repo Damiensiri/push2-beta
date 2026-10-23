@@ -70,7 +70,9 @@ CREATE TABLE IF NOT EXISTS general_schedules (
 CREATE TABLE IF NOT EXISTS schedule_exceptions (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   date TEXT NOT NULL UNIQUE,
+  end_date TEXT,
   message TEXT NOT NULL,
+  color TEXT NOT NULL DEFAULT 'orange' CHECK(color IN ('orange','red')),
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );

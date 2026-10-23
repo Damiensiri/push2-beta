@@ -3,12 +3,24 @@ import assert from "node:assert/strict";
 import {
   compatibleAlert,validateAlert,parisNow,isPushEnabled,sendRequestedPush,plainTextMessage,
   calculateStatus,publicSpace,publicSchedule,validateSpace,validateSchedules,timeToMinutes,effectiveActivityValue,findNextSpaceOpening,
+  validateScheduleException,
   spaceProgramFields,
   normalizeEmail,validatePassword,validateNewUser,hashPassword,verifyPassword,validatePaddockBooking,
   reservationLocalMinute,duePaddockReminderTypes,validatePaddockRequestDate,
   validStaffMonth,staffMonthRange,staffMinutes,validateStaffShift,isStaffWeekStart,addIsoDays,
   parseIcsCalendar,googleCalendarIcalUrls,sendPaddockReservationCancellationPush
 } from "../src/worker.js";
+
+test("les bandeaux exceptionnels acceptent une journée ou une période et une couleur",()=>{
+  assert.deepEqual(validateScheduleException({date:"2026-10-23",message:"Information"}),{
+    date:"2026-10-23",endDate:null,message:"Information",color:"orange"
+  });
+  assert.deepEqual(validateScheduleException({
+    date:"2026-10-23",endDate:"2026-10-25",message:"  Vigilance  ",color:"red"
+  }),{date:"2026-10-23",endDate:"2026-10-25",message:"Vigilance",color:"red"});
+  assert.equal(validateScheduleException({date:"2026-10-25",endDate:"2026-10-23",message:"Erreur"}).error,
+    "La date de fin doit être postérieure ou égale à la date de début");
+});
 
 test("les comptes utilisateurs normalisent et valident l’identité",()=>{
   assert.equal(normalizeEmail("  Test@Example.COM "),"test@example.com");
