@@ -3,8 +3,8 @@
   "level": "yellow",
   "label": "Jaune",
   "phenomenon": "Pluie-inondation · Vent violent",
-  "period": "Du 25 octobre à 04:04 au 26 octobre à 00:00",
-  "updatedAt": "25 octobre à 04:04",
+  "period": "Du 25 octobre à 06:00 au 26 octobre à 00:00",
+  "updatedAt": "25 octobre à 06:00",
   "source": "MeteoAlarm / EUMETNET",
   "sourceUrl": "https://meteoalarm.org"
 }
