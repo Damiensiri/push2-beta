@@ -4,7 +4,7 @@ window.METEOALARM_VIGILANCE = {
   "label": "Jaune",
   "phenomenon": "Vent violent",
   "period": "Du 17 novembre à 00:00 au 18 novembre à 00:00",
-  "updatedAt": "16 novembre à 06:00",
+  "updatedAt": "16 novembre à 16:02",
   "source": "MeteoAlarm / EUMETNET",
   "sourceUrl": "https://meteoalarm.org"
 };
