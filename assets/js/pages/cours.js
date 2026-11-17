@@ -4,6 +4,7 @@
   const grid=document.getElementById('upcomingGrid'),planningList=document.getElementById('planningList'),status=document.getElementById('courseStatus');
   const weekNumber=document.getElementById('weekNumber'),weekRange=document.getElementById('weekRange'),dialog=document.getElementById('courseDialog'),dialogContent=document.getElementById('courseDialogContent');
   const palette=['#39c3ff','#ff64b1','#a46cff','#ffbd21','#50d89c','#ff7a45','#58a6ff','#d579ff'];
+  const riderColors=new Map(),usedRiderColors=new Set();
   let weekStart=monday(new Date()),data=null,category='owners';
   const esc=value=>String(value??'').replace(/[&<>'"]/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
   const iso=date=>{const local=new Date(date.getTime()-date.getTimezoneOffset()*60000);return local.toISOString().slice(0,10)};
@@ -11,7 +12,7 @@
   function plus(date,days){const value=new Date(date);value.setDate(value.getDate()+days);return value}
   function formatDate(value,options){return new Intl.DateTimeFormat('fr-FR',{timeZone:'Europe/Paris',...options}).format(new Date(value))}
   function courseTime(start,end){return `${formatDate(start,{hour:'2-digit',minute:'2-digit'})} – ${formatDate(end,{hour:'2-digit',minute:'2-digit'})}`}
-  function riderColor(id){let hash=0;for(const char of String(id||''))hash=(hash*31+char.charCodeAt(0))>>>0;return palette[hash%palette.length]}
+  function riderColor(id){const key=String(id||'');if(riderColors.has(key))return riderColors.get(key);let hash=0;for(const char of key)hash=(hash*31+char.charCodeAt(0))>>>0;let index=hash%palette.length;for(let offset=0;offset<palette.length;offset++){const candidate=palette[(index+offset)%palette.length];if(!usedRiderColors.has(candidate)){riderColors.set(key,candidate);usedRiderColors.add(candidate);return candidate}}const fallback=palette[index];riderColors.set(key,fallback);return fallback}
   async function api(path,options={}){const response=await fetch(API+path,{...options,headers:{authorization:`Bearer ${token()}`,'content-type':'application/json',...(options.headers||{})},cache:'no-store'});const body=await response.json().catch(()=>({}));if(!response.ok)throw Error(body.error||'Une erreur est survenue.');return body}
   function setStatus(message='',error=false){status.textContent=message;status.classList.toggle('error',error)}
   function weekOf(date){const target=new Date(Date.UTC(date.getFullYear(),date.getMonth(),date.getDate()));target.setUTCDate(target.getUTCDate()+4-(target.getUTCDay()||7));const yearStart=new Date(Date.UTC(target.getUTCFullYear(),0,1));return Math.ceil((((target-yearStart)/86400000)+1)/7)}
