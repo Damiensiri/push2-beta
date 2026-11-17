@@ -3,8 +3,7 @@
   const token=()=>localStorage.getItem('ecurie_beta_session')||'';
   const grid=document.getElementById('upcomingGrid'),planningList=document.getElementById('planningList'),status=document.getElementById('courseStatus');
   const weekNumber=document.getElementById('weekNumber'),weekRange=document.getElementById('weekRange'),dialog=document.getElementById('courseDialog'),dialogContent=document.getElementById('courseDialogContent');
-  const palette=['#39c3ff','#ff64b1','#a46cff','#ffbd21','#50d89c','#ff7a45','#58a6ff','#d579ff'];
-  const riderColors=new Map(),usedRiderColors=new Set();
+  let riderColor=window.RiderColors.create();
   let weekStart=monday(new Date()),data=null,category='owners';
   const esc=value=>String(value??'').replace(/[&<>'"]/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
   const iso=date=>{const local=new Date(date.getTime()-date.getTimezoneOffset()*60000);return local.toISOString().slice(0,10)};
@@ -12,14 +11,13 @@
   function plus(date,days){const value=new Date(date);value.setDate(value.getDate()+days);return value}
   function formatDate(value,options){return new Intl.DateTimeFormat('fr-FR',{timeZone:'Europe/Paris',...options}).format(new Date(value))}
   function courseTime(start,end){return `${formatDate(start,{hour:'2-digit',minute:'2-digit'})} – ${formatDate(end,{hour:'2-digit',minute:'2-digit'})}`}
-  function riderColor(id){const key=String(id||'');if(riderColors.has(key))return riderColors.get(key);let hash=0;for(const char of key)hash=(hash*31+char.charCodeAt(0))>>>0;let index=hash%palette.length;for(let offset=0;offset<palette.length;offset++){const candidate=palette[(index+offset)%palette.length];if(!usedRiderColors.has(candidate)){riderColors.set(key,candidate);usedRiderColors.add(candidate);return candidate}}const fallback=palette[index];riderColors.set(key,fallback);return fallback}
   async function api(path,options={}){const response=await fetch(API+path,{...options,headers:{authorization:`Bearer ${token()}`,'content-type':'application/json',...(options.headers||{})},cache:'no-store'});const body=await response.json().catch(()=>({}));if(!response.ok)throw Error(body.error||'Une erreur est survenue.');return body}
   function setStatus(message='',error=false){status.textContent=message;status.classList.toggle('error',error)}
   function weekOf(date){const target=new Date(Date.UTC(date.getFullYear(),date.getMonth(),date.getDate()));target.setUTCDate(target.getUTCDate()+4-(target.getUTCDay()||7));const yearStart=new Date(Date.UTC(target.getUTCFullYear(),0,1));return Math.ceil((((target-yearStart)/86400000)+1)/7)}
   async function load(){
     const from=iso(weekStart),to=iso(plus(weekStart,6));weekNumber.textContent=`Semaine ${weekOf(weekStart)}`;weekRange.textContent=`Du ${formatDate(`${from}T12:00:00`,{day:'2-digit',month:'2-digit',year:'numeric'})} au ${formatDate(`${to}T12:00:00`,{day:'2-digit',month:'2-digit',year:'numeric'})}`;
     planningList.innerHTML='<p class="course-loading">Chargement du planning…</p>';setStatus();
-    try{data=await api(`/api/courses?from=${from}&to=${to}`);renderUpcoming();renderPlanning()}catch(error){grid.innerHTML=`<p class="course-empty">${esc(error.message)}</p>`;planningList.innerHTML=`<p class="course-empty">${esc(error.message)}</p>`;setStatus(error.message,true)}
+    try{data=await api(`/api/courses?from=${from}&to=${to}`);riderColor=window.RiderColors.create([...(data?.planning?.riders||[]).map(item=>item.id),...(data?.lessons||[]).map(item=>item.participant_profile_id)]);renderUpcoming();renderPlanning()}catch(error){grid.innerHTML=`<p class="course-empty">${esc(error.message)}</p>`;planningList.innerHTML=`<p class="course-empty">${esc(error.message)}</p>`;setStatus(error.message,true)}
   }
   function renderUpcoming(){
     const lessons=(data?.lessons||[]).filter(item=>new Date(item.ends_at)>new Date()).sort((a,b)=>new Date(a.starts_at)-new Date(b.starts_at)).slice(0,6);

@@ -162,6 +162,8 @@
   gap:14px;
 }
 
+.profile-lesson-cards{display:grid;gap:14px}.profile-lesson-cards-list{display:grid;gap:12px}.profile-lesson-card{position:relative;overflow:hidden;padding:16px 16px 14px 24px;border:1px solid rgba(205,232,250,.38);border-radius:20px;background:linear-gradient(145deg,rgba(65,130,170,.38),rgba(5,46,76,.5));box-shadow:inset 0 1px 0 rgba(255,255,255,.14)}.profile-rider-stripe{position:absolute;top:14px;bottom:14px;left:10px;width:5px;border-radius:6px;background:var(--rider-color,#39c3ff);box-shadow:0 0 9px color-mix(in srgb,var(--rider-color,#39c3ff),transparent 38%)}.profile-lesson-card header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.profile-lesson-card header span,.profile-lesson-card header small,.profile-lesson-card header strong{display:block}.profile-lesson-card header small{color:rgba(255,255,255,.66);font-size:9px;font-weight:800;letter-spacing:.12em}.profile-lesson-card header strong{margin-top:4px;font-size:18px}.profile-lesson-card header>b{flex:0 0 auto;padding:6px 10px;border:1px solid rgba(218,238,251,.3);border-radius:999px;background:rgba(184,214,231,.2);font-size:14px}.profile-lesson-rider{margin:10px 0 0;color:#fff;font-size:13px;font-weight:800}.profile-lesson-rider::before{content:'♙';margin-right:6px;color:var(--rider-color,#39c3ff)}.profile-lesson-card footer{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-top:10px;color:rgba(255,255,255,.7);font-size:10px;line-height:1.35}.profile-lesson-card footer span{max-width:70%}.profile-lesson-card footer b{color:#fff;text-align:right}.profile-lesson-card.is-finished{opacity:.58;filter:grayscale(.55)}
+
 .profile-card-message,
 .profile-card-balance{
   margin:0;

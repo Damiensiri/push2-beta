@@ -7,6 +7,7 @@ const status=document.getElementById("accountStatus");
 const openPasswordChange=document.getElementById("openPasswordChange");
 const passwordHelp=document.getElementById("accountPasswordHelp");
 const cardContent=document.getElementById("profileCardContent");
+const lessonCardsContent=document.getElementById("lessonCardsContent");
 const emailForm=document.getElementById("accountEmailForm");
 const openEmailChange=document.getElementById("openEmailChange");
 
@@ -72,6 +73,7 @@ cardContent.innerHTML=`<p class="profile-card-message">${account.cardRequestPend
 bindCardRequest(account);
 return;
 }
+
 const remaining=Math.max(0,Number(card.remaining)||0);
 const total=Math.max(0,Number(card.total)||0);
 const progress=total>0?Math.min(100,Math.max(0,(remaining/total)*100)):0;
@@ -86,6 +88,22 @@ bindCardRequest(account);
 }catch(error){
 cardContent.innerHTML='<p class="profile-card-message">Impossible d’actualiser la carte pour le moment.</p>';
 }
+}
+
+function escapeHtml(value){return String(value??"").replace(/[&<>'"]/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[char]));}
+function lessonDate(value){if(!value)return "À préciser";return new Intl.DateTimeFormat("fr-FR",{timeZone:"Europe/Paris",day:"2-digit",month:"2-digit",year:"numeric"}).format(new Date(`${value}T12:00:00`));}
+async function showLessonCards(){
+if(!lessonCardsContent)return;
+try{
+const account=await request("/api/courses");
+const cards=(account.cards||[]).filter(card=>card.credit_type==="card");
+if(!cards.length){lessonCardsContent.innerHTML='<p class="profile-card-message">Aucune carte de reprises.</p>';return;}
+const riderColor=window.RiderColors.create([...(account.planning?.riders||[]).map(rider=>rider.id),...cards.map(card=>card.participant_profile_id)]);
+lessonCardsContent.innerHTML=cards.map(card=>{
+const remaining=Math.max(0,Number(card.balance_sessions)||0),total=Math.max(0,Number(card.original_sessions)||0),progress=total?Math.min(100,(remaining/total)*100):0,finished=remaining===0||card.status!=="active",rider=`${card.first_name||""} ${card.last_name||""}`.trim();
+return `<article class="profile-lesson-card${finished?' is-finished':''}" style="--rider-color:${riderColor(card.participant_profile_id)}"><i class="profile-rider-stripe" aria-hidden="true"></i><header><span><small>CARTE DE REPRISES</small><strong>${escapeHtml(card.label||"Carte")}</strong></span><b>${remaining}/${total}</b></header><p class="profile-lesson-rider">${escapeHtml(rider||"Cavalier")}</p><div class="profile-card-progress" role="progressbar" aria-label="Séances restantes pour ${escapeHtml(rider)}" aria-valuemin="0" aria-valuemax="${total}" aria-valuenow="${remaining}"><div class="${remaining===0?'profile-progress-red':remaining/Math.max(1,total)<=.25?'profile-progress-orange':'profile-progress-green'}" style="width:${progress}%"></div></div><footer><span>Valable du ${lessonDate(card.starts_on)} au ${lessonDate(card.ends_on)}</span>${finished?'<b>Carte terminée</b>':`<b>${remaining} séance${remaining>1?'s':''} restante${remaining>1?'s':''}</b>`}</footer></article>`;
+}).join("");
+}catch(error){lessonCardsContent.innerHTML=`<p class="profile-card-message">${escapeHtml(error.message||"Impossible d’actualiser les cartes pour le moment.")}</p>`;}
 }
 
 function bindCardRequest(account){
@@ -142,6 +160,6 @@ localStorage.removeItem(TOKEN_KEY);location.replace("connexion.html");
 (async()=>{try{
 const data=await request("/api/auth/me");
 await showUser(data.user);
-await Promise.all([showPaddockCard(),syncRemotePhoto().catch(()=>{})]);
+await Promise.all([showPaddockCard(),showLessonCards(),syncRemotePhoto().catch(()=>{})]);
 }catch(error){localStorage.removeItem(TOKEN_KEY);location.replace("connexion.html");}})();
 })();
