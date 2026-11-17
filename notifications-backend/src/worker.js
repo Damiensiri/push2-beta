@@ -260,6 +260,14 @@ export default{
         if(!viewer)return json({error:"Non autorisé"},401,cors);
         return grandRangCourses(env,viewer,`/api/pwa/courses/${courseSignup[1]}/signup`,{method:"POST",body:JSON.stringify(await readJson(request))},cors);
       }
+      if(url.pathname==="/api/courses/checkout/status"&&request.method==="GET"){
+        const viewer=await authenticatedUser(request,env);if(!viewer)return json({error:"Non autorisé"},401,cors);
+        return grandRangCourses(env,viewer,`/api/pwa/courses/checkout/status${url.search}`,{method:"GET"},cors);
+      }
+      if(url.pathname==="/api/courses/checkout/cancel"&&request.method==="POST"){
+        const viewer=await authenticatedUser(request,env);if(!viewer)return json({error:"Non autorisé"},401,cors);
+        return grandRangCourses(env,viewer,"/api/pwa/courses/checkout/cancel",{method:"POST",body:JSON.stringify(await readJson(request))},cors);
+      }
 
       if(url.pathname==="/api/auth/profile-photo"){
         const viewer=await authenticatedUser(request,env);
@@ -332,7 +340,7 @@ export default{
       if(request.method==="GET"&&url.pathname==="/api/orders"){
         const viewer=await authenticatedUser(request,env);
         if(!viewer)return json({error:"Non autorisé"},401,cors);
-        return json({orders:await loadOrders(env,"WHERE o.user_id=?",[viewer.id])},200,cors);
+        const local=await loadOrders(env,"WHERE o.user_id=?",[viewer.id]);let grandRang=[];try{grandRang=(await grandRangData(env,viewer,"/api/pwa/orders",{method:"GET"})).orders||[]}catch(error){if(!String(error?.message||error).includes("pas encore relié"))console.error("Commandes Grand Rang indisponibles",error)}return json({orders:[...local,...grandRang].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt))},200,cors);
       }
 
       if(request.method==="POST"&&url.pathname==="/api/orders"){
@@ -3857,6 +3865,12 @@ async function grandRangCourses(env,user,path,init,cors){
   const upstream=await env.GRAND_RANG.fetch(new Request(`https://grand-rang.internal${path}`,{...init,headers}));
   const responseHeaders={...cors,"content-type":upstream.headers.get("content-type")||"application/json; charset=utf-8","cache-control":"no-store"};
   return new Response(upstream.body,{status:upstream.status,headers:responseHeaders});
+}
+
+async function grandRangData(env,user,path,init={method:"GET"}){
+  if(!env.GRAND_RANG||!env.PWA_BRIDGE_TOKEN)throw new Error("La liaison Grand Rang n’est pas encore configurée.");
+  const headers=new Headers({"X-PWA-Bridge-Token":env.PWA_BRIDGE_TOKEN,"X-PWA-User-Id":String(user.id),"X-PWA-User-Email":String(user.email||"")});if(init.body)headers.set("content-type","application/json");
+  const response=await env.GRAND_RANG.fetch(new Request(`https://grand-rang.internal${path}`,{...init,headers})),data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||`Grand Rang indisponible (${response.status})`);return data;
 }
 
 function bytesToBase64(bytes){
