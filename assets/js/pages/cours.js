@@ -21,9 +21,9 @@
     try{data=await api(`/api/courses?from=${from}&to=${to}`);renderUpcoming();renderPlanning()}catch(error){grid.innerHTML=`<p class="course-empty">${esc(error.message)}</p>`;planningList.innerHTML=`<p class="course-empty">${esc(error.message)}</p>`;setStatus(error.message,true)}
   }
   function renderUpcoming(){
-    const lessons=(data?.lessons||[]).filter(item=>new Date(item.ends_at)>new Date()&&!['cancelled'].includes(item.status)).sort((a,b)=>new Date(a.starts_at)-new Date(b.starts_at)).slice(0,6);
+    const lessons=(data?.lessons||[]).filter(item=>new Date(item.ends_at)>new Date()).sort((a,b)=>new Date(a.starts_at)-new Date(b.starts_at)).slice(0,6);
     if(!lessons.length){grid.innerHTML='<p class="course-empty">Aucun cours à venir.</p>';return}
-    grid.innerHTML=lessons.map(item=>`<button class="upcoming-card" type="button" data-enrollment="${esc(item.enrollment_id)}" style="--rider-color:${riderColor(item.participant_profile_id)}"><i class="rider-stripe"></i><time>${esc(formatDate(item.starts_at,{weekday:'short',day:'2-digit',month:'short'}))}</time><strong>${esc(item.title)}</strong><span class="rider-name">${esc(`${item.first_name} ${item.last_name}`.trim())}</span><span class="course-time">${esc(courseTime(item.starts_at,item.ends_at))}</span></button>`).join('');
+    grid.innerHTML=lessons.map(item=>{const cancelled=['absent','cancelled'].includes(item.status),pending=item.absence_request_status==='pending',hint=cancelled?'Cours annulé':pending?'Demande en cours':'Toucher pour annuler';return `<button class="upcoming-card${cancelled?' is-cancelled':''}" type="button" data-enrollment="${esc(item.enrollment_id)}" style="--rider-color:${riderColor(item.participant_profile_id)}" ${cancelled?'disabled aria-disabled="true"':''}><i class="rider-stripe"></i><time>${esc(formatDate(item.starts_at,{weekday:'short',day:'2-digit',month:'short'}))}</time><strong>${esc(item.title)}</strong><span class="rider-name">${esc(`${item.first_name} ${item.last_name}`.trim())}</span><span class="course-time">${esc(courseTime(item.starts_at,item.ends_at))}</span><small class="course-card-hint">${hint}</small></button>`}).join('');
   }
   function ownersOccurrence(item){return String(item.category_label||'').toLocaleLowerCase('fr-FR').includes('propri')}
   function renderPlanning(){
