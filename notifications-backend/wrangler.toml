@@ -31,6 +31,10 @@ database_id = "c88d9f28-f645-4c61-abd2-3ddebcbc0cab"
 binding = "PRODUCT_IMAGES"
 bucket_name = "ecurie-products-beta"
 
+[[services]]
+binding = "GRAND_RANG"
+service = "ce-grandrang-beta"
+
 [[durable_objects.bindings]]
 name = "REALTIME_HUB"
 class_name = "RealtimeHub"

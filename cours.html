@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style id="app-critical-paint">html{background:#071a33;color-scheme:dark}body{margin:0;background:#071a33;color:#fff}</style>
+<title>Mes cours</title>
+<meta name="theme-color" content="#071a33">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="assets/js/app-config.js?v=20261117-cours"></script>
+<script src="assets/js/app-layout.js?v=20261117-cours"></script>
+<link rel="stylesheet" href="assets/css/app.css?v=20261117-cours">
+<link rel="stylesheet" href="assets/css/themes/summer.css?v=20261117-cours">
+<link rel="stylesheet" href="assets/css/themes/autumn.css?v=20261117-cours">
+<link rel="stylesheet" href="assets/css/themes/christmas.css?v=20261117-cours">
+<link rel="stylesheet" href="assets/css/themes/winter.css?v=20261117-cours">
+<link rel="stylesheet" href="assets/css/themes/spring.css?v=20261117-cours">
+<link rel="stylesheet" href="assets/css/pages/cours.css?v=20261117-cours">
+</head>
+<body class="app-page courses-page">
+<div class="ambient-stage" aria-hidden="true"></div>
+<main class="page courses-shell" id="page">
+  <header class="plan-header">
+    <button id="backBtn" type="button" onclick="goBack()" aria-label="Retour"><img src="image/back.svg" alt=""></button>
+    <h1>Cours</h1>
+  </header>
+
+  <section class="course-panel upcoming-panel" aria-labelledby="upcomingTitle">
+    <div class="course-panel-title"><span class="course-icon" aria-hidden="true">▣</span><h2 id="upcomingTitle">Mes prochains cours</h2></div>
+    <div class="upcoming-grid" id="upcomingGrid"><p class="course-loading">Chargement de vos cours…</p></div>
+  </section>
+
+  <section class="course-panel planning-panel" aria-labelledby="planningTitle">
+    <div class="course-panel-title"><span class="course-icon" aria-hidden="true">▤</span><h2 id="planningTitle">Planning des reprises</h2></div>
+    <div class="week-picker">
+      <button id="previousWeek" type="button" aria-label="Semaine précédente">‹</button>
+      <div><strong id="weekNumber">Semaine</strong><span id="weekRange">—</span></div>
+      <button id="nextWeek" type="button" aria-label="Semaine suivante">›</button>
+    </div>
+    <div class="category-filter" role="group" aria-label="Filtrer les reprises">
+      <button type="button" class="active" data-category="owners"><span aria-hidden="true">♙</span>Propriétaires</button>
+      <button type="button" data-category="all"><span aria-hidden="true">♙♙</span>Tous</button>
+    </div>
+    <div class="planning-list" id="planningList"><p class="course-loading">Chargement du planning…</p></div>
+  </section>
+  <p class="course-status" id="courseStatus" role="status" aria-live="polite"></p>
+</main>
+
+<dialog class="course-dialog" id="courseDialog">
+  <form method="dialog" class="course-dialog-card">
+    <button class="dialog-close" value="cancel" aria-label="Fermer">×</button>
+    <div id="courseDialogContent"></div>
+  </form>
+</dialog>
+
+<script src="assets/js/pages/cours.js?v=20261117-cours"></script>
+</body>
+</html>

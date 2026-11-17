@@ -1,0 +1,53 @@
+(()=>{
+  const API='https://ecurie-notifications-beta.damiensiri-pro.workers.dev';
+  const token=()=>localStorage.getItem('ecurie_beta_session')||'';
+  const grid=document.getElementById('upcomingGrid'),planningList=document.getElementById('planningList'),status=document.getElementById('courseStatus');
+  const weekNumber=document.getElementById('weekNumber'),weekRange=document.getElementById('weekRange'),dialog=document.getElementById('courseDialog'),dialogContent=document.getElementById('courseDialogContent');
+  const palette=['#39c3ff','#ff64b1','#a46cff','#ffbd21','#50d89c','#ff7a45','#58a6ff','#d579ff'];
+  let weekStart=monday(new Date()),data=null,category='owners';
+  const esc=value=>String(value??'').replace(/[&<>'"]/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
+  const iso=date=>{const local=new Date(date.getTime()-date.getTimezoneOffset()*60000);return local.toISOString().slice(0,10)};
+  function monday(date){const copy=new Date(date);copy.setHours(12,0,0,0);copy.setDate(copy.getDate()-((copy.getDay()+6)%7));return copy}
+  function plus(date,days){const value=new Date(date);value.setDate(value.getDate()+days);return value}
+  function formatDate(value,options){return new Intl.DateTimeFormat('fr-FR',{timeZone:'Europe/Paris',...options}).format(new Date(value))}
+  function courseTime(start,end){return `${formatDate(start,{hour:'2-digit',minute:'2-digit'})} – ${formatDate(end,{hour:'2-digit',minute:'2-digit'})}`}
+  function riderColor(id){let hash=0;for(const char of String(id||''))hash=(hash*31+char.charCodeAt(0))>>>0;return palette[hash%palette.length]}
+  async function api(path,options={}){const response=await fetch(API+path,{...options,headers:{authorization:`Bearer ${token()}`,'content-type':'application/json',...(options.headers||{})},cache:'no-store'});const body=await response.json().catch(()=>({}));if(!response.ok)throw Error(body.error||'Une erreur est survenue.');return body}
+  function setStatus(message='',error=false){status.textContent=message;status.classList.toggle('error',error)}
+  function weekOf(date){const target=new Date(Date.UTC(date.getFullYear(),date.getMonth(),date.getDate()));target.setUTCDate(target.getUTCDate()+4-(target.getUTCDay()||7));const yearStart=new Date(Date.UTC(target.getUTCFullYear(),0,1));return Math.ceil((((target-yearStart)/86400000)+1)/7)}
+  async function load(){
+    const from=iso(weekStart),to=iso(plus(weekStart,6));weekNumber.textContent=`Semaine ${weekOf(weekStart)}`;weekRange.textContent=`Du ${formatDate(`${from}T12:00:00`,{day:'2-digit',month:'2-digit',year:'numeric'})} au ${formatDate(`${to}T12:00:00`,{day:'2-digit',month:'2-digit',year:'numeric'})}`;
+    planningList.innerHTML='<p class="course-loading">Chargement du planning…</p>';setStatus();
+    try{data=await api(`/api/courses?from=${from}&to=${to}`);renderUpcoming();renderPlanning()}catch(error){grid.innerHTML=`<p class="course-empty">${esc(error.message)}</p>`;planningList.innerHTML=`<p class="course-empty">${esc(error.message)}</p>`;setStatus(error.message,true)}
+  }
+  function renderUpcoming(){
+    const lessons=(data?.lessons||[]).filter(item=>new Date(item.ends_at)>new Date()&&!['cancelled'].includes(item.status)).sort((a,b)=>new Date(a.starts_at)-new Date(b.starts_at)).slice(0,6);
+    if(!lessons.length){grid.innerHTML='<p class="course-empty">Aucun cours à venir.</p>';return}
+    grid.innerHTML=lessons.map(item=>`<button class="upcoming-card" type="button" data-enrollment="${esc(item.enrollment_id)}" style="--rider-color:${riderColor(item.participant_profile_id)}"><i class="rider-stripe"></i><time>${esc(formatDate(item.starts_at,{weekday:'short',day:'2-digit',month:'short'}))}</time><strong>${esc(item.title)}</strong><span class="rider-name">${esc(`${item.first_name} ${item.last_name}`.trim())}</span><span class="course-time">${esc(courseTime(item.starts_at,item.ends_at))}</span></button>`).join('');
+  }
+  function ownersOccurrence(item){return String(item.category_label||'').toLocaleLowerCase('fr-FR').includes('propri')}
+  function renderPlanning(){
+    let items=data?.planning?.occurrences||[];if(category==='owners')items=items.filter(ownersOccurrence);
+    if(!items.length){planningList.innerHTML=`<p class="course-empty">Aucune reprise ${category==='owners'?'dans la catégorie Propriétaires ':''}cette semaine.</p>`;return}
+    const groups=new Map();for(const item of items){const key=String(item.starts_at).slice(0,10);if(!groups.has(key))groups.set(key,[]);groups.get(key).push(item)}
+    planningList.innerHTML=[...groups].map(([date,courses])=>`<section class="planning-day"><h3>${esc(formatDate(`${date}T12:00:00`,{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'}))}</h3>${courses.map(item=>{const count=Number(item.participant_count||0),capacity=Number(item.capacity||0),deadline=new Date(new Date(item.starts_at).getTime()-Number(item.signup_deadline_hours||0)*3600000),closed=count>=capacity||new Date()>=deadline;return `<button class="planning-course" type="button" data-occurrence="${esc(item.id)}" ${closed?'disabled':''}><span><strong>${esc(item.title)}</strong><small>${esc(courseTime(item.starts_at,item.ends_at))} · ${esc(item.instructor_label||'')}</small></span><span class="capacity-pill">${count}/${capacity}${closed?' · Fermé':''}</span></button>`}).join('')}</section>`).join('');
+  }
+  function openLesson(item){
+    const name=`${item.first_name} ${item.last_name}`.trim(),pending=item.absence_request_status==='pending',absent=['absent','cancelled'].includes(item.status),hours=Math.max(0,Math.ceil((new Date(item.starts_at)-new Date())/3600000)),within=hours>Number(item.cancel_deadline_hours||0);
+    dialogContent.innerHTML=`<h2>${esc(item.title)}</h2><p class="dialog-meta">${esc(formatDate(item.starts_at,{weekday:'long',day:'2-digit',month:'long',hour:'2-digit',minute:'2-digit'}))}</p><p class="dialog-rider" style="--rider-color:${riderColor(item.participant_profile_id)}">${esc(name)}</p>${pending?'<p class="dialog-message">Votre demande d’absence a bien été transmise au centre.</p>':absent?'<p class="dialog-message">Ce cavalier est déjà noté absent.</p>':`<p class="dialog-message">${within?'L’annulation sera appliquée selon les règles prévues.':'Le délai est dépassé : le centre décidera de la suite.'}</p><button class="dialog-action" type="button" data-absence="${esc(item.enrollment_id)}">${within?'Annuler ce cours':'Prévenir de mon absence'}</button>`}`;dialog.showModal();
+  }
+  function openSignup(item){
+    const riders=data?.planning?.riders||[],credits=data?.planning?.credits||[];
+    const riderOptions=riders.map(r=>`<option value="${esc(r.id)}">${esc(`${r.first_name} ${r.last_name}`.trim())}</option>`).join('');
+    dialogContent.innerHTML=`<h2>${esc(item.title)}</h2><p class="dialog-meta">${esc(formatDate(item.starts_at,{weekday:'long',day:'2-digit',month:'long',hour:'2-digit',minute:'2-digit'}))}</p><label for="signupRider">Cavalier</label><select id="signupRider"><option value="">Choisir</option>${riderOptions}</select><div id="signupSourceWrap" hidden><label for="signupSource">Mode d’inscription</label><select id="signupSource"></select></div><p class="dialog-message" id="signupMessage"></p><button class="dialog-action" type="button" id="signupSubmit" disabled>Demander l’inscription</button>`;
+    const rider=document.getElementById('signupRider'),source=document.getElementById('signupSource'),wrap=document.getElementById('signupSourceWrap'),message=document.getElementById('signupMessage'),submit=document.getElementById('signupSubmit');
+    rider.addEventListener('change',()=>{const available=credits.filter(c=>c.participant_profile_id===rider.value&&(c.credit_type!=='makeup'||Number(item.allow_makeups)));source.innerHTML=available.map(c=>`<option value="${esc(c.credit_type)}:${esc(c.id)}">${esc(c.label)} · ${Number(c.balance_sessions)} séance${Number(c.balance_sessions)>1?'s':''}</option>`).join('');wrap.hidden=!available.length;message.textContent=available.length?'':'Aucun forfait, carte ou crédit compatible n’est disponible pour ce cavalier.';submit.disabled=!available.length});
+    submit.addEventListener('click',async()=>{const [sourceType,sourceId]=source.value.split(':');submit.disabled=true;submit.textContent='Inscription…';try{await api(`/api/courses/${item.id}/signup`,{method:'POST',body:JSON.stringify({participantId:rider.value,sourceType,sourceId})});dialog.close();setStatus('Inscription enregistrée.');await load()}catch(error){message.textContent=error.message;submit.disabled=false;submit.textContent='Demander l’inscription'}});dialog.showModal();
+  }
+  grid.addEventListener('click',event=>{const button=event.target.closest('[data-enrollment]');if(!button)return;const item=(data?.lessons||[]).find(row=>row.enrollment_id===button.dataset.enrollment);if(item)openLesson(item)});
+  planningList.addEventListener('click',event=>{const button=event.target.closest('[data-occurrence]');if(!button)return;const item=(data?.planning?.occurrences||[]).find(row=>row.id===button.dataset.occurrence);if(item)openSignup(item)});
+  dialog.addEventListener('click',async event=>{const button=event.target.closest('[data-absence]');if(!button)return;if(!confirm('Confirmer cette absence ?'))return;button.disabled=true;button.textContent='Enregistrement…';try{const result=await api(`/api/courses/${button.dataset.absence}/absence`,{method:'POST',body:'{}'});dialog.close();setStatus(result.withinDeadline?'Absence enregistrée.':'Votre demande a été transmise au centre.');await load()}catch(error){button.disabled=false;button.textContent='Réessayer';setStatus(error.message,true)}});
+  document.getElementById('previousWeek').addEventListener('click',()=>{weekStart=plus(weekStart,-7);load()});document.getElementById('nextWeek').addEventListener('click',()=>{weekStart=plus(weekStart,7);load()});
+  document.querySelector('.category-filter').addEventListener('click',event=>{const button=event.target.closest('[data-category]');if(!button)return;category=button.dataset.category;document.querySelectorAll('[data-category]').forEach(item=>item.classList.toggle('active',item===button));renderPlanning()});
+  load();
+})();

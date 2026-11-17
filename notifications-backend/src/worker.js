@@ -233,6 +233,24 @@ export default{
         }
       }
 
+      if(url.pathname==="/api/courses"&&request.method==="GET"){
+        const viewer=await authenticatedUser(request,env);
+        if(!viewer)return json({error:"Non autorisé"},401,cors);
+        return grandRangCourses(env,viewer,`/api/pwa/courses${url.search}`,{method:"GET"},cors);
+      }
+      const courseAbsence=url.pathname.match(/^\/api\/courses\/([a-f0-9-]{36})\/absence$/i);
+      if(courseAbsence&&request.method==="POST"){
+        const viewer=await authenticatedUser(request,env);
+        if(!viewer)return json({error:"Non autorisé"},401,cors);
+        return grandRangCourses(env,viewer,`/api/pwa/courses/${courseAbsence[1]}/absence`,{method:"POST"},cors);
+      }
+      const courseSignup=url.pathname.match(/^\/api\/courses\/([a-f0-9-]{36})\/signup$/i);
+      if(courseSignup&&request.method==="POST"){
+        const viewer=await authenticatedUser(request,env);
+        if(!viewer)return json({error:"Non autorisé"},401,cors);
+        return grandRangCourses(env,viewer,`/api/pwa/courses/${courseSignup[1]}/signup`,{method:"POST",body:JSON.stringify(await readJson(request))},cors);
+      }
+
       if(url.pathname==="/api/auth/profile-photo"){
         const viewer=await authenticatedUser(request,env);
         if(!viewer)return json({error:"Non autorisé"},401,cors);
@@ -3800,6 +3818,15 @@ function publicUser(user){
     cardNumber:user.card_number||"",role:user.role,status:user.status,approvalStatus:user.approval_status||"approved",
     mustChangePassword:Boolean(user.must_change_password),createdAt:user.created_at,
     updatedAt:user.updated_at,lastLoginAt:user.last_login_at||null};
+}
+
+async function grandRangCourses(env,user,path,init,cors){
+  if(!env.GRAND_RANG||!env.PWA_BRIDGE_TOKEN)return json({error:"La liaison Grand Rang n’est pas encore configurée."},503,cors);
+  const headers=new Headers({"X-PWA-Bridge-Token":env.PWA_BRIDGE_TOKEN,"X-PWA-User-Id":String(user.id),"X-PWA-User-Email":String(user.email||"")});
+  if(init.body)headers.set("content-type","application/json");
+  const upstream=await env.GRAND_RANG.fetch(new Request(`https://grand-rang.internal${path}`,{...init,headers}));
+  const responseHeaders={...cors,"content-type":upstream.headers.get("content-type")||"application/json; charset=utf-8","cache-control":"no-store"};
+  return new Response(upstream.body,{status:upstream.status,headers:responseHeaders});
 }
 
 function bytesToBase64(bytes){
