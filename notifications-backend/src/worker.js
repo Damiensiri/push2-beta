@@ -233,6 +233,16 @@ export default{
         }
       }
 
+      if(url.pathname==="/api/internal/grand-rang/users"&&request.method==="GET"){
+        if(!env.PWA_BRIDGE_TOKEN||request.headers.get("X-PWA-Bridge-Token")!==env.PWA_BRIDGE_TOKEN)return json({error:"Passerelle Grand Rang non autorisée."},401,cors);
+        const id=String(url.searchParams.get("id")||"").trim(),query=String(url.searchParams.get("q")||"").trim().slice(0,100);
+        let result;
+        if(/^\d{1,18}$/.test(id))result=await env.DB.prepare("SELECT id,email,first_name,last_name,status,last_login_at FROM users WHERE id=? LIMIT 1").bind(Number(id)).all();
+        else if(query.length>=2){const like=`%${query}%`;result=await env.DB.prepare("SELECT id,email,first_name,last_name,status,last_login_at FROM users WHERE email LIKE ? OR first_name LIKE ? OR last_name LIKE ? OR (first_name||' '||last_name) LIKE ? ORDER BY last_name,first_name LIMIT 30").bind(like,like,like,like).all();}
+        else return json({users:[]},200,cors);
+        return json({users:result.results.map(row=>({id:Number(row.id),email:row.email,firstName:row.first_name,lastName:row.last_name,status:row.status,lastLoginAt:row.last_login_at||null}))},200,cors);
+      }
+
       if(url.pathname==="/api/courses"&&request.method==="GET"){
         const viewer=await authenticatedUser(request,env);
         if(!viewer)return json({error:"Non autorisé"},401,cors);
@@ -598,6 +608,19 @@ export default{
 
       if(url.pathname.startsWith("/api/admin/")){
         if(!isAdmin(request,env))return json({error:"Non autorisé"},401,cors);
+
+        const grandRangLinkMatch=url.pathname.match(/^\/api\/admin\/users\/(\d+)\/grand-rang-link$/);
+        if(grandRangLinkMatch&&request.method==="GET"){
+          const userId=Number(grandRangLinkMatch[1]),user=await env.DB.prepare("SELECT id FROM users WHERE id=?").bind(userId).first();if(!user)return json({error:"Utilisateur introuvable"},404,cors);
+          const query=String(url.searchParams.get("q")||"").trim().slice(0,100),[linkData,customerData]=await Promise.all([grandRangAdmin(env,`/api/internal/pwa/links/${userId}`,{method:"GET"}),query.length>=2?grandRangAdmin(env,`/api/internal/pwa/customers?q=${encodeURIComponent(query)}`,{method:"GET"}):Promise.resolve({customers:[]})]);
+          return json({link:linkData.link||null,customers:Array.isArray(customerData.customers)?customerData.customers:[],riders:Array.isArray(customerData.riders)?customerData.riders:[]},200,cors);
+        }
+        if(grandRangLinkMatch&&request.method==="PUT"){
+          const userId=Number(grandRangLinkMatch[1]),user=await env.DB.prepare("SELECT id,email,first_name,last_name FROM users WHERE id=?").bind(userId).first();if(!user)return json({error:"Utilisateur introuvable"},404,cors);
+          const input=await readJson(request),customerId=String(input?.customerId||""),participantId=String(input?.participantId||"").trim()||null;if(!/^[a-f0-9-]{36}$/i.test(customerId)||participantId&&!/^[a-f0-9-]{36}$/i.test(participantId))return json({error:"Compte Grand Rang invalide"},400,cors);
+          const data=await grandRangAdmin(env,`/api/internal/pwa/links/${userId}`,{method:"PUT",body:JSON.stringify({customerId,participantId,pwaEmail:user.email,pwaFirstName:user.first_name,pwaLastName:user.last_name,force:input?.force===true})});return json(data,200,cors);
+        }
+        if(grandRangLinkMatch&&request.method==="DELETE")return json(await grandRangAdmin(env,`/api/internal/pwa/links/${Number(grandRangLinkMatch[1])}`,{method:"DELETE"}),200,cors);
 
         if(request.method==="GET"&&url.pathname==="/api/admin/theme"){
           return json(await readThemeConfig(env),200,cors);
@@ -3818,6 +3841,13 @@ function publicUser(user){
     cardNumber:user.card_number||"",role:user.role,status:user.status,approvalStatus:user.approval_status||"approved",
     mustChangePassword:Boolean(user.must_change_password),createdAt:user.created_at,
     updatedAt:user.updated_at,lastLoginAt:user.last_login_at||null};
+}
+
+async function grandRangAdmin(env,path,init={method:"GET"}){
+  if(!env.GRAND_RANG||!env.PWA_BRIDGE_TOKEN)throw new Error("La liaison Grand Rang n’est pas encore configurée.");
+  const headers=new Headers({"X-PWA-Bridge-Token":env.PWA_BRIDGE_TOKEN});if(init.body)headers.set("content-type","application/json");
+  const response=await env.GRAND_RANG.fetch(new Request(`https://grand-rang.internal${path}`,{...init,headers}));
+  const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||`Grand Rang indisponible (${response.status})`);return data;
 }
 
 async function grandRangCourses(env,user,path,init,cors){
