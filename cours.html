@@ -16,7 +16,7 @@
 <link rel="stylesheet" href="assets/css/themes/christmas.css?v=20261117-cours-airy1">
 <link rel="stylesheet" href="assets/css/themes/winter.css?v=20261117-cours-airy1">
 <link rel="stylesheet" href="assets/css/themes/spring.css?v=20261117-cours-airy1">
-<link rel="stylesheet" href="assets/css/pages/cours.css?v=20261117-cours-airy1">
+<link rel="stylesheet" href="assets/css/pages/cours.css?v=20261118-cours-grandrang-beta1">
 </head>
 <body class="app-page courses-page">
 <div class="ambient-stage" aria-hidden="true"></div>
@@ -28,21 +28,22 @@
 
   <section class="course-panel upcoming-panel" aria-labelledby="upcomingTitle">
     <div class="course-panel-title"><img class="course-icon course-icon-image" src="image/course.svg?v=20261117-1" alt=""><h2 id="upcomingTitle">Mes prochains cours</h2></div>
-    <div class="upcoming-grid" id="upcomingGrid"><p class="course-loading">Chargement de vos cours…</p></div>
+    <div class="upcoming-list" id="upcomingGrid"><p class="course-loading">Chargement de vos cours…</p></div>
   </section>
 
   <section class="course-panel planning-panel" aria-labelledby="planningTitle">
     <div class="course-panel-title"><span class="course-icon" aria-hidden="true">▤</span><h2 id="planningTitle">Planning des reprises</h2></div>
     <div class="week-picker">
-      <button id="previousWeek" type="button" aria-label="Semaine précédente">‹</button>
+      <button id="previousWeek" type="button" aria-label="Semaine précédente"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
       <div><strong id="weekNumber">Semaine</strong><span id="weekRange">—</span></div>
-      <button id="nextWeek" type="button" aria-label="Semaine suivante">›</button>
+      <button id="nextWeek" type="button" aria-label="Semaine suivante"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>
     </div>
+    <div class="week-days" id="weekDays" aria-label="Jours de la semaine"></div>
     <div class="category-filter" role="group" aria-label="Filtrer les reprises">
       <button type="button" class="active" data-category="owners"><span aria-hidden="true">♙</span>Propriétaires</button>
       <button type="button" data-category="all"><span aria-hidden="true">♙♙</span>Tous</button>
     </div>
-    <div class="planning-list" id="planningList"><p class="course-loading">Chargement du planning…</p></div>
+    <div class="planning-agenda" id="planningList"><p class="course-loading">Chargement du planning…</p></div>
   </section>
   <p class="course-status" id="courseStatus" role="status" aria-live="polite"></p>
 </main>
@@ -55,6 +56,6 @@
 </dialog>
 
 <script src="assets/js/rider-colors.js?v=20261117-cours-airy1"></script>
-<script src="assets/js/pages/cours.js?v=20261117-cours-airy1"></script>
+<script src="assets/js/pages/cours.js?v=20261118-cours-grandrang-beta1"></script>
 </body>
 </html>
